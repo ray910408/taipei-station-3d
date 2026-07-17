@@ -4,6 +4,54 @@
   "slab": {
     "outline": [[-105, -75], [105, -75], [105, -10], [151, 2], [140, 55], [105, 46], [105, 75], [-105, 75]],
     "source": "trtc-info-b1", "confidence": 2,
-    "note": "站體矩形＋東翼（R 線站體北段上方的 B1 通廊）粗估，待 Task 10 對照 floor-1.jpg 修正"
+    "note": "站體矩形＋東翼粗估"
+  },
+  "areas": [
+    { "id": "a-tc-corridor", "kind": "corridor", "system": "shared",
+      "polygon": [[105, -8], [149, 3], [139, 53], [105, 44]],
+      "source": "trtc-info-b1", "confidence": 2, "note": "東翼通廊：B3 長梯與電梯降落區" },
+    { "id": "a-tc-unpaid-e", "kind": "unpaid", "system": "tra",
+      "polygon": [[80, -40], [105, -40], [105, 60], [80, 60]],
+      "source": "tra-b1-map", "confidence": 2, "note": "站體東側非付費帶" },
+    { "id": "a-tc-tra-paid", "kind": "paid", "system": "tra",
+      "polygon": [[-60, -50], [80, -50], [80, 55], [-60, 55]],
+      "source": "tra-b1-map", "confidence": 2, "note": "臺鐵付費區（局部；西側未建）" }
+  ],
+  "units": [
+    { "id": "u-tc-ticket-office", "kind": "room",
+      "polygon": [[30, -45], [60, -45], [60, -30], [30, -30]],
+      "height": 3.5, "source": "tra-b1-map", "confidence": 2, "note": "售票處示意量體" },
+    { "id": "u-tc-col-1", "kind": "column", "polygon": [[-40, -1], [-38, -1], [-38, 1], [-40, 1]],
+      "height": 5, "source": "tra-b1-map", "confidence": 2 },
+    { "id": "u-tc-col-2", "kind": "column", "polygon": [[0, -1], [2, -1], [2, 1], [0, 1]],
+      "height": 5, "source": "tra-b1-map", "confidence": 2 },
+    { "id": "u-tc-col-3", "kind": "column", "polygon": [[40, -1], [42, -1], [42, 1], [40, 1]],
+      "height": 5, "source": "tra-b1-map", "confidence": 2 }
+  ],
+  "gates": [
+    { "id": "g-tc-tra-in-e", "kind": "faregate", "system": "tra", "direction": "in", "accessible": false,
+      "line": [[80, 5], [80, 15]], "connects": ["a-tc-tra-paid", "a-tc-unpaid-e"],
+      "source": "tra-b1-map", "confidence": 2, "note": "東側剪票口（離捷運最近閘口群，粗估）" },
+    { "id": "g-tc-tra-acc-e", "kind": "faregate", "system": "tra", "direction": "both", "accessible": true,
+      "line": [[80, 18], [80, 24]], "connects": ["a-tc-tra-paid", "a-tc-unpaid-e"],
+      "source": "tra-b1-map", "confidence": 2 }
+  ],
+  "nav": {
+    "nodes": [
+      { "id": "n-tc-001", "xy": [128, 30], "area": "a-tc-corridor" },
+      { "id": "n-tc-002", "xy": [92, 12], "area": "a-tc-unpaid-e" },
+      { "id": "n-tc-003", "xy": [70, 12], "area": "a-tc-tra-paid" },
+      { "id": "n-tc-004", "xy": [120, 38], "area": "a-tc-corridor" },
+      { "id": "n-tc-005", "xy": [92, 21], "area": "a-tc-unpaid-e" },
+      { "id": "n-tc-006", "xy": [70, 21], "area": "a-tc-tra-paid" }
+    ],
+    "edges": [
+      { "from": "n-tc-001", "to": "n-tc-002", "kind": "walk" },
+      { "from": "n-tc-001", "to": "n-tc-004", "kind": "walk" },
+      { "from": "n-tc-004", "to": "n-tc-005", "kind": "walk" },
+      { "from": "n-tc-002", "to": "n-tc-005", "kind": "walk" },
+      { "from": "n-tc-002", "to": "n-tc-003", "kind": "gate", "gate": "g-tc-tra-in-e", "bidir": false },
+      { "from": "n-tc-005", "to": "n-tc-006", "kind": "gate", "gate": "g-tc-tra-acc-e", "bidir": true }
+    ]
   }
 }

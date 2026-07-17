@@ -4,6 +4,20 @@
   "slab": {
     "outline": [[-105, -75], [105, -75], [105, 75], [-105, 75]],
     "source": "tra-b2-map", "confidence": 2,
-    "note": "站體矩形粗估；R 線站體豎井位於站體東側之外，不需開洞"
-  }
+    "note": "站體矩形；R 線站體豎井在站體之外，不開洞"
+  },
+  "areas": [
+    { "id": "a-tp-plat-1", "kind": "platform", "system": "tra",
+      "polygon": [[-95, -52], [95, -52], [95, -40], [-95, -40]],
+      "source": "tra-b2-map", "confidence": 2, "note": "月台帶示意；西段實為高鐵月台（簡化為 tra）" },
+    { "id": "a-tp-plat-2", "kind": "platform", "system": "tra",
+      "polygon": [[-95, -28], [95, -28], [95, -16], [-95, -16]],
+      "source": "tra-b2-map", "confidence": 2 },
+    { "id": "a-tp-plat-3", "kind": "platform", "system": "tra",
+      "polygon": [[-95, -4], [95, -4], [95, 8], [-95, 8]],
+      "source": "tra-b2-map", "confidence": 2 },
+    { "id": "a-tp-plat-4", "kind": "platform", "system": "tra",
+      "polygon": [[-95, 20], [95, 20], [95, 32], [-95, 32]],
+      "source": "tra-b2-map", "confidence": 2 }
+  ]
 }
