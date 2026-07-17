@@ -3,7 +3,33 @@
   "id": "mrt-r-platform-b4",
   "slab": {
     "outline": [[101.9, -94.3], [156.7, 56.1], [134.1, 64.3], [79.3, -86.1]],
-    "source": "trtc-info-b4", "confidence": 2,
-    "note": "與 B3 同站體範圍粗估"
+    "source": "trtc-info-b4", "confidence": 3
+  },
+  "areas": [
+    { "id": "a-rp-platform", "kind": "platform", "system": "trtc",
+      "polygon": [[99.1, -79.4], [147.3, 49.4], [137.0, 53.2], [88.8, -83.2]],
+      "source": "trtc-info-b4", "confidence": 3,
+      "note": "島式月台，長 141m 為比例基準（高運量 6 節）" },
+    { "id": "a-rp-track-e", "kind": "track", "system": "trtc",
+      "polygon": [[104.2, -85.1], [152.4, 47.5], [147.3, 49.4], [99.1, -79.4]],
+      "source": "trtc-info-b4", "confidence": 3, "note": "一月台側軌道（往淡水·北投）" },
+    { "id": "a-rp-track-w", "kind": "track", "system": "trtc",
+      "polygon": [[83.6, -77.5], [88.8, -83.2], [137.0, 53.2], [131.8, 55.1]],
+      "source": "trtc-info-b4", "confidence": 3, "note": "二月台側軌道（往象山）" }
+  ],
+  "nav": {
+    "nodes": [
+      { "id": "n-rp-001", "xy": [97.6, -71.4], "area": "a-rp-platform" },
+      { "id": "n-rp-002", "xy": [106.0, -47.9], "area": "a-rp-platform" },
+      { "id": "n-rp-003", "xy": [118.0, -15.0], "area": "a-rp-platform" },
+      { "id": "n-rp-004", "xy": [128.3, 13.2], "area": "a-rp-platform" },
+      { "id": "n-rp-005", "xy": [139.2, 43.3], "area": "a-rp-platform" }
+    ],
+    "edges": [
+      { "from": "n-rp-001", "to": "n-rp-002", "kind": "walk" },
+      { "from": "n-rp-002", "to": "n-rp-003", "kind": "walk" },
+      { "from": "n-rp-003", "to": "n-rp-004", "kind": "walk" },
+      { "from": "n-rp-004", "to": "n-rp-005", "kind": "walk" }
+    ]
   }
 }
