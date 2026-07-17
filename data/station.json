@@ -30,5 +30,6 @@
       "name": { "zh": "淡水信義線月台層", "en": "Tamsui-Xinyi Platform" },
       "labels": { "complex": "B4", "trtc": "B4 淡水信義線月台層" },
       "elevation": -28, "height": 4.5, "estimated": true }
-  ]
+  ],
+  "demo": { "start": "n-rp-003", "end": "n-rc-006" }
 }
