@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>台北車站室內 3D 導航 — Phase 1</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #14171c; color: #e8e8e8;
+      font-family: "Noto Sans TC", system-ui, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #panel { position: fixed; top: 12px; right: 12px; width: 260px; background: #1e232bcc;
+      border: 1px solid #3a4250; border-radius: 8px; padding: 12px; font-size: 14px; z-index: 10; }
+    #panel h1 { font-size: 15px; margin: 0 0 8px; }
+    #panel label { display: block; margin: 4px 0; cursor: pointer; }
+    #panel button { margin: 6px 6px 0 0; padding: 5px 10px; background: #2b5ea7; color: #fff;
+      border: 0; border-radius: 5px; cursor: pointer; }
+    #panel button:disabled { background: #444; cursor: not-allowed; }
+    #steps { margin: 8px 0 0; padding-left: 20px; max-height: 40vh; overflow-y: auto; }
+    #overlay { position: fixed; inset: 0; background: #000c; color: #ff8080; padding: 24px;
+      white-space: pre-wrap; font-family: monospace; display: none; z-index: 99; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="panel">
+    <h1>台北車站 Phase 1</h1>
+    <div id="floors"></div>
+    <label>樓層透明度 <input id="opacity" type="range" min="10" max="100" value="60" /></label>
+    <button id="btn-route">一般路徑</button>
+    <button id="btn-route-acc">無障礙路徑</button>
+    <button id="btn-clear">清除</button>
+    <ol id="steps"></ol>
+  </div>
+  <div id="overlay"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
