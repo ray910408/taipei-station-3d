@@ -1,0 +1,9 @@
+{
+  "schema": "floor@1",
+  "id": "mrt-r-concourse-b3",
+  "slab": {
+    "outline": [[101.9, -94.3], [156.7, 56.1], [134.1, 64.3], [79.3, -86.1]],
+    "source": "trtc-info-b3", "confidence": 2,
+    "note": "R 線站體 N20°E 斜矩形（長 160 寬 24）粗估"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "station@1",
+  "id": "taipei-main-station",
+  "name": { "zh": "台北車站", "en": "Taipei Main Station" },
+  "frame": {
+    "units": "m",
+    "origin_note": "臺鐵站體中心",
+    "axis_note": "+X 沿臺鐵站體長軸約東向，+Y 約北向；R 線站體長軸約 N20°E",
+    "bearing_deg": 90,
+    "bearing_status": "estimated"
+  },
+  "systems": {
+    "trtc": { "name": { "zh": "台北捷運" }, "color": "#e3002c" },
+    "tra":  { "name": { "zh": "臺鐵" },    "color": "#0070bd" }
+  },
+  "floors": [
+    { "id": "tra-concourse-b1", "short": "tc", "file": "floors/tra-concourse-b1.json",
+      "name": { "zh": "臺鐵穿堂層", "en": "TRA Concourse" },
+      "labels": { "complex": "B1", "trtc": "B1", "tra": "B1" },
+      "elevation": -8, "height": 5, "estimated": true },
+    { "id": "tra-platform-b2", "short": "tp", "file": "floors/tra-platform-b2.json",
+      "name": { "zh": "臺鐵/高鐵月台層", "en": "TRA/HSR Platforms" },
+      "labels": { "complex": "B2", "tra": "B2 月台層", "trtc": "B2 板南線大廳層" },
+      "elevation": -14, "height": 4.5, "estimated": true },
+    { "id": "mrt-r-concourse-b3", "short": "rc", "file": "floors/mrt-r-concourse-b3.json",
+      "name": { "zh": "淡水信義線大廳層", "en": "Tamsui-Xinyi Concourse" },
+      "labels": { "complex": "B3", "trtc": "B3 淡水信義線大廳層", "tra": "B3 轉乘層" },
+      "elevation": -21, "height": 4.5, "estimated": true },
+    { "id": "mrt-r-platform-b4", "short": "rp", "file": "floors/mrt-r-platform-b4.json",
+      "name": { "zh": "淡水信義線月台層", "en": "Tamsui-Xinyi Platform" },
+      "labels": { "complex": "B4", "trtc": "B4 淡水信義線月台層" },
+      "elevation": -28, "height": 4.5, "estimated": true }
+  ]
+}
