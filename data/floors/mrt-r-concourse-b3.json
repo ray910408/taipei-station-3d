@@ -3,7 +3,75 @@
   "id": "mrt-r-concourse-b3",
   "slab": {
     "outline": [[101.9, -94.3], [156.7, 56.1], [134.1, 64.3], [79.3, -86.1]],
-    "source": "trtc-info-b3", "confidence": 2,
-    "note": "R 線站體 N20°E 斜矩形（長 160 寬 24）粗估"
+    "source": "trtc-info-b3", "confidence": 3
+  },
+  "areas": [
+    { "id": "a-rc-paid", "kind": "paid", "system": "trtc",
+      "polygon": [[106.1, -79.9], [135.8, 1.9], [115.2, 9.5], [85.5, -72.3]],
+      "source": "trtc-info-b3", "confidence": 2,
+      "note": "捷運付費區帶 t∈[-65,22]、s∈[-11,11]（自 slab 內縮 1m）" },
+    { "id": "a-rc-unpaid-n", "kind": "unpaid", "system": "trtc",
+      "polygon": [[135.8, 1.9], [155.0, 54.5], [134.4, 62.1], [115.2, 9.5]],
+      "source": "trtc-info-b3", "confidence": 2, "note": "北非付費區 t∈[22,78]" },
+    { "id": "a-rc-tra-paid", "kind": "paid", "system": "tra",
+      "polygon": [[126.2, 19.3], [133.0, 38.1], [126.5, 40.5], [119.7, 21.7]],
+      "source": "tra-b3-map", "confidence": 2,
+      "note": "臺鐵轉乘付費梯區 t∈[35,55]、s∈[-11,-4]；與 a-rc-unpaid-n 重疊屬預期（畫在其上）" }
+  ],
+  "units": [
+    { "id": "u-rc-tra-ticket", "kind": "room",
+      "polygon": [[131.0, 55.0], [138.0, 57.5], [136.5, 61.5], [129.5, 59.0]],
+      "height": 3, "source": "tra-b3-map", "confidence": 2, "note": "臺鐵售票處（示意量體）" }
+  ],
+  "gates": [
+    { "id": "g-rc-out-n", "kind": "faregate", "system": "trtc", "direction": "out", "accessible": false,
+      "line": [[123.0, 4.5], [128.6, 2.5]], "connects": ["a-rc-paid", "a-rc-unpaid-n"],
+      "source": "trtc-info-b3", "confidence": 2 },
+    { "id": "g-rc-in-n", "kind": "faregate", "system": "trtc", "direction": "in", "accessible": false,
+      "line": [[129.5, 5.0], [133.2, 3.7]], "connects": ["a-rc-paid", "a-rc-unpaid-n"],
+      "source": "trtc-info-b3", "confidence": 2 },
+    { "id": "g-rc-acc-n", "kind": "faregate", "system": "trtc", "direction": "both", "accessible": true,
+      "line": [[134.0, 6.5], [137.0, 5.4]], "connects": ["a-rc-paid", "a-rc-unpaid-n"],
+      "source": "trtc-info-b3", "confidence": 2 },
+    { "id": "g-rc-tra-in", "kind": "faregate", "system": "tra", "direction": "in", "accessible": false,
+      "line": [[133.0, 62.0], [137.5, 60.4]], "connects": ["a-rc-tra-paid", "a-rc-unpaid-n"],
+      "source": "tra-b3-map", "confidence": 2 },
+    { "id": "g-rc-tra-acc", "kind": "faregate", "system": "tra", "direction": "both", "accessible": true,
+      "line": [[138.5, 60.0], [141.0, 59.1]], "connects": ["a-rc-tra-paid", "a-rc-unpaid-n"],
+      "source": "tra-b3-map", "confidence": 2 }
+  ],
+  "nav": {
+    "nodes": [
+      { "id": "n-rc-001", "xy": [99.2, -66.7], "area": "a-rc-paid" },
+      { "id": "n-rc-002", "xy": [123.1, -0.9], "area": "a-rc-paid" },
+      { "id": "n-rc-003", "xy": [124.5, 2.9], "area": "a-rc-paid" },
+      { "id": "n-rc-004", "xy": [126.9, 9.4], "area": "a-rc-unpaid-n" },
+      { "id": "n-rc-005", "xy": [130.5, 25.2], "area": "a-rc-unpaid-n" },
+      { "id": "n-rc-006", "xy": [124.9, 27.2], "area": "a-rc-tra-paid" },
+      { "id": "n-rc-007", "xy": [141.3, 48.9], "area": "a-rc-unpaid-n" },
+      { "id": "n-rc-008", "xy": [130.1, 0.8], "area": "a-rc-paid" },
+      { "id": "n-rc-009", "xy": [132.5, 7.3], "area": "a-rc-unpaid-n" },
+      { "id": "n-rc-010", "xy": [106.0, -47.9], "area": "a-rc-paid" },
+      { "id": "n-rc-011", "xy": [142.3, 40.0], "area": "a-rc-unpaid-n" },
+      { "id": "n-rc-012", "xy": [127.3, 1.9], "area": "a-rc-paid" },
+      { "id": "n-rc-013", "xy": [129.7, 8.4], "area": "a-rc-unpaid-n" }
+    ],
+    "edges": [
+      { "from": "n-rc-001", "to": "n-rc-010", "kind": "walk" },
+      { "from": "n-rc-010", "to": "n-rc-002", "kind": "walk" },
+      { "from": "n-rc-002", "to": "n-rc-003", "kind": "walk" },
+      { "from": "n-rc-002", "to": "n-rc-008", "kind": "walk" },
+      { "from": "n-rc-002", "to": "n-rc-012", "kind": "walk" },
+      { "from": "n-rc-003", "to": "n-rc-004", "kind": "gate", "gate": "g-rc-out-n", "bidir": false },
+      { "from": "n-rc-013", "to": "n-rc-012", "kind": "gate", "gate": "g-rc-in-n", "bidir": false },
+      { "from": "n-rc-008", "to": "n-rc-009", "kind": "gate", "gate": "g-rc-acc-n", "bidir": true },
+      { "from": "n-rc-004", "to": "n-rc-005", "kind": "walk" },
+      { "from": "n-rc-009", "to": "n-rc-005", "kind": "walk" },
+      { "from": "n-rc-013", "to": "n-rc-005", "kind": "walk" },
+      { "from": "n-rc-005", "to": "n-rc-007", "kind": "walk" },
+      { "from": "n-rc-007", "to": "n-rc-011", "kind": "walk" },
+      { "from": "n-rc-005", "to": "n-rc-006", "kind": "gate", "gate": "g-rc-tra-in", "bidir": false },
+      { "from": "n-rc-005", "to": "n-rc-006", "kind": "gate", "gate": "g-rc-tra-acc", "bidir": true }
+    ]
   }
 }
