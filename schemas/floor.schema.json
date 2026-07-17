@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "floor.schema.json",
+  "type": "object",
+  "required": ["schema", "id", "slab"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "floor@1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "slab": {
+      "type": "object",
+      "required": ["outline", "source", "confidence"],
+      "unevaluatedProperties": false,
+      "allOf": [{ "$ref": "#/$defs/prov" }],
+      "properties": {
+        "outline": { "$ref": "#/$defs/ring" },
+        "holes": { "type": "array", "items": { "$ref": "#/$defs/ring" } }
+      }
+    },
+    "areas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "system", "polygon", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "$ref": "#/$defs/eid" },
+          "kind": { "enum": ["platform", "paid", "unpaid", "corridor", "track", "restricted"] },
+          "system": { "type": "string", "minLength": 1 },
+          "polygon": { "$ref": "#/$defs/ring" }
+        }
+      }
+    },
+    "walls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "polyline", "height", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "$ref": "#/$defs/eid" },
+          "polyline": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vec2" } },
+          "height": { "type": "number", "exclusiveMinimum": 0 },
+          "width": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "polygon", "height", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "$ref": "#/$defs/eid" },
+          "kind": { "enum": ["column", "shop", "room", "machine", "stair-void"] },
+          "polygon": { "$ref": "#/$defs/ring" },
+          "height": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "system", "direction", "accessible", "line", "connects", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "$ref": "#/$defs/eid" },
+          "kind": { "const": "faregate" },
+          "system": { "type": "string", "minLength": 1 },
+          "direction": { "enum": ["in", "out", "both"] },
+          "accessible": { "type": "boolean" },
+          "line": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/vec2" } },
+          "connects": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string" } }
+        }
+      }
+    },
+    "pois": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "position", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "$ref": "#/$defs/eid" },
+          "kind": { "enum": ["tvm", "info", "toilet", "exit", "sign"] },
+          "system": { "type": "string" },
+          "position": { "$ref": "#/$defs/vec2" },
+          "name": { "type": "object", "required": ["zh"], "additionalProperties": false,
+            "properties": { "zh": { "type": "string" }, "en": { "type": "string" } } }
+        }
+      }
+    },
+    "nav": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "xy"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^n-[a-z]{2}-[a-z0-9-]+$" },
+              "xy": { "$ref": "#/$defs/vec2" },
+              "area": { "type": "string" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "kind": { "enum": ["walk", "gate", "platform-edge"] },
+              "gate": { "type": "string" },
+              "bidir": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vec2": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+    "ring": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/vec2" } },
+    "eid": { "type": "string", "pattern": "^[a-z]+-[a-z]{2}-[a-z0-9-]+$" },
+    "prov": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "status": { "enum": ["estimated", "traced", "verified"] },
+        "note": { "type": "string" }
+      },
+      "required": ["source", "confidence"]
+    }
+  }
+}

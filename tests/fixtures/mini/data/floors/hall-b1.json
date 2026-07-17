@@ -1,0 +1,31 @@
+{
+  "schema": "floor@1",
+  "id": "hall-b1",
+  "slab": { "outline": [[-10, -5], [10, -5], [10, 5], [-10, 5]], "source": "test-src", "confidence": 5 },
+  "areas": [
+    { "id": "a-ha-paid", "kind": "paid", "system": "test",
+      "polygon": [[-10, -5], [0, -5], [0, 5], [-10, 5]], "source": "test-src", "confidence": 5 },
+    { "id": "a-ha-unpaid", "kind": "unpaid", "system": "test",
+      "polygon": [[0, -5], [10, -5], [10, 5], [0, 5]], "source": "test-src", "confidence": 5 }
+  ],
+  "gates": [
+    { "id": "g-ha-out", "kind": "faregate", "system": "test", "direction": "out", "accessible": false,
+      "line": [[0, -1], [0, 1]], "connects": ["a-ha-paid", "a-ha-unpaid"], "source": "test-src", "confidence": 5 },
+    { "id": "g-ha-acc", "kind": "faregate", "system": "test", "direction": "both", "accessible": true,
+      "line": [[0, 2], [0, 4]], "connects": ["a-ha-paid", "a-ha-unpaid"], "source": "test-src", "confidence": 5 }
+  ],
+  "nav": {
+    "nodes": [
+      { "id": "n-ha-001", "xy": [-5, 0], "area": "a-ha-paid" },
+      { "id": "n-ha-002", "xy": [2, 0], "area": "a-ha-unpaid" },
+      { "id": "n-ha-003", "xy": [-5, 3], "area": "a-ha-paid" },
+      { "id": "n-ha-004", "xy": [2, 3], "area": "a-ha-unpaid" }
+    ],
+    "edges": [
+      { "from": "n-ha-001", "to": "n-ha-002", "kind": "gate", "gate": "g-ha-out", "bidir": false },
+      { "from": "n-ha-003", "to": "n-ha-004", "kind": "gate", "gate": "g-ha-acc", "bidir": true },
+      { "from": "n-ha-001", "to": "n-ha-003", "kind": "walk" },
+      { "from": "n-ha-002", "to": "n-ha-004", "kind": "walk" }
+    ]
+  }
+}

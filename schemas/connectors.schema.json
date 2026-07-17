@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "connectors.schema.json",
+  "type": "object",
+  "required": ["schema", "connectors"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "connectors@1" },
+    "connectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "system", "direction", "accessible", "levels", "source", "confidence"],
+        "unevaluatedProperties": false,
+        "allOf": [{ "$ref": "#/$defs/prov" }],
+        "properties": {
+          "id": { "type": "string", "pattern": "^c-(esc|stair|elv)-[a-z]{4}-[0-9]+$" },
+          "kind": { "enum": ["stair", "escalator", "elevator"] },
+          "system": { "type": "string", "minLength": 1 },
+          "direction": { "enum": ["up", "down", "both"] },
+          "accessible": { "type": "boolean" },
+          "levels": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["floor", "node"],
+              "additionalProperties": false,
+              "properties": { "floor": { "type": "string" }, "node": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "prov": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "status": { "enum": ["estimated", "traced", "verified"] },
+        "note": { "type": "string" }
+      },
+      "required": ["source", "confidence"]
+    }
+  }
+}

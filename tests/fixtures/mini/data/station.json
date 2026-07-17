@@ -1,0 +1,16 @@
+{
+  "schema": "station@1",
+  "id": "mini-station",
+  "name": { "zh": "迷你測試站" },
+  "frame": { "units": "m", "origin_note": "測試原點", "axis_note": "+X 東 +Y 北" },
+  "systems": { "test": { "name": { "zh": "測試系統" }, "color": "#888888" } },
+  "floors": [
+    { "id": "hall-b1", "short": "ha", "file": "floors/hall-b1.json",
+      "name": { "zh": "測試大廳" }, "labels": { "complex": "B1" },
+      "elevation": -4, "height": 3, "estimated": true },
+    { "id": "plat-b2", "short": "pl", "file": "floors/plat-b2.json",
+      "name": { "zh": "測試月台" }, "labels": { "complex": "B2" },
+      "elevation": -9, "height": 3, "estimated": true }
+  ],
+  "demo": { "start": "n-pl-001", "end": "n-ha-002" }
+}

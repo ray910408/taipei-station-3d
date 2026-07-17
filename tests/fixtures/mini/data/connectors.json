@@ -1,0 +1,11 @@
+{
+  "schema": "connectors@1",
+  "connectors": [
+    { "id": "c-esc-plha-1", "kind": "escalator", "system": "test", "direction": "up", "accessible": false,
+      "levels": [{ "floor": "plat-b2", "node": "n-pl-001" }, { "floor": "hall-b1", "node": "n-ha-001" }],
+      "source": "test-src", "confidence": 5 },
+    { "id": "c-elv-plha-1", "kind": "elevator", "system": "test", "direction": "both", "accessible": true,
+      "levels": [{ "floor": "plat-b2", "node": "n-pl-002" }, { "floor": "hall-b1", "node": "n-ha-003" }],
+      "source": "test-src", "confidence": 5 }
+  ]
+}

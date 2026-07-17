@@ -1,0 +1,16 @@
+{
+  "schema": "floor@1",
+  "id": "plat-b2",
+  "slab": { "outline": [[-10, -5], [10, -5], [10, 5], [-10, 5]], "source": "test-src", "confidence": 5 },
+  "areas": [
+    { "id": "a-pl-platform", "kind": "platform", "system": "test",
+      "polygon": [[-10, -5], [10, -5], [10, 5], [-10, 5]], "source": "test-src", "confidence": 5 }
+  ],
+  "nav": {
+    "nodes": [
+      { "id": "n-pl-001", "xy": [-5, 0], "area": "a-pl-platform" },
+      { "id": "n-pl-002", "xy": [0, 0], "area": "a-pl-platform" }
+    ],
+    "edges": [{ "from": "n-pl-001", "to": "n-pl-002", "kind": "walk" }]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "schema": "sources@1",
+  "sources": [{ "id": "test-src", "title": "測試來源", "file": "refs/none.png" }]
+}
