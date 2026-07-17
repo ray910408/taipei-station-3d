@@ -9,6 +9,8 @@
 
 > 淡水信義線月台 → 淡水信義線大廳 → 捷運與臺鐵轉乘通道 → 臺鐵指定剪票口（臺鐵穿堂局部）
 
+**「指定剪票口」定案（2026-07-17）**：demo 終點 = **B3 淡水信義線大廳北段的臺鐵轉乘閘門**——2025.12 版北捷官方剖面圖與臺鐵 B3「轉乘層」圖佐證：B3 大廳設有臺鐵售票處與轉乘閘門，進閘後直接搭梯上臺鐵月台（複合體 B2），高鐵亦有對應轉乘區。B1 臺鐵穿堂局部與 B3→B1 長電扶梯仍在建模範圍（對應「或大廳局部」），但非 demo 主線。
+
 **成功標準（Phase 1 完成的定義）**：
 
 1. 四個樓層 JSON + 全站索引 + 垂直設施檔全部通過 `npm run validate`。
@@ -118,6 +120,8 @@ schemas/
 ```
 
 `floors[]` 依高程由高至低排列；`elevation`/`height` 全部 `estimated: true`（初版概估：tc -8 / tp -15 / rc -22 / rp -29，樓高 4–5 m）。
+
+選填 `demo: {"start": "<node id>", "end": "<node id>"}`：demo 路徑起訖節點；資料未完成前可省略，viewer 據此啟用/停用 demo 按鈕。
 
 ### 5.2 樓層檔（floor@1）
 
@@ -247,14 +251,14 @@ Vite + TypeScript + three.js，無 UI 框架。TS 介面手寫於 `src/types.ts`
 
 | 模組 | 職責 |
 |---|---|
-| `src/loader.ts` | fetch 全部 JSON；dev 模式跑 ajv 驗證，失敗顯示錯誤 overlay（含檔名與 JSON path），不白屏；組成 `StationModel` |
+| `src/loader.ts` | 以 Vite JSON import 載入全部資料檔（dev 與 build 皆可用、資料變更觸發熱重載）；ajv 驗證失敗顯示錯誤 overlay（含檔名與 JSON path），不白屏；組成 `StationModel` |
 | `src/builder.ts` | 純函式 `StationModel → THREE.Group`：slab 以固定 0.3 m 厚薄板 extrude（含 holes）、areas 半透明染色面（paid/unpaid/corridor/platform 各色、track 下沉 1.1 m）、slab 輪廓自動生成半透明外殼立面、walls/units extrude、gates 畫閘門柱示意、connectors 依兩端 node 座標與樓層高程生成斜坡（stair/escalator）或豎井（elevator） |
 | `src/nav.ts` | 合成全站有向圖：層內 edges（`bidir` 展開雙向）+ connectors 展開為跨層 edges（`direction` 決定向性）；A*（3D 歐氏 heuristic）；`accessible` 模式過濾 `accessible === false` 的 connector 與 gate edge |
 | `src/path.ts` | 路徑折線 → 發光管線（TubeGeometry），跨層沿 connector 斜行；由 edge kind 序列生成文字步驟（直行/搭電扶梯上一層/出閘門/…） |
 | `src/ui.ts` | 樓層開關與透明度、OrbitControls、demo 按鈕、無障礙模式 checkbox |
 | `src/main.ts` | 組裝與啟動 |
 
-**Demo 硬編**：起點 `n-rp-*`（R 線月台中段）、終點 `n-tc-*`（臺鐵指定剪票口前）。一般模式走電扶梯路線；無障礙模式應改走電梯鏈。
+**Demo 起訖**：由 `station.json` 選填欄位 `demo: {"start": "<node id>", "end": "<node id>"}` 提供（資料未完成前可省略，UI 停用按鈕）。起點 = R 線月台中段節點、終點 = B3 臺鐵轉乘閘門內側節點。一般模式走電扶梯；無障礙模式改走電梯與無障礙閘門。
 
 ## 7. 驗證與測試
 
@@ -284,8 +288,8 @@ Vite + TypeScript + three.js，無 UI 框架。TS 介面手寫於 `src/types.ts`
 
 | 疑點 | 影響 | 粗版假設 |
 |---|---|---|
-| B3 R 大廳 → B1 臺鐵穿堂的電扶梯是否直達（穿越 B2 豎井）、位置與數量 | 轉乘動線正確性 | 直達，confidence 2 |
-| 「臺鐵指定剪票口」是哪一組閘門（離捷運轉乘最近者） | demo 終點 | 取穿堂南側最近閘門群，confidence 2 |
+| ~~B3→B1 電扶梯是否存在~~ **已解決**：官方剖面圖確認 B3↔B1/地面長電扶梯存在；B3 大廳北段設臺鐵轉乘區（售票處＋轉乘閘門直上臺鐵月台），高鐵亦同 | 轉乘動線 | 依剖面圖與臺鐵 B3 圖描繪，confidence 3；閘門精確位置 confidence 2 |
+| ~~「臺鐵指定剪票口」是哪組閘門~~ **已定案**（使用者 2026-07-17）：demo 終點 = B3 臺鐵轉乘閘門；B1 穿堂剪票口仍建模但非 demo 主線 | demo 終點 | — |
 | R 線月台實際尺寸與大廳輪廓比例 | 全域比例尺 | 月台長 141 m 為基準推算 |
 | 無障礙動線：月台電梯 → B3 無障礙閘門 → B1 電梯鏈是否成立 | 無障礙 demo | 各層放一部估計位置電梯，confidence 2 |
 | 樓層高程 | 疊層視覺 | tc -8 / tp -15 / rc -22 / rp -29 m，全部 estimated |
