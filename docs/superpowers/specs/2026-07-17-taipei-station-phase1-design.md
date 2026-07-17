@@ -243,7 +243,7 @@ schemas/
 
 - area `a-rc-paid`、wall `w-rc-1`、unit `u-tc-shop-1`、gate `g-tc-tra-s-1`、poi `p-tc-tvm-1`
 - nav node `n-rp-001`（floor short 內嵌，validator 檢查前綴與所在檔一致）
-- connector `c-{esc|stair|elv}-{低樓short}{高樓short}-{序號}`，如 `c-esc-rp-rc-1`
+- connector `c-{esc|stair|elv}-{低樓short}{高樓short}-{序號}`，如 `c-esc-rprc-1`（兩個 short 直接相連）
 
 ## 6. Viewer 架構
 
