@@ -66,3 +66,20 @@ export interface StationModel {
   floors: Map<string, FloorDoc>;
   connectors: Connector[];
 }
+
+export interface CalibrationControlPoint { px: Vec2; local: Vec2 }
+
+export interface Calibration {
+  px_per_m: number;
+  basis: string;
+  status: 'estimated' | 'surveyed';
+  control_points?: [CalibrationControlPoint, CalibrationControlPoint];
+}
+
+export interface SourceRef {
+  id: string; title: string; file: string;
+  url?: string; captured?: string; license_note?: string;
+  calibration?: Calibration;
+}
+
+export interface SourcesDoc { schema: 'sources@1'; sources: SourceRef[] }

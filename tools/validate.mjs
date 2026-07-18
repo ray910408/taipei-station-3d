@@ -77,6 +77,7 @@ export function validateDocs(docs) {
   if (errors.length) return { errors, warnings }; // schema 壞了就不做後續檢查
 
   const sourceIds = new Set(sources.sources.map((s) => s.id));
+  const sourceHasCalib = new Set(sources.sources.filter((s) => s.calibration).map((s) => s.id));
   const systemIds = new Set([...Object.keys(station.systems), 'shared']);
   const floorMeta = new Map(station.floors.map((f) => [f.id, f]));
   const allIds = new Map(); // id -> 所在描述，全域唯一檢查
@@ -88,6 +89,8 @@ export function validateDocs(docs) {
 
   const checkProv = (obj, where) => {
     if (!sourceIds.has(obj.source)) errors.push(`[ref] ${where} source "${obj.source}" 不存在於 refs/sources.json`);
+    else if (obj.status === 'traced' && !sourceHasCalib.has(obj.source))
+      warnings.push(`[sem] ${where} status=traced 但來源 "${obj.source}" 無 calibration`);
   };
 
   // 2–4. 各樓層檢查
@@ -170,6 +173,19 @@ export function validateDocs(docs) {
         }
       }
     }
+  }
+
+  // sources：calibration 控制點與 px_per_m 一致性
+  for (const s of sources.sources) {
+    const cal = s.calibration;
+    if (!cal?.control_points) continue;
+    const [p, q] = cal.control_points;
+    const dpx = Math.hypot(q.px[0] - p.px[0], q.px[1] - p.px[1]);
+    const dloc = Math.hypot(q.local[0] - p.local[0], q.local[1] - p.local[1]);
+    if (dpx === 0 || dloc === 0) { errors.push(`[geom] source ${s.id} calibration 控制點重複`); continue; }
+    const derived = dpx / dloc;
+    if (Math.abs(derived - cal.px_per_m) / derived > 0.02)
+      warnings.push(`[sem] source ${s.id} px_per_m ${cal.px_per_m} 與控制點推導值 ${derived.toFixed(2)} 差逾 2%`);
   }
 
   // connectors

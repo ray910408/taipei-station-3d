@@ -27,7 +27,21 @@
             "properties": {
               "px_per_m": { "type": "number", "exclusiveMinimum": 0 },
               "basis": { "type": "string" },
-              "status": { "enum": ["estimated", "surveyed"] }
+              "status": { "enum": ["estimated", "surveyed"] },
+              "control_points": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": ["px", "local"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "px": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+                    "local": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } }
+                  }
+                }
+              }
             }
           }
         }

@@ -68,4 +68,35 @@ describe('validateDocs', () => {
     const { errors } = validateDocs(docs);
     expect(errors.some((e) => e.includes('c-esc-plha-1'))).toBe(true);
   });
+
+  it('calibration：px_per_m 與控制點不一致 → warning', () => {
+    const docs = freshDocs();
+    (docs.sources as any).sources[0].calibration = {
+      px_per_m: 99, basis: '測試', status: 'estimated',
+      control_points: [
+        { px: [0, 0], local: [0, 0] },
+        { px: [100, 0], local: [10, 0] },
+      ],
+    };
+    const { errors, warnings } = validateDocs(docs);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes('test-src') && w.includes('px_per_m'))).toBe(true);
+  });
+
+  it('calibration：控制點重複 → error', () => {
+    const docs = freshDocs();
+    (docs.sources as any).sources[0].calibration = {
+      px_per_m: 10, basis: '測試', status: 'estimated',
+      control_points: [{ px: [5, 5], local: [0, 0] }, { px: [5, 5], local: [10, 0] }],
+    };
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('控制點重複'))).toBe(true);
+  });
+
+  it('status=traced 但來源無 calibration → warning', () => {
+    const docs = freshDocs();
+    (docs.floors.get('hall-b1') as any).slab.status = 'traced';
+    const { warnings } = validateDocs(docs);
+    expect(warnings.some((w) => w.includes('traced') && w.includes('test-src'))).toBe(true);
+  });
 });
