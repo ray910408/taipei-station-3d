@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-// @ts-expect-error -- 專案未安裝 @types/node，但 Vitest runtime 提供 Node API
 import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-// @ts-expect-error -- 專案未安裝 @types/node，但 Vitest runtime 提供 Node API
 import { tmpdir } from 'node:os';
-// @ts-expect-error -- 專案未安裝 @types/node，但 Vitest runtime 提供 Node API
 import path from 'node:path';
 import { applySave } from '../tools/save-handler.mjs';
 import { formatDataJson } from '../tools/format-data.mjs';
