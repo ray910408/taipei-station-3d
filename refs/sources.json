@@ -77,7 +77,22 @@
       "file": "refs/tra-taipei-station/b1-to-2f-map.jpg",
       "url": "https://tip.railway.gov.tw/tra-tip-web/tip/img/869f5722-348f-4de2-89ef-0cc727940cb9/1140x900",
       "captured": "2026-07-14",
-      "license_note": "臺鐵公開站圖"
+      "license_note": "臺鐵公開站圖",
+      "calibration": {
+        "px_per_m": 5.66,
+        "basis": "等角立體圖近似：東剪票口列中心/台北地下街北口 兩對應點；僅東半局部有效，全域有投影變形",
+        "status": "estimated",
+        "control_points": [
+          {
+            "px": [1000, 1950],
+            "local": [82, 8]
+          },
+          {
+            "px": [690, 1437],
+            "local": [0, 75]
+          }
+        ]
+      }
     },
     {
       "id": "tra-b2-map",
@@ -85,7 +100,22 @@
       "file": "refs/tra-taipei-station/b2-map.jpg",
       "url": "https://tip.railway.gov.tw/tra-tip-web/tip/img/0a00114c-3667-4e2f-a897-78b2864d8eba/1140x900",
       "captured": "2026-07-14",
-      "license_note": "臺鐵公開站圖"
+      "license_note": "臺鐵公開站圖",
+      "calibration": {
+        "px_per_m": 22.19,
+        "basis": "平面示意圖：第四月台北緣西端/第一月台南緣東端 對齊站體框架（帶距依圖、長寬示意）",
+        "status": "estimated",
+        "control_points": [
+          {
+            "px": [359, 782],
+            "local": [-95, 32]
+          },
+          {
+            "px": [4412, 2977],
+            "local": [95, -52]
+          }
+        ]
+      }
     },
     {
       "id": "tra-b3-map",

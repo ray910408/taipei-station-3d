@@ -12,9 +12,10 @@
       [105, 75],
       [-105, 75]
     ],
-    "source": "trtc-info-b1",
+    "source": "tra-b1-map",
     "confidence": 2,
-    "note": "站體矩形＋東翼粗估"
+    "status": "traced",
+    "note": "站體矩形＋東翼（往 R 線 B3 通廊）；等角底圖僅供比例參考"
   },
   "areas": [
     {
@@ -27,37 +28,40 @@
         [139, 53],
         [105, 44]
       ],
-      "source": "trtc-info-b1",
+      "source": "tra-b1-map",
       "confidence": 2,
-      "note": "東翼通廊：B3 長梯與電梯降落區"
+      "status": "traced",
+      "note": "東翼通廊：B3 長梯與電梯降落區（往捷運淡水線/中山地下街出入口）"
     },
     {
       "id": "a-tc-unpaid-e",
       "kind": "unpaid",
       "system": "tra",
       "polygon": [
-        [80, -40],
-        [105, -40],
+        [82, -60],
+        [105, -60],
         [105, 60],
-        [80, 60]
+        [82, 60]
       ],
       "source": "tra-b1-map",
       "confidence": 2,
-      "note": "站體東側非付費帶"
+      "status": "traced",
+      "note": "站體東側非付費帶（東剪票口外）"
     },
     {
       "id": "a-tc-tra-paid",
       "kind": "paid",
       "system": "tra",
       "polygon": [
-        [-60, -50],
-        [80, -50],
-        [80, 55],
-        [-60, 55]
+        [12, -55],
+        [82, -55],
+        [82, 55],
+        [12, 55]
       ],
       "source": "tra-b1-map",
       "confidence": 2,
-      "note": "臺鐵付費區（局部；西側未建）"
+      "status": "traced",
+      "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
     }
   ],
   "units": [
@@ -65,54 +69,59 @@
       "id": "u-tc-ticket-office",
       "kind": "room",
       "polygon": [
-        [30, -45],
-        [60, -45],
-        [60, -30],
-        [30, -30]
+        [20, 42],
+        [45, 42],
+        [45, 52],
+        [20, 52]
       ],
       "height": 3.5,
       "source": "tra-b1-map",
       "confidence": 2,
-      "note": "售票處示意量體"
+      "status": "traced",
+      "note": "售票／服務設施示意量體（東島北緣）"
     },
     {
       "id": "u-tc-col-1",
       "kind": "column",
       "polygon": [
-        [-40, -1],
-        [-38, -1],
-        [-38, 1],
-        [-40, 1]
+        [20, -1],
+        [22, -1],
+        [22, 1],
+        [20, 1]
       ],
       "height": 5,
       "source": "tra-b1-map",
-      "confidence": 2
+      "confidence": 2,
+      "status": "traced",
+      "note": "柱位底圖無標示，結構跨距示意（28m 網格）"
     },
     {
       "id": "u-tc-col-2",
       "kind": "column",
       "polygon": [
-        [0, -1],
-        [2, -1],
-        [2, 1],
-        [0, 1]
+        [48, -1],
+        [50, -1],
+        [50, 1],
+        [48, 1]
       ],
       "height": 5,
       "source": "tra-b1-map",
-      "confidence": 2
+      "confidence": 2,
+      "status": "traced"
     },
     {
       "id": "u-tc-col-3",
       "kind": "column",
       "polygon": [
-        [40, -1],
-        [42, -1],
-        [42, 1],
-        [40, 1]
+        [76, -1],
+        [78, -1],
+        [78, 1],
+        [76, 1]
       ],
       "height": 5,
       "source": "tra-b1-map",
-      "confidence": 2
+      "confidence": 2,
+      "status": "traced"
     }
   ],
   "gates": [
@@ -123,8 +132,8 @@
       "direction": "in",
       "accessible": false,
       "line": [
-        [80, 5],
-        [80, 15]
+        [82, 2],
+        [82, 12]
       ],
       "connects": [
         "a-tc-tra-paid",
@@ -132,7 +141,8 @@
       ],
       "source": "tra-b1-map",
       "confidence": 2,
-      "note": "東側剪票口（離捷運最近閘口群，粗估）"
+      "status": "traced",
+      "note": "東剪票口（東付費島東緣閘門列，等角圖 px(948-1050,1910-1995)）"
     },
     {
       "id": "g-tc-tra-acc-e",
@@ -141,15 +151,17 @@
       "direction": "both",
       "accessible": true,
       "line": [
-        [80, 18],
-        [80, 24]
+        [82, 16],
+        [82, 22]
       ],
       "connects": [
         "a-tc-tra-paid",
         "a-tc-unpaid-e"
       ],
       "source": "tra-b1-map",
-      "confidence": 2
+      "confidence": 2,
+      "status": "traced",
+      "note": "東剪票口寬閘門（推定於群北端）"
     }
   ],
   "nav": {
