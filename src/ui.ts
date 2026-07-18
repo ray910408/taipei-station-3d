@@ -31,7 +31,7 @@ export function setupUI(opts: {
     const k = Number(opacity.value) / 100;
     stationGroup.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
-      const m = mesh.material as THREE.MeshLambertMaterial | undefined;
+      const m = mesh.material as THREE.MeshStandardMaterial | undefined;
       if (m && (mesh.userData.kind === 'slab' || mesh.userData.kind === 'shell')) {
         m.opacity = (mesh.userData.kind === 'slab' ? 0.9 : 0.08) * k * (1 / 0.6);
         m.transparent = true;

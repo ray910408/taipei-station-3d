@@ -6,3 +6,4 @@ dist/
 .codegraph/
 .cursor/
 *.log
+public/models/
