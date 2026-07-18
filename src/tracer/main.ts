@@ -4,12 +4,14 @@ import { fitSimilarity, localToPx, type PxTransform } from './transform';
 import { fitView, screenToLocal, zoomAt, type ViewState } from './view';
 import { render, type RenderInput } from './render';
 import { createStore, type ToolContext, type ToolHandler, type ToolName, type TracerStore } from './store';
+import { makeCalibrateTool } from './tool-calibrate';
 import stationJson from '../../data/station.json';
 import connectorsJson from '../../data/connectors.json';
 import sourcesJson from '../../refs/sources.json';
 
 // 工具於後續任務註冊：Task 5 → calibrate；Task 6 → select/draw/nav
 const toolFactories: Partial<Record<ToolName, (ctx: ToolContext) => ToolHandler>> = {};
+toolFactories.calibrate = makeCalibrateTool;
 
 const DEFAULT_SOURCE: Record<string, string> = {
   'mrt-r-platform-b4': 'trtc-info-b4',
@@ -300,7 +302,7 @@ function boot(store: TracerStore): void {
   }
 
   resize();
-  if (!store.views[store.floorId]) store.view = fitToFloor();
+  store.view = store.views[store.floorId] ?? fitToFloor();
   invalidate();
 }
 

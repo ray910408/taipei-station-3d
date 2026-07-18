@@ -31,7 +31,22 @@
       "file": "refs/trtc-taipei-station/floor-4.jpg",
       "url": "https://web.metro.taipei/img/ALL/INFOPDF/JPG/051-4.jpg",
       "captured": "2026-07-14",
-      "license_note": "北捷公開站圖，僅作描圖參考"
+      "license_note": "北捷公開站圖，僅作描圖參考",
+      "calibration": {
+        "px_per_m": 4.08,
+        "basis": "月台面南北兩角對齊 Phase 1 幾何（月台長 141m 基準）",
+        "status": "estimated",
+        "control_points": [
+          {
+            "px": [982, 1033],
+            "local": [88.8, -83.2]
+          },
+          {
+            "px": [1158, 469],
+            "local": [147.3, 49.4]
+          }
+        ]
+      }
     },
     {
       "id": "trtc-section",
