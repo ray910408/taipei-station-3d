@@ -23,7 +23,22 @@
       "file": "refs/trtc-taipei-station/floor-3.jpg",
       "url": "https://web.metro.taipei/img/ALL/INFOPDF/JPG/051-3.jpg",
       "captured": "2026-07-14",
-      "license_note": "北捷公開站圖，僅作描圖參考"
+      "license_note": "北捷公開站圖，僅作描圖參考",
+      "calibration": {
+        "px_per_m": 4.08,
+        "basis": "同系列圖框對齊 B4 校準（電梯2/梯群豎井實測位移 +1,+19px），控制點＝B4 控制點平移",
+        "status": "estimated",
+        "control_points": [
+          {
+            "px": [983, 1052],
+            "local": [88.8, -83.2]
+          },
+          {
+            "px": [1159, 488],
+            "local": [147.3, 49.4]
+          }
+        ]
+      }
     },
     {
       "id": "trtc-info-b4",

@@ -3,13 +3,27 @@
   "id": "mrt-r-concourse-b3",
   "slab": {
     "outline": [
-      [101.9, -94.3],
-      [156.7, 56.1],
-      [134.1, 64.3],
-      [79.3, -86.1]
+      [75.5, 12.6],
+      [95.5, 10.4],
+      [99.6, 9.4],
+      [96.8, -3.6],
+      [95.8, -21.8],
+      [94, -46.3],
+      [86.6, -70.1],
+      [81.8, -83.6],
+      [83, -90.7],
+      [91.9, -92.9],
+      [99.2, -89.6],
+      [101.8, -81.7],
+      [122, -49.4],
+      [135.4, -8],
+      [144.7, 22],
+      [150.6, 41.6],
+      [79.7, 49.7]
     ],
     "source": "trtc-info-b3",
-    "confidence": 3
+    "confidence": 3,
+    "status": "traced"
   },
   "areas": [
     {
@@ -17,42 +31,79 @@
       "kind": "paid",
       "system": "trtc",
       "polygon": [
-        [106.1, -79.9],
-        [135.8, 1.9],
-        [115.2, 9.5],
-        [85.5, -72.3]
+        [125.7, 31.1],
+        [116.6, 24.7],
+        [110.8, 12.3],
+        [107.4, 0.1],
+        [96.8, -3.6],
+        [95.8, -21.8],
+        [94, -46.3],
+        [86.6, -70.1],
+        [83.2, -82.6],
+        [85.4, -84.8],
+        [92.6, -87.1],
+        [99.2, -89.6],
+        [101.8, -81.7],
+        [122, -49.4],
+        [135.4, -8],
+        [144.7, 22],
+        [143.3, 34]
       ],
       "source": "trtc-info-b3",
-      "confidence": 2,
-      "note": "捷運付費區帶 t∈[-65,22]、s∈[-11,11]（自 slab 內縮 1m）"
+      "confidence": 3,
+      "status": "traced",
+      "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
       "id": "a-rc-unpaid-n",
       "kind": "unpaid",
       "system": "trtc",
       "polygon": [
-        [135.8, 1.9],
-        [155, 54.5],
-        [134.4, 62.1],
-        [115.2, 9.5]
+        [95.5, 10.4],
+        [99.6, 9.4],
+        [97, 0.3],
+        [107.4, 0.1],
+        [110.8, 12.3],
+        [116.6, 24.7],
+        [125.7, 31.1],
+        [143.3, 34],
+        [150.6, 41.6],
+        [99.7, 47.4]
       ],
       "source": "trtc-info-b3",
-      "confidence": 2,
-      "note": "北非付費區 t∈[22,78]"
+      "confidence": 3,
+      "status": "traced",
+      "note": "北非付費轉乘廊：北閘門陣列西北側，接台鐵轉乘閘門/台鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
       "id": "a-rc-tra-paid",
       "kind": "paid",
       "system": "tra",
       "polygon": [
-        [126.2, 19.3],
-        [133, 38.1],
-        [126.5, 40.5],
-        [119.7, 21.7]
+        [75.5, 12.6],
+        [95.5, 10.4],
+        [99.7, 47.4],
+        [79.7, 49.7]
       ],
-      "source": "tra-b3-map",
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "台鐵轉乘付費區（圖示台鐵TR區，西側；高鐵區未建模）"
+    },
+    {
+      "id": "a-rc-unpaid-s",
+      "kind": "unpaid",
+      "system": "trtc",
+      "polygon": [
+        [83.6, -90.3],
+        [91.2, -92.4],
+        [92.4, -88.1],
+        [84.8, -85.7]
+      ],
+      "source": "trtc-info-b3",
       "confidence": 2,
-      "note": "臺鐵轉乘付費梯區 t∈[35,55]、s∈[-11,-4]；與 a-rc-unpaid-n 重疊屬預期（畫在其上）"
+      "status": "traced",
+      "note": "南側非付費出口帶（往忠孝西路/板南線；閘門位置推定）"
     }
   ],
   "units": [
@@ -60,35 +111,19 @@
       "id": "u-rc-tra-ticket",
       "kind": "room",
       "polygon": [
-        [131, 55],
-        [138, 57.5],
-        [136.5, 61.5],
-        [129.5, 59]
+        [87.7, 43.8],
+        [109.1, 41.4],
+        [109.6, 45.5],
+        [88.1, 48]
       ],
       "height": 3,
-      "source": "tra-b3-map",
+      "source": "trtc-info-b3",
       "confidence": 2,
-      "note": "臺鐵售票處（示意量體）"
+      "status": "traced",
+      "note": "臺鐵售票處（沿北蓋西段，示意量體）"
     }
   ],
   "gates": [
-    {
-      "id": "g-rc-out-n",
-      "kind": "faregate",
-      "system": "trtc",
-      "direction": "out",
-      "accessible": false,
-      "line": [
-        [123, 4.5],
-        [128.6, 2.5]
-      ],
-      "connects": [
-        "a-rc-paid",
-        "a-rc-unpaid-n"
-      ],
-      "source": "trtc-info-b3",
-      "confidence": 2
-    },
     {
       "id": "g-rc-in-n",
       "kind": "faregate",
@@ -96,15 +131,36 @@
       "direction": "in",
       "accessible": false,
       "line": [
-        [129.5, 5],
-        [133.2, 3.7]
+        [125.2, 30.9],
+        [119.3, 26.9]
       ],
       "connects": [
         "a-rc-paid",
         "a-rc-unpaid-n"
       ],
       "source": "trtc-info-b3",
-      "confidence": 2
+      "confidence": 3,
+      "status": "traced",
+      "note": "北閘門群進站段（詢問處1 西南）"
+    },
+    {
+      "id": "g-rc-out-n",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "out",
+      "accessible": false,
+      "line": [
+        [116.6, 24.7],
+        [112.1, 15.9]
+      ],
+      "connects": [
+        "a-rc-paid",
+        "a-rc-unpaid-n"
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "北閘門群出站段"
     },
     {
       "id": "g-rc-acc-n",
@@ -113,15 +169,17 @@
       "direction": "both",
       "accessible": true,
       "line": [
-        [134, 6.5],
-        [137, 5.4]
+        [111.8, 14.7],
+        [108.6, 3.9]
       ],
       "connects": [
         "a-rc-paid",
         "a-rc-unpaid-n"
       ],
       "source": "trtc-info-b3",
-      "confidence": 2
+      "confidence": 3,
+      "status": "traced",
+      "note": "北閘門群寬閘門（無障礙，藍線經此）"
     },
     {
       "id": "g-rc-tra-in",
@@ -130,15 +188,17 @@
       "direction": "in",
       "accessible": false,
       "line": [
-        [133, 62],
-        [137.5, 60.4]
+        [96.2, 18.9],
+        [95.6, 13.8]
       ],
       "connects": [
         "a-rc-tra-paid",
         "a-rc-unpaid-n"
       ],
-      "source": "tra-b3-map",
-      "confidence": 2
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "台鐵轉乘閘門（進台鐵付費區）"
     },
     {
       "id": "g-rc-tra-acc",
@@ -147,83 +207,157 @@
       "direction": "both",
       "accessible": true,
       "line": [
-        [138.5, 60],
-        [141, 59.1]
+        [95.6, 13.3],
+        [95.2, 9.9]
       ],
       "connects": [
         "a-rc-tra-paid",
         "a-rc-unpaid-n"
       ],
-      "source": "tra-b3-map",
-      "confidence": 2
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "台鐵轉乘寬閘門（推定於群南端）"
+    },
+    {
+      "id": "g-rc-s-1",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "in",
+      "accessible": false,
+      "line": [
+        [85.4, -84.8],
+        [87.8, -85.6]
+      ],
+      "connects": [
+        "a-rc-paid",
+        "a-rc-unpaid-s"
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "南閘門群進站段（圖未明繪，依南牆出口開口推定）"
+    },
+    {
+      "id": "g-rc-s-2",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "out",
+      "accessible": false,
+      "line": [
+        [88, -85.6],
+        [90.4, -86.3]
+      ],
+      "connects": [
+        "a-rc-paid",
+        "a-rc-unpaid-s"
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "南閘門群出站段（推定）"
+    },
+    {
+      "id": "g-rc-s-acc",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": true,
+      "line": [
+        [90.7, -86.4],
+        [92.6, -87.1]
+      ],
+      "connects": [
+        "a-rc-paid",
+        "a-rc-unpaid-s"
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "南閘門群寬閘門（推定）"
     }
   ],
   "nav": {
     "nodes": [
       {
         "id": "n-rc-001",
-        "xy": [99.2, -66.7],
+        "xy": [104.9, -60.6],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-002",
-        "xy": [123.1, -0.9],
+        "xy": [129.5, 20.8],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-003",
-        "xy": [124.5, 2.9],
+        "xy": [120.5, 22.3],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-004",
-        "xy": [126.9, 9.4],
+        "xy": [112.8, 26.4],
         "area": "a-rc-unpaid-n"
       },
       {
         "id": "n-rc-005",
-        "xy": [130.5, 25.2],
+        "xy": [102.7, 13.2],
         "area": "a-rc-unpaid-n"
       },
       {
         "id": "n-rc-006",
-        "xy": [124.9, 27.2],
+        "xy": [90.7, 16.3],
         "area": "a-rc-tra-paid"
       },
       {
         "id": "n-rc-007",
-        "xy": [141.3, 48.9],
+        "xy": [136.4, 37.8],
         "area": "a-rc-unpaid-n"
       },
       {
         "id": "n-rc-008",
-        "xy": [130.1, 0.8],
+        "xy": [113, 5.9],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-009",
-        "xy": [132.5, 7.3],
+        "xy": [106.9, 11],
         "area": "a-rc-unpaid-n"
       },
       {
         "id": "n-rc-010",
-        "xy": [106, -47.9],
+        "xy": [92.9, -81.4],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-011",
-        "xy": [142.3, 40],
+        "xy": [141.5, 39.7],
         "area": "a-rc-unpaid-n"
       },
       {
         "id": "n-rc-012",
-        "xy": [127.3, 1.9],
+        "xy": [125.1, 25.7],
         "area": "a-rc-paid"
       },
       {
         "id": "n-rc-013",
-        "xy": [129.7, 8.4],
+        "xy": [121.4, 32.1],
         "area": "a-rc-unpaid-n"
+      },
+      {
+        "id": "n-rc-014",
+        "xy": [122.2, -6.8],
+        "area": "a-rc-paid"
+      },
+      {
+        "id": "n-rc-015",
+        "xy": [89.2, -82.3],
+        "area": "a-rc-paid"
+      },
+      {
+        "id": "n-rc-016",
+        "xy": [87.9, -89],
+        "area": "a-rc-unpaid-s"
       }
     ],
     "edges": [
@@ -234,6 +368,16 @@
       },
       {
         "from": "n-rc-010",
+        "to": "n-rc-015",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-001",
+        "to": "n-rc-014",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-014",
         "to": "n-rc-002",
         "kind": "walk"
       },
@@ -289,7 +433,12 @@
         "kind": "walk"
       },
       {
-        "from": "n-rc-005",
+        "from": "n-rc-004",
+        "to": "n-rc-013",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-004",
         "to": "n-rc-007",
         "kind": "walk"
       },
@@ -310,6 +459,27 @@
         "to": "n-rc-006",
         "kind": "gate",
         "gate": "g-rc-tra-acc",
+        "bidir": true
+      },
+      {
+        "from": "n-rc-015",
+        "to": "n-rc-016",
+        "kind": "gate",
+        "gate": "g-rc-s-2",
+        "bidir": false
+      },
+      {
+        "from": "n-rc-016",
+        "to": "n-rc-015",
+        "kind": "gate",
+        "gate": "g-rc-s-1",
+        "bidir": false
+      },
+      {
+        "from": "n-rc-015",
+        "to": "n-rc-016",
+        "kind": "gate",
+        "gate": "g-rc-s-acc",
         "bidir": true
       }
     ]

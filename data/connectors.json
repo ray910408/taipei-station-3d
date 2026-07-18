@@ -178,6 +178,27 @@
       "source": "trtc-section",
       "confidence": 2,
       "note": "B3↔B1 電梯（位置粗估）"
+    },
+    {
+      "id": "c-elv-rprc-2",
+      "kind": "elevator",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-006"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-014"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 3,
+      "status": "traced",
+      "note": "月台中段電梯（淡水信義線2），B4↔B3"
     }
   ]
 }
