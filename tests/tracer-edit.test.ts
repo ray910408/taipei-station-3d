@@ -5,11 +5,15 @@ import {
   addArea, addGate, addNavNode, addSlabHole, deleteNavNode, deleteVertex, insertVertex,
   moveVertex, nextNodeId, replaceGeom, segIndexNear,
 } from '../src/tracer/edit';
+import { dedupeAdjacentRoundedPoints } from '../src/tracer/tool-edit';
 
 const doc = (): FloorDoc => structuredClone({
   schema: 'floor@1', id: 'hall-b1',
   slab: { outline: [[0, 0], [20, 0], [20, 10], [0, 10]], source: 's', confidence: 2 },
-  areas: [{ id: 'a-ha-paid', kind: 'paid', system: 'test', polygon: [[1, 1], [9, 1], [9, 9], [1, 9]], source: 's', confidence: 2 }],
+  areas: [
+    { id: 'a-ha-paid', kind: 'paid', system: 'test', polygon: [[1, 1], [9, 1], [9, 9], [1, 9]], source: 's', confidence: 2 },
+    { id: 'a-ha-unpaid', kind: 'unpaid', system: 'test', polygon: [[11, 1], [19, 1], [19, 9], [11, 9]], source: 's', confidence: 2 },
+  ],
   nav: {
     nodes: [{ id: 'n-ha-001', xy: [3, 3], area: 'a-ha-paid' }, { id: 'n-ha-002', xy: [8, 8], area: 'a-ha-paid' }],
     edges: [{ from: 'n-ha-001', to: 'n-ha-002', kind: 'walk' }],
@@ -30,6 +34,13 @@ describe('新增元素', () => {
     expect(a.confidence).toBe(3);
   });
 
+  it('完成描繪前去除 round 後相鄰重複末點', () => {
+    const d = doc();
+    const pts = dedupeAdjacentRoundedPoints([[10, 2], [18, 2], [18, 8], [18.04, 8.03]]);
+    addArea(d, 'a-ha-hall', 'corridor', 'test', pts, P);
+    expect(d.areas!.find((x) => x.id === 'a-ha-hall')!.polygon).toHaveLength(3);
+  });
+
   it('addArea：id 重複或格式錯拋錯', () => {
     expect(() => addArea(doc(), 'a-ha-paid', 'paid', 'test', [[0, 0], [1, 0], [1, 1]], P)).toThrow('已存在');
     expect(() => addArea(doc(), 'Bad_ID', 'paid', 'test', [[0, 0], [1, 0], [1, 1]], P)).toThrow('格式');
@@ -39,7 +50,7 @@ describe('新增元素', () => {
     const d = doc();
     expect(() => addGate(d, 'g-ha-x', 'test', 'both', true, ['a-ha-paid', 'nope'], [[1, 1], [2, 2]], P)).toThrow('不存在');
     expect(() => addGate(d, 'g-ha-x', 'test', 'both', true, ['a-ha-paid', 'a-ha-paid'], [[1, 1]], P)).toThrow('2 點');
-    addGate(d, 'g-ha-x', 'test', 'in', false, ['a-ha-paid', 'a-ha-paid'], [[2, 8], [4, 8]], P);
+    addGate(d, 'g-ha-x', 'test', 'in', false, ['a-ha-paid', 'a-ha-unpaid'], [[2, 8], [4, 8]], P);
     expect(d.gates![0].direction).toBe('in');
   });
 
@@ -64,9 +75,9 @@ describe('幾何編修', () => {
     const d = doc();
     moveVertex(d, { ref: { kind: 'area', id: 'a-ha-paid' }, vi: 0 }, [1.26, 1.24]);
     expect(d.areas![0].polygon[0]).toEqual([1.3, 1.2]);
-    moveVertex(d, { ref: { kind: 'nav-node', id: 'n-ha-001' }, vi: 0 }, [15, 5]); // area 外
+    moveVertex(d, { ref: { kind: 'nav-node', id: 'n-ha-001' }, vi: 0 }, [10, 5]); // area 外
     const n = d.nav!.nodes[0];
-    expect(n.xy).toEqual([15, 5]);
+    expect(n.xy).toEqual([10, 5]);
     expect(n.area).toBeUndefined();
   });
 

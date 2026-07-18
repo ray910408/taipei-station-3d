@@ -122,6 +122,8 @@ export function validateDocs(docs) {
       const [fx, fy] = ring[0];
       const [lx, ly] = ring[ring.length - 1];
       if (fx === lx && fy === ly) errors.push(`[geom] ${where} ${label} 首尾點重複（應為開環）`);
+      if (ring.some((p, i) => i > 0 && p[0] === ring[i - 1][0] && p[1] === ring[i - 1][1]))
+        errors.push(`[geom] ${where} ${label} 相鄰重複點（零長邊）`);
       const area = ringArea(ring);
       if (wind === 'ccw' && area <= 0) errors.push(`[geom] ${where} ${label} 應為逆時針`);
       if (wind === 'cw' && area >= 0) errors.push(`[geom] ${where} ${label} 應為順時針（hole）`);
@@ -134,6 +136,12 @@ export function validateDocs(docs) {
       for (const aid of g.connects) {
         if (!areaById.has(aid)) errors.push(`[ref] ${where} ${g.id} connects "${aid}" 不存在`);
       }
+      if (g.connects[0] === g.connects[1])
+        errors.push(`[sem] ${where} ${g.id} connects 兩側不得相同`);
+      const paid = areaById.get(g.connects[0]);
+      const unpaid = areaById.get(g.connects[1]);
+      if (paid && unpaid && (paid.kind !== 'paid' || unpaid.kind !== 'unpaid'))
+        errors.push(`[sem] ${where} ${g.id} connects 需 [付費側, 非付費側]`);
     }
     const nodeById = new Map();
     for (const n of floor.nav?.nodes ?? []) {

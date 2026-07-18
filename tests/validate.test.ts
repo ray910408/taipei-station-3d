@@ -48,6 +48,14 @@ describe('validateDocs', () => {
     expect(errors.some((e) => e.includes('逆時針'))).toBe(true);
   });
 
+  it('幾何：polygon 相鄰重複點會報零長邊', () => {
+    const docs = freshDocs();
+    const polygon = (docs.floors.get('hall-b1') as any).areas[0].polygon;
+    polygon.splice(2, 0, [...polygon[1]]);
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('[geom]') && e.includes('area a-ha-paid') && e.includes('相鄰重複點（零長邊）'))).toBe(true);
+  });
+
   it('幾何：node 落在 slab 外', () => {
     const docs = freshDocs();
     (docs.floors.get('plat-b2') as any).nav.nodes[0].xy = [99, 99];
@@ -60,6 +68,20 @@ describe('validateDocs', () => {
     (docs.floors.get('hall-b1') as any).nav.edges[0].bidir = true;
     const { errors } = validateDocs(docs);
     expect(errors.some((e) => e.includes('g-ha-out'))).toBe(true);
+  });
+
+  it('語意：gate connects 兩側不可使用同一 area', () => {
+    const docs = freshDocs();
+    (docs.floors.get('hall-b1') as any).gates[0].connects = ['a-ha-paid', 'a-ha-paid'];
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('g-ha-out') && e.includes('connects 兩側不得相同'))).toBe(true);
+  });
+
+  it('語意：gate connects 順序須為付費側、非付費側', () => {
+    const docs = freshDocs();
+    (docs.floors.get('hall-b1') as any).gates[0].connects = ['a-ha-unpaid', 'a-ha-paid'];
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('g-ha-out') && e.includes('connects 需 [付費側, 非付費側]'))).toBe(true);
   });
 
   it('語意：connector levels 高程須遞增', () => {

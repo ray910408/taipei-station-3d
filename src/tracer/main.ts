@@ -278,6 +278,7 @@ function boot(store: TracerStore): void {
   floorSel.value = store.floorId;
   sourceSel.value = store.sourceId;
   floorSel.addEventListener('change', () => {
+    tools[store.tool]?.deactivate?.();
     store.views[store.floorId] = store.view;
     store.floorId = floorSel.value;
     store.sourceId = DEFAULT_SOURCE[store.floorId] ?? store.sourceId;
@@ -286,9 +287,15 @@ function boot(store: TracerStore): void {
     store.hoverVertex = null;
     store.draft = [];
     store.view = store.views[store.floorId] ?? fitToFloor();
+    tools[store.tool]?.activate?.();
     invalidate();
   });
-  sourceSel.addEventListener('change', () => { store.sourceId = sourceSel.value; invalidate(); });
+  sourceSel.addEventListener('change', () => {
+    tools[store.tool]?.deactivate?.();
+    store.sourceId = sourceSel.value;
+    tools[store.tool]?.activate?.();
+    invalidate();
+  });
   for (const key of ['image', 'areas', 'units', 'walls', 'gates', 'pois', 'nav', 'labels'] as const) {
     const cb = el<HTMLInputElement>(`#layer-${key}`);
     cb.checked = store.layers[key];

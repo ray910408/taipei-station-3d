@@ -61,7 +61,7 @@
       "polygon": [
         [95.5, 10.4],
         [99.6, 9.4],
-        [97, 0.3],
+        [97.6, 0.3],
         [107.4, 0.1],
         [110.8, 12.3],
         [116.6, 24.7],
@@ -216,7 +216,6 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "status": "traced",
       "note": "台鐵轉乘寬閘門（推定於群南端）"
     },
     {
@@ -235,7 +234,6 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "status": "traced",
       "note": "南閘門群進站段（圖未明繪，依南牆出口開口推定）"
     },
     {
@@ -254,7 +252,6 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "status": "traced",
       "note": "南閘門群出站段（推定）"
     },
     {
@@ -273,7 +270,6 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "status": "traced",
       "note": "南閘門群寬閘門（推定）"
     }
   ],
@@ -331,7 +327,7 @@
       },
       {
         "id": "n-rc-011",
-        "xy": [141.5, 39.7],
+        "xy": [120, 38],
         "area": "a-rc-unpaid-n"
       },
       {

@@ -1,5 +1,5 @@
 import type { Area, Gate, Poi, Unit, Vec2 } from '../types';
-import { allRefs, geomKind, getRing, hitGeom, hitVertex, type GeomRef, type VertexRef } from './geom';
+import { allRefs, geomKind, getRing, hitGeom, hitVertex, roundPt, type GeomRef, type VertexRef } from './geom';
 import {
   addArea, addGate, addNavNode, addPoi, addSlabHole, addUnit, addWall, deleteNavNode,
   deleteVertex, insertVertex, moveNavNode, moveVertex, replaceGeom, segIndexNear, type ProvInput,
@@ -16,6 +16,11 @@ function q<T extends HTMLElement>(sel: string): T {
 
 function tol(ctx: ToolContext): number {
   return 8 / ctx.store.view.zoom;
+}
+
+export function dedupeAdjacentRoundedPoints(pts: Vec2[]): Vec2[] {
+  const rounded = pts.map(roundPt);
+  return rounded.filter((p, i) => i === 0 || p[0] !== rounded[i - 1][0] || p[1] !== rounded[i - 1][1]);
 }
 
 /** 選取／編輯：點選元素、拖頂點、Alt+點刪頂點、雙擊選取元素邊上插點、Esc 取消選取 */
@@ -130,7 +135,8 @@ export function makeDrawTool(ctx: ToolContext): ToolHandler {
   function finish(): void {
     const store = ctx.store;
     const doc = ctx.floorDoc();
-    const pts = store.draft;
+    const pts = dedupeAdjacentRoundedPoints(store.draft);
+    store.draft = pts;
     if (!pts.length) return;
     const t = targetSel.value;
     const short = ctx.floorShort();
@@ -155,7 +161,7 @@ export function makeDrawTool(ctx: ToolContext): ToolHandler {
             const connects = connectsEl.value.split(',').map((s) => s.trim());
             if (connects.length !== 2 || !connects[0] || !connects[1]) throw new Error('connects 需「付費側,非付費側」兩個 area id');
             store.selection = addGate(doc, `g-${short}-${idDesc}`, systemSel.value, dirSel.value as Gate['direction'], accEl.checked, connects as [string, string], pts, provInput());
-          }
+          } else throw new Error(`未知描繪目標：${t}`);
         }
       } catch (e) {
         store.undo.pop();

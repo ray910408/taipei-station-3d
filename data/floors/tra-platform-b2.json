@@ -10,7 +10,6 @@
     ],
     "source": "tra-b2-map",
     "confidence": 2,
-    "status": "traced",
     "note": "站體矩形（示意圖無輪廓，沿用 B1 站體框架）；R 線站體豎井在站體之外，不開洞"
   },
   "areas": [
