@@ -20,3 +20,17 @@
 - gate `connects = [付費側, 非付費側]`；`in`=僅進、`out`=僅出、`both`=雙向；非 both 的 gate edge 必須 `bidir:false`。
 - 每個幾何元素必填 `source` + `confidence`；不確定就 confidence 2 並寫 `note`。
 - 任何資料變更後：`npm run validate`。
+
+## Phase 2 增補慣例
+
+- **status**：經校準底圖以 tracer 重描 → `"traced"`（來源必須有 calibration，validator 警告把關）；
+  推測/未重描 → 維持 estimated（不標）。verified 保留給實測。
+- **confidence**：官方圖清晰描繪＝3、判讀含糊＝2；1 不用、4–5 留給實測。
+- **calibration**（refs/sources.json）：`control_points` 兩點為真相（px 整數、local 0.1m），
+  `px_per_m` 為推導值（validator 檢查 2% 一致性）、`status` 一律 estimated、`basis` 寫控制點錨到什麼。
+- **序列化**：資料檔唯一格式＝`npm run format:data`（純數字陣列單行）；改資料後必跑，
+  QA 用 `npm run format:data -- --check`。
+- **GLB 雙軌**：`npm run export:glb` 產 `public/models/station.glb`（gitignored 建置產物），
+  `npm run validate:glb` 跑 Khronos 驗證；viewer `?geom=glb` 載入。雙軌契約＝group name（樓層開關）
+  與 userData.kind（透明度）經 extras 保留，由 tests/glb-roundtrip.test.ts 守住。
+  資料改動後記得重新 export，GLB 不會自動更新。
