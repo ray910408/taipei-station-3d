@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>台北車站 描圖工具</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #14171c; color: #e8e8e8;
+      font-family: "Noto Sans TC", system-ui, sans-serif; font-size: 13px; }
+    #wrap { display: flex; height: 100vh; }
+    #side { width: 300px; flex: none; overflow-y: auto; background: #1e232b;
+      border-right: 1px solid #3a4250; padding: 10px 12px; box-sizing: border-box; }
+    #side h1 { font-size: 15px; margin: 0 0 8px; }
+    #side section { margin-bottom: 8px; border-top: 1px solid #2c333d; padding-top: 8px; }
+    #side label { display: block; margin: 3px 0; cursor: pointer; }
+    #side select, #side input[type="text"], #side input[type="number"] {
+      width: 100%; box-sizing: border-box; background: #14171c; color: #e8e8e8;
+      border: 1px solid #3a4250; border-radius: 4px; padding: 3px 6px; margin: 2px 0; }
+    #side button { margin: 4px 4px 0 0; padding: 4px 10px; background: #2b5ea7; color: #fff;
+      border: 0; border-radius: 5px; cursor: pointer; }
+    #side button:disabled { background: #444; cursor: not-allowed; }
+    #main { flex: 1; position: relative; min-width: 0; }
+    #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+    #status { position: absolute; left: 8px; bottom: 8px; background: #1e232bcc; padding: 2px 8px;
+      border-radius: 4px; font-family: monospace; pointer-events: none; }
+    #banner { position: absolute; left: 8px; top: 8px; right: 8px; padding: 4px 8px; border-radius: 4px;
+      white-space: pre-wrap; display: none; }
+    #banner.ok { display: block; background: #16402a; color: #7fe3a8; }
+    #banner.err { display: block; background: #4a1f24; color: #ff9c9c; }
+    #overlay { position: fixed; inset: 0; background: #000c; color: #ff8080; padding: 24px;
+      white-space: pre-wrap; font-family: monospace; display: none; z-index: 99; overflow: auto; }
+    fieldset { border: 1px solid #3a4250; border-radius: 5px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="side">
+      <h1>描圖工具</h1>
+      <section>
+        <label>樓層 <select id="floor"></select></label>
+        <label>底圖 <select id="source"></select></label>
+        <label>底圖透明度 <input id="img-opacity" type="range" min="0" max="100" value="70" /></label>
+      </section>
+      <section id="layers">
+        圖層：
+        <label><input id="layer-image" type="checkbox" checked /> 底圖</label>
+        <label><input id="layer-areas" type="checkbox" checked /> areas</label>
+        <label><input id="layer-units" type="checkbox" checked /> units</label>
+        <label><input id="layer-walls" type="checkbox" checked /> walls</label>
+        <label><input id="layer-gates" type="checkbox" checked /> gates</label>
+        <label><input id="layer-pois" type="checkbox" checked /> pois</label>
+        <label><input id="layer-nav" type="checkbox" checked /> nav</label>
+        <label><input id="layer-labels" type="checkbox" checked /> 標籤</label>
+      </section>
+      <section id="toolbox">
+        工具：
+        <label><input type="radio" name="tool" value="select" checked /> 選取／編輯</label>
+        <label><input type="radio" name="tool" value="draw" /> 描繪</label>
+        <label><input type="radio" name="tool" value="nav" /> nav node</label>
+        <label><input type="radio" name="tool" value="calibrate" /> 校準底圖</label>
+      </section>
+      <fieldset id="draw-form" hidden>
+        <legend>描繪目標</legend>
+        <select id="draw-target">
+          <option value="new-area">新增 area</option>
+          <option value="new-unit">新增 unit</option>
+          <option value="new-wall">新增 wall</option>
+          <option value="new-gate">新增 gate（2 點）</option>
+          <option value="new-poi">新增 poi（1 點）</option>
+          <option value="slab-hole">新增 slab hole</option>
+          <option value="slab-outline">重描 slab outline</option>
+          <option value="replace">替換選取元素幾何</option>
+        </select>
+        <select id="draw-kind"></select>
+        <input id="draw-id" type="text" placeholder="id 描述段（如 paid-s、stairs-n）" />
+        <label>system <select id="draw-system"><option>trtc</option><option>tra</option><option>shared</option></select></label>
+        <label>confidence <select id="draw-conf"><option>3</option><option>2</option></select></label>
+        <label>height(m) <input id="draw-height" type="number" value="2.5" step="0.1" /></label>
+        <label>gate direction <select id="draw-dir"><option>both</option><option>in</option><option>out</option></select></label>
+        <label><input id="draw-acc" type="checkbox" /> gate accessible</label>
+        <input id="draw-connects" type="text" placeholder="gate connects：付費側,非付費側" />
+      </fieldset>
+      <div id="calib-panel" hidden>
+        <div id="calib-info">—</div>
+        <button id="btn-calib-save" disabled>儲存校準</button>
+        <button id="btn-calib-reset">重來</button>
+      </div>
+      <section>
+        <button id="btn-save">儲存（Ctrl+S）</button>
+        <button id="btn-undo">復原（Ctrl+Z）</button>
+      </section>
+      <section>
+        操作：左鍵＝工具動作、空白處拖曳/中鍵＝平移、滾輪＝縮放。<br />
+        描繪：Enter/雙擊完成、Esc 取消、Backspace 退點、Shift＝正交。
+      </section>
+    </div>
+    <div id="main">
+      <canvas id="cv"></canvas>
+      <div id="banner"></div>
+      <div id="status">—</div>
+    </div>
+  </div>
+  <div id="overlay"></div>
+  <script type="module" src="/src/tracer/main.ts"></script>
+</body>
+</html>

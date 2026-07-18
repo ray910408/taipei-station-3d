@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
+import { fileURLToPath } from 'node:url';
 import { applySave } from './tools/save-handler.mjs';
 
 // 描圖工具 dev-only 存檔端點：POST /__tracer/save {files:[{file,doc}]} → 全站驗證通過才寫檔
@@ -32,5 +33,13 @@ function tracerSavePlugin(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [tracerSavePlugin()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        tracer: fileURLToPath(new URL('./tracer.html', import.meta.url)),
+      },
+    },
+  },
   test: { environment: 'node' },
 });

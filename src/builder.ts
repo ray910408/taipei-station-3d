@@ -1,14 +1,10 @@
 import * as THREE from 'three';
 import type { StationModel, Vec2 } from './types';
+import { AREA_COLORS, GATE_COLORS } from './palette';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
   return new THREE.Vector3(xy[0], y, -xy[1]);
 }
-
-const AREA_COLORS: Record<string, string> = {
-  platform: '#e8c060', paid: '#e3547a', unpaid: '#4a90d9',
-  corridor: '#7bc47f', track: '#333a45', restricted: '#777777',
-};
 
 function ringToShape(outline: Vec2[], holes: Vec2[][] = []): THREE.Shape {
   const shape = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -88,7 +84,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       }
     }
     for (const gate of floor.gates ?? []) {
-      const color = gate.accessible ? '#2bb3a3' : '#c05050';
+      const color = gate.accessible ? GATE_COLORS.accessible : GATE_COLORS.standard;
       const [p1, p2] = gate.line.map((p) => toWorld(p, meta.elevation));
       for (const p of [p1, p2]) {
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.1, 0.25), mat(color, 1));
