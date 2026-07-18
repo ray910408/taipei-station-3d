@@ -1,41 +1,183 @@
 {
   "schema": "connectors@1",
   "connectors": [
-    { "id": "c-esc-rprc-1", "kind": "escalator", "system": "trtc", "direction": "up", "accessible": false,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-004" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-002" }],
-      "source": "trtc-info-b4", "confidence": 2, "note": "北梯群上行" },
-    { "id": "c-esc-rprc-2", "kind": "escalator", "system": "trtc", "direction": "down", "accessible": false,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-004" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-002" }],
-      "source": "trtc-info-b4", "confidence": 2, "note": "北梯群下行" },
-    { "id": "c-esc-rprc-3", "kind": "escalator", "system": "trtc", "direction": "up", "accessible": false,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-001" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-001" }],
-      "source": "trtc-info-b4", "confidence": 2, "note": "南梯群上行" },
-    { "id": "c-esc-rprc-4", "kind": "escalator", "system": "trtc", "direction": "down", "accessible": false,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-001" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-001" }],
-      "source": "trtc-info-b4", "confidence": 2, "note": "南梯群下行" },
-    { "id": "c-stair-rprc-1", "kind": "stair", "system": "trtc", "direction": "both", "accessible": false,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-001" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-001" }],
-      "source": "trtc-info-b4", "confidence": 2 },
-    { "id": "c-elv-rprc-1", "kind": "elevator", "system": "trtc", "direction": "both", "accessible": true,
-      "levels": [{ "floor": "mrt-r-platform-b4", "node": "n-rp-002" },
-                 { "floor": "mrt-r-concourse-b3", "node": "n-rc-010" }],
-      "source": "trtc-info-b4", "confidence": 2, "note": "淡水信義線電梯1（月台南中段—大廳）" },
-    { "id": "c-esc-rctc-1", "kind": "escalator", "system": "shared", "direction": "up", "accessible": false,
-      "levels": [{ "floor": "mrt-r-concourse-b3", "node": "n-rc-007" },
-                 { "floor": "tra-concourse-b1", "node": "n-tc-001" }],
-      "source": "trtc-section", "confidence": 3, "note": "B3→B1 長電扶梯（穿越 B2 東側外）" },
-    { "id": "c-esc-rctc-2", "kind": "escalator", "system": "shared", "direction": "down", "accessible": false,
-      "levels": [{ "floor": "mrt-r-concourse-b3", "node": "n-rc-007" },
-                 { "floor": "tra-concourse-b1", "node": "n-tc-001" }],
-      "source": "trtc-section", "confidence": 3 },
-    { "id": "c-elv-rctc-1", "kind": "elevator", "system": "shared", "direction": "both", "accessible": true,
-      "levels": [{ "floor": "mrt-r-concourse-b3", "node": "n-rc-011" },
-                 { "floor": "tra-concourse-b1", "node": "n-tc-004" }],
-      "source": "trtc-section", "confidence": 2, "note": "B3↔B1 電梯（位置粗估）" }
+    {
+      "id": "c-esc-rprc-1",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-004"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-002"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "北梯群上行"
+    },
+    {
+      "id": "c-esc-rprc-2",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-004"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-002"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "北梯群下行"
+    },
+    {
+      "id": "c-esc-rprc-3",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-001"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-001"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "南梯群上行"
+    },
+    {
+      "id": "c-esc-rprc-4",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-001"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-001"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "南梯群下行"
+    },
+    {
+      "id": "c-stair-rprc-1",
+      "kind": "stair",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-001"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-001"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2
+    },
+    {
+      "id": "c-elv-rprc-1",
+      "kind": "elevator",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-r-platform-b4",
+          "node": "n-rp-002"
+        },
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-010"
+        }
+      ],
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "淡水信義線電梯1（月台南中段—大廳）"
+    },
+    {
+      "id": "c-esc-rctc-1",
+      "kind": "escalator",
+      "system": "shared",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-007"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-001"
+        }
+      ],
+      "source": "trtc-section",
+      "confidence": 3,
+      "note": "B3→B1 長電扶梯（穿越 B2 東側外）"
+    },
+    {
+      "id": "c-esc-rctc-2",
+      "kind": "escalator",
+      "system": "shared",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-007"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-001"
+        }
+      ],
+      "source": "trtc-section",
+      "confidence": 3
+    },
+    {
+      "id": "c-elv-rctc-1",
+      "kind": "elevator",
+      "system": "shared",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-011"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-004"
+        }
+      ],
+      "source": "trtc-section",
+      "confidence": 2,
+      "note": "B3↔B1 電梯（位置粗估）"
+    }
   ]
 }
