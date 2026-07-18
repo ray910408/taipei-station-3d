@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup } from './builder';
 import { buildGraph, findPath, routeSteps } from './nav';
@@ -20,7 +21,7 @@ for (const [p, mod] of Object.entries(floorModules)) {
   floorDocsByFile[p.replace('../data/', '')] = (mod as { default: unknown }).default;
 }
 
-try {
+async function boot(): Promise<void> {
   const model = assembleModel(stationDoc, floorDocsByFile, connectorsDoc);
 
   const scene = new THREE.Scene();
@@ -31,8 +32,25 @@ try {
   scene.add(dir);
   scene.add(new THREE.GridHelper(500, 50, '#2c333d', '#232830'));
 
-  const stationGroup = buildStationGroup(model);
+  // 幾何雙軌：預設 runtime extrude；?geom=glb 載入離線匯出檔
+  const geomMode = new URLSearchParams(location.search).get('geom') === 'glb' ? 'glb' : 'json';
+  let stationGroup: THREE.Group;
+  if (geomMode === 'glb') {
+    const gltf = await new GLTFLoader().loadAsync('models/station.glb').catch(() => {
+      throw new Error('載入 models/station.glb 失敗——請先執行 npm run export:glb');
+    });
+    const found = gltf.scene.getObjectByName('station');
+    if (!found) throw new Error('station.glb 內找不到名為 station 的節點');
+    stationGroup = found as THREE.Group;
+  } else {
+    stationGroup = buildStationGroup(model);
+  }
   scene.add(stationGroup);
+
+  const modeDiv = document.querySelector<HTMLDivElement>('#geom-mode')!;
+  modeDiv.innerHTML = geomMode === 'glb'
+    ? '幾何：GLB <a href="./">切回 runtime</a>'
+    : '幾何：runtime <a href="?geom=glb">切至 GLB</a>';
 
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
   camera.position.set(220, 140, 260);
@@ -67,8 +85,10 @@ try {
     renderer.setSize(innerWidth, innerHeight);
   });
   renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-} catch (e) {
+}
+
+boot().catch((e) => {
   if (e instanceof LoaderError) showOverlay(`${e.message}\n\n${e.details.join('\n')}`);
   else showOverlay(String(e));
   throw e;
-}
+});
