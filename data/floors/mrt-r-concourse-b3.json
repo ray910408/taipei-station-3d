@@ -214,7 +214,7 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "note": "台鐵轉乘寬閘門（推定於群南端）"
+      "note": "台鐵轉乘寬閘門（群南端；tra-b3-map 驗票員崗位於閘門列南端佐證，幾何仍為推定）"
     },
     {
       "id": "g-rc-s-1",
@@ -352,6 +352,16 @@
         "id": "n-rc-016",
         "xy": [87.9, -89],
         "area": "a-rc-unpaid-s"
+      },
+      {
+        "id": "n-rc-017",
+        "xy": [92.8, 38.8],
+        "area": "a-rc-tra-paid"
+      },
+      {
+        "id": "n-rc-018",
+        "xy": [91.7, 22.6],
+        "area": "a-rc-tra-paid"
       }
     ],
     "edges": [
@@ -475,6 +485,21 @@
         "kind": "gate",
         "gate": "g-rc-s-acc",
         "bidir": true
+      },
+      {
+        "from": "n-rc-006",
+        "to": "n-rc-017",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-006",
+        "to": "n-rc-018",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-017",
+        "to": "n-rc-018",
+        "kind": "walk"
       }
     ]
   }
