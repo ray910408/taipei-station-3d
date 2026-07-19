@@ -359,6 +359,174 @@
       "source": "tra-b3-map",
       "confidence": 2,
       "note": "第3月台轉乘電梯（同 P4 佐證）"
+    },
+    {
+      "id": "c-stair-tptc-1",
+      "kind": "stair",
+      "system": "tra",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-002"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-007"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "B1 大廳往第4月台樓梯（語意推定，落點沿用候車點，待描圖）"
+    },
+    {
+      "id": "c-esc-tptc-1",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-002"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-007"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第4月台↔B1 電扶梯上行（語意推定）"
+    },
+    {
+      "id": "c-esc-tptc-2",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-002"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-007"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第4月台↔B1 電扶梯下行（語意推定）"
+    },
+    {
+      "id": "c-elv-tptc-1",
+      "kind": "elevator",
+      "system": "tra",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-002"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-007"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第4月台↔B1 電梯（語意推定）"
+    },
+    {
+      "id": "c-stair-tptc-2",
+      "kind": "stair",
+      "system": "tra",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-004"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-008"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "B1 大廳往第3月台樓梯（語意推定，落點沿用候車點，待描圖）"
+    },
+    {
+      "id": "c-esc-tptc-3",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-004"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-008"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第3月台↔B1 電扶梯上行（語意推定）"
+    },
+    {
+      "id": "c-esc-tptc-4",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-004"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-008"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第3月台↔B1 電扶梯下行（語意推定）"
+    },
+    {
+      "id": "c-elv-tptc-2",
+      "kind": "elevator",
+      "system": "tra",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-004"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-008"
+        }
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "第3月台↔B1 電梯（語意推定）"
     }
   ]
 }

@@ -212,6 +212,16 @@
         "id": "n-tc-006",
         "xy": [70, 21],
         "area": "a-tc-tra-paid"
+      },
+      {
+        "id": "n-tc-007",
+        "xy": [76, 26],
+        "area": "a-tc-tra-paid"
+      },
+      {
+        "id": "n-tc-008",
+        "xy": [76, 6],
+        "area": "a-tc-tra-paid"
       }
     ],
     "edges": [
@@ -260,6 +270,16 @@
         "kind": "gate",
         "gate": "g-tc-tra-out-e",
         "bidir": false
+      },
+      {
+        "from": "n-tc-006",
+        "to": "n-tc-007",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-003",
+        "to": "n-tc-008",
+        "kind": "walk"
       }
     ]
   }

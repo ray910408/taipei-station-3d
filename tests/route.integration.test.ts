@@ -66,3 +66,18 @@ describe('B1 東剪票口出站閘門（QA ISSUE-004）', () => {
     expect(path[0].gate).toBe('g-tc-tra-out-e');
   });
 });
+
+describe('B1↔B2 直達梯群（QA ISSUE-003）', () => {
+  it('B1 東剪票口外→第4月台不再繞 B3', () => {
+    const path = findPath(graph, 'n-tc-002', 'n-tp-002')!;
+    const floors = path.map((e) => graph.nodes.get(e.to)!.floor);
+    expect(floors).not.toContain('mrt-r-concourse-b3');
+    expect(path.some((e) => e.connector?.includes('tptc'))).toBe(true);
+  });
+
+  it('無障礙：B1 付費島→第3月台走 B1 電梯，全程 accessible', () => {
+    const path = findPath(graph, 'n-tc-003', 'n-tp-004', { accessibleOnly: true })!;
+    expect(path.every((e) => e.accessible)).toBe(true);
+    expect(path.some((e) => e.connector === 'c-elv-tptc-2')).toBe(true);
+  });
+});
