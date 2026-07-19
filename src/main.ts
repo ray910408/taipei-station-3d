@@ -3,7 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup } from './builder';
-import { buildGraph, findPath, routeSteps } from './nav';
+import { buildGraph, findPath, routeSteps, listLandmarks } from './nav';
+import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { setupUI } from './ui';
 import stationDoc from '../data/station.json';
@@ -62,17 +63,22 @@ async function boot(): Promise<void> {
   controls.enableDamping = true;
 
   const graph = buildGraph(model);
+  let routeEdges: GraphEdge[] | null = null;
   let routeObj: THREE.Object3D | null = null;
-  const clearRoute = () => { if (routeObj) { scene.remove(routeObj); routeObj = null; } };
+  const clearRoute = () => {
+    routeEdges = null;
+    if (routeObj) { scene.remove(routeObj); routeObj = null; }
+  };
 
   const ui = setupUI({
     model, stationGroup,
+    landmarks: listLandmarks(model),
     onClear: clearRoute,
-    onRoute: (accessibleOnly) => {
+    onRoute: (start, end, accessibleOnly) => {
       clearRoute();
-      const demo = model.station.demo!;
-      const path = findPath(graph, demo.start, demo.end, { accessibleOnly });
+      const path = findPath(graph, start, end, { accessibleOnly });
       if (!path) { ui.setSteps(['找不到路徑']); return; }
+      routeEdges = path;
       routeObj = buildRouteObject(graph, path);
       scene.add(routeObj);
       ui.setSteps(routeSteps(model, graph, path));

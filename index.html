@@ -12,6 +12,8 @@
       border: 1px solid #3a4250; border-radius: 8px; padding: 12px; font-size: 14px; z-index: 10; }
     #panel h1 { font-size: 15px; margin: 0 0 8px; }
     #panel label { display: block; margin: 4px 0; cursor: pointer; }
+    #panel select { width: 100%; margin-top: 2px; padding: 4px; background: #14171c;
+      color: #e8e8e8; border: 1px solid #3a4250; border-radius: 4px; }
     #panel button { margin: 6px 6px 0 0; padding: 5px 10px; background: #2b5ea7; color: #fff;
       border: 0; border-radius: 5px; cursor: pointer; }
     #panel button:disabled { background: #444; cursor: not-allowed; }
@@ -26,6 +28,8 @@
     <h1>台北車站室內 3D 導航</h1>
     <div id="geom-mode"></div>
     <div id="floors"></div>
+    <label>起點 <select id="sel-start"></select></label>
+    <label>終點 <select id="sel-end"></select></label>
     <label>樓層透明度 <input id="opacity" type="range" min="10" max="100" value="60" /></label>
     <button id="btn-route">一般路徑</button>
     <button id="btn-route-acc">無障礙路徑</button>
