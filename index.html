@@ -44,6 +44,13 @@
   <div id="app"></div>
   <div id="panel">
     <h1>台北車站室內 3D 導航</h1>
+    <div id="follow-panel" style="display:none" aria-live="polite">
+      <div id="follow-next"></div>
+      <div id="follow-progress"></div>
+      <button id="btn-advance">我到了</button>
+      <button id="btn-back">上一步</button>
+      <button id="btn-exit-follow">結束導航</button>
+    </div>
     <div id="a11y-toggles">
       <button id="btn-bigtext" aria-pressed="false">大字</button>
       <button id="btn-contrast" aria-pressed="false">高對比</button>
@@ -57,13 +64,6 @@
     <button id="btn-route-acc">無障礙路徑</button>
     <button id="btn-clear">清除</button>
     <button id="btn-follow" disabled>開始導航</button>
-    <div id="follow-panel" style="display:none">
-      <div id="follow-next"></div>
-      <div id="follow-progress"></div>
-      <button id="btn-advance">我到了</button>
-      <button id="btn-back">上一步</button>
-      <button id="btn-exit-follow">結束導航</button>
-    </div>
     <ol id="steps"></ol>
   </div>
   <div id="overlay"></div>
