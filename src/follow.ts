@@ -42,6 +42,17 @@ export function buildPositionMarker(): THREE.Group {
   return g;
 }
 
+/** slider 於跟隨會話中更新基準值：保留當前 dim 係數（0.15 或 1），退出後還原至新基準。
+ *  非會話中（無快照）則直接設定 opacity。 */
+export function updateBaseOpacity(mesh: THREE.Mesh, newBase: number): void {
+  const m = mesh.material as THREE.MeshStandardMaterial;
+  const oldBase = mesh.userData.baseOpacity as number | undefined;
+  if (oldBase === undefined) { m.opacity = newBase; return; }
+  const factor = oldBase > 0 ? m.opacity / oldBase : 1;
+  mesh.userData.baseOpacity = newBase;
+  m.opacity = newBase * factor;
+}
+
 export function setFloorEmphasis(stationGroup: THREE.Group, activeFloorId: string | null): void {
   for (const child of stationGroup.children) {
     if (child.name === 'connectors') continue;

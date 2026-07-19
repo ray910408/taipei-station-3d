@@ -4,7 +4,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel } from '../src/loader';
 import { buildStationGroup } from '../src/builder';
-import { setFloorEmphasis } from '../src/follow';
+import { setFloorEmphasis, updateBaseOpacity } from '../src/follow';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
@@ -143,5 +143,25 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1 * 0.15, 5);
     setFloorEmphasis(g, null);
     expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1, 5);
+  });
+
+  it('跟隨會話中 slider 更新基準：保留 dim 係數，退出後還原至新基準（複審 I-1R）', () => {
+    const g = new THREE.Group();
+    const fa = new THREE.Group();
+    fa.name = 'floor-a';
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ opacity: 0.9, transparent: true }),
+    );
+    fa.add(mesh);
+    g.add(fa);
+    setFloorEmphasis(g, 'floor-b'); // fa 被調暗 → 0.135
+    updateBaseOpacity(mesh, 0.45);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.45 * 0.15, 5);
+    setFloorEmphasis(g, null);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.45, 5);
+    // 非會話中：直接生效
+    updateBaseOpacity(mesh, 0.2);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.2, 5);
   });
 });

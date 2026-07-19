@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { updateBaseOpacity } from './follow';
 import type { Landmark } from './nav';
 import type { StationModel } from './types';
 
@@ -77,10 +78,9 @@ export function setupUI(opts: {
       const mesh = obj as THREE.Mesh;
       const m = mesh.material as THREE.MeshStandardMaterial | undefined;
       if (m && (mesh.userData.kind === 'slab' || mesh.userData.kind === 'shell')) {
-        m.opacity = (mesh.userData.kind === 'slab' ? 0.9 : 0.08) * k * (1 / 0.6);
         m.transparent = true;
-        // 跟隨會話中同步快照，退出/下一次聚焦以 slider 新值為基準
-        if (mesh.userData.baseOpacity !== undefined) mesh.userData.baseOpacity = m.opacity;
+        // 跟隨會話中保留 dim 係數更新基準（updateBaseOpacity）；非會話中直接生效
+        updateBaseOpacity(mesh, (mesh.userData.kind === 'slab' ? 0.9 : 0.08) * k * (1 / 0.6));
       }
     });
   });
