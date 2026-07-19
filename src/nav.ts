@@ -11,6 +11,16 @@ export interface NavGraph { nodes: Map<string, GraphNode>; adj: Map<string, Grap
 const dist3 = (a: GraphNode, b: GraphNode) =>
   Math.hypot(a.xy[0] - b.xy[0], a.xy[1] - b.xy[1], a.z - b.z);
 
+// 垂直設施轉乘懲罰（公尺當量）：等待＋轉乘體感成本。
+// 若無此項，connector 上下節點同 xy 時垂直邊只計高差，
+// 「上樓再下樓」會被定價成比月台直走便宜（QA ISSUE-002）。
+// 電扶梯 < 樓梯 符合乘客偏好；電梯含候梯時間最高。stair 走 connector 迴圈同一路徑。
+const TRANSFER_PENALTY: Record<'stair' | 'escalator' | 'elevator', number> = {
+  escalator: 20,
+  stair: 25,
+  elevator: 40,
+};
+
 export function buildGraph(model: StationModel): NavGraph {
   const nodes = new Map<string, GraphNode>();
   const adj = new Map<string, GraphEdge[]>();
@@ -56,7 +66,10 @@ export function buildGraph(model: StationModel): NavGraph {
       const b = nodes.get(hi.node);
       if (!a || !b) continue;
       const base: Omit<GraphEdge, 'from' | 'to'> = {
-        kind: c.kind, accessible: c.accessible, length: dist3(a, b), connector: c.id,
+        kind: c.kind,
+        accessible: c.accessible,
+        length: dist3(a, b) + TRANSFER_PENALTY[c.kind],
+        connector: c.id,
       };
       if (c.direction === 'up' || c.direction === 'both') addEdge({ from: lo.node, to: hi.node, ...base });
       if (c.direction === 'down' || c.direction === 'both') addEdge({ from: hi.node, to: lo.node, ...base });

@@ -30,6 +30,13 @@ describe('buildGraph', () => {
     const down = (graph.adj.get('n-ha-001') ?? []).find((e) => e.kind === 'escalator');
     expect(down).toBeUndefined();
   });
+
+  it('垂直邊含轉乘懲罰（電扶梯 +20、電梯 +40 公尺當量）', () => {
+    const esc = (graph.adj.get('n-pl-001') ?? []).find((e) => e.kind === 'escalator')!;
+    expect(esc.length).toBeCloseTo(5 + 20, 6); // 幾何長 = 高差 5
+    const elv = (graph.adj.get('n-pl-002') ?? []).find((e) => e.kind === 'elevator')!;
+    expect(elv.length).toBeCloseTo(Math.hypot(5, 3, 5) + 40, 6);
+  });
 });
 
 describe('findPath', () => {
