@@ -9,7 +9,7 @@ import { buildRouteObject } from './path';
 import { setupUI } from './ui';
 import {
   startFollow, advance, back, atEnd, currentNodeId, remainingEdges,
-  buildPositionMarker, type FollowState,
+  buildPositionMarker, setFloorEmphasis, type FollowState,
 } from './follow';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
@@ -79,6 +79,7 @@ async function boot(): Promise<void> {
   function refreshFollow(): void {
     if (!followState || !routeEdges || !marker) return;
     marker.position.copy(nodeWorld(currentNodeId(followState)));
+    setFloorEmphasis(stationGroup, graph.nodes.get(currentNodeId(followState))!.floor);
     const progress = `節點 ${followState.index + 1}/${followState.nodeIds.length}`;
     if (atEnd(followState)) {
       ui.setFollowInfo('已抵達目的地', progress);
@@ -91,6 +92,7 @@ async function boot(): Promise<void> {
   function exitFollow(): void {
     if (marker) { scene.remove(marker); marker = null; }
     followState = null;
+    setFloorEmphasis(stationGroup, null);
     ui.showFollow(false);
   }
 
@@ -133,7 +135,11 @@ async function boot(): Promise<void> {
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
   });
-  renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+  renderer.setAnimationLoop(() => {
+    if (marker && followState) controls.target.lerp(marker.position, 0.08);
+    controls.update();
+    renderer.render(scene, camera);
+  });
 }
 
 boot().catch((e) => {

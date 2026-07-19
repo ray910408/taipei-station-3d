@@ -41,3 +41,23 @@ export function buildPositionMarker(): THREE.Group {
   g.add(cone, ring);
   return g;
 }
+
+export function setFloorEmphasis(stationGroup: THREE.Group, activeFloorId: string | null): void {
+  for (const child of stationGroup.children) {
+    if (child.name === 'connectors') continue;
+    const dim = activeFloorId !== null && child.name !== activeFloorId;
+    child.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      const m = mesh.material as THREE.MeshStandardMaterial | undefined;
+      if (!m?.isMaterial) return;
+      if (mesh.userData.baseOpacity === undefined) {
+        // GLB 軌 material 可能跨 mesh 共用——首次調整前 clone，避免調暗洩漏到其他樓層
+        mesh.material = m.clone();
+        mesh.userData.baseOpacity = (mesh.material as THREE.MeshStandardMaterial).opacity;
+      }
+      const mat = mesh.material as THREE.MeshStandardMaterial;
+      mat.transparent = true;
+      mat.opacity = (mesh.userData.baseOpacity as number) * (dim ? 0.15 : 1);
+    });
+  }
+}
