@@ -20,6 +20,9 @@
     #steps { margin: 8px 0 0; padding-left: 20px; max-height: 40vh; overflow-y: auto; }
     #overlay { position: fixed; inset: 0; background: #000c; color: #ff8080; padding: 24px;
       white-space: pre-wrap; font-family: monospace; display: none; z-index: 99; overflow: auto; }
+    #follow-next { font-size: 16px; font-weight: 700; margin: 8px 0 2px; }
+    #follow-progress { color: #9fb0c4; margin-bottom: 4px; }
+    #btn-advance { font-size: 16px; }
   </style>
 </head>
 <body>
@@ -34,6 +37,14 @@
     <button id="btn-route">一般路徑</button>
     <button id="btn-route-acc">無障礙路徑</button>
     <button id="btn-clear">清除</button>
+    <button id="btn-follow" disabled>開始導航</button>
+    <div id="follow-panel" style="display:none">
+      <div id="follow-next"></div>
+      <div id="follow-progress"></div>
+      <button id="btn-advance">我到了</button>
+      <button id="btn-back">上一步</button>
+      <button id="btn-exit-follow">結束導航</button>
+    </div>
     <ol id="steps"></ol>
   </div>
   <div id="overlay"></div>

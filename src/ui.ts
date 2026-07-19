@@ -2,7 +2,12 @@ import type * as THREE from 'three';
 import type { Landmark } from './nav';
 import type { StationModel } from './types';
 
-export interface UIHandles { setSteps(steps: string[]): void }
+export interface UIHandles {
+  setSteps(steps: string[]): void;
+  showFollow(on: boolean): void;
+  setFollowInfo(next: string, progress: string): void;
+  setFollowReady(on: boolean): void;
+}
 
 export function setupUI(opts: {
   model: StationModel;
@@ -10,6 +15,10 @@ export function setupUI(opts: {
   landmarks: Landmark[];
   onRoute: (start: string, end: string, accessibleOnly: boolean) => void;
   onClear: () => void;
+  onStartFollow: () => void;
+  onAdvance: () => void;
+  onBack: () => void;
+  onExitFollow: () => void;
 }): UIHandles {
   const { model, stationGroup } = opts;
   const floorsDiv = document.querySelector<HTMLDivElement>('#floors')!;
@@ -65,13 +74,21 @@ export function setupUI(opts: {
   const btnRoute = document.querySelector<HTMLButtonElement>('#btn-route')!;
   const btnAcc = document.querySelector<HTMLButtonElement>('#btn-route-acc')!;
   const btnClear = document.querySelector<HTMLButtonElement>('#btn-clear')!;
+  const btnFollow = document.querySelector<HTMLButtonElement>('#btn-follow')!;
+  const followPanel = document.querySelector<HTMLDivElement>('#follow-panel')!;
+  const followNext = document.querySelector<HTMLDivElement>('#follow-next')!;
+  const followProgress = document.querySelector<HTMLDivElement>('#follow-progress')!;
+  document.querySelector<HTMLButtonElement>('#btn-advance')!.addEventListener('click', () => opts.onAdvance());
+  document.querySelector<HTMLButtonElement>('#btn-back')!.addEventListener('click', () => opts.onBack());
+  document.querySelector<HTMLButtonElement>('#btn-exit-follow')!.addEventListener('click', () => opts.onExitFollow());
+  btnFollow.addEventListener('click', () => opts.onStartFollow());
   const canRoute = opts.landmarks.length >= 2;
   btnRoute.disabled = !canRoute;
   btnAcc.disabled = !canRoute;
   if (!canRoute) btnRoute.title = btnAcc.title = '資料尚無具名節點（landmarks）';
   btnRoute.addEventListener('click', () => opts.onRoute(selStart.value, selEnd.value, false));
   btnAcc.addEventListener('click', () => opts.onRoute(selStart.value, selEnd.value, true));
-  btnClear.addEventListener('click', () => { opts.onClear(); setSteps([]); });
+  btnClear.addEventListener('click', () => { opts.onClear(); setSteps([]); setFollowReady(false); });
 
   function setSteps(steps: string[]): void {
     stepsOl.replaceChildren(...steps.map((s) => {
@@ -80,5 +97,16 @@ export function setupUI(opts: {
       return li;
     }));
   }
-  return { setSteps };
+  function showFollow(on: boolean): void {
+    followPanel.style.display = on ? 'block' : 'none';
+    for (const b of [btnRoute, btnAcc, btnClear, btnFollow]) b.style.display = on ? 'none' : '';
+    selStart.disabled = on;
+    selEnd.disabled = on;
+  }
+  function setFollowInfo(next: string, progress: string): void {
+    followNext.textContent = next;
+    followProgress.textContent = progress;
+  }
+  function setFollowReady(on: boolean): void { btnFollow.disabled = !on; }
+  return { setSteps, showFollow, setFollowInfo, setFollowReady };
 }

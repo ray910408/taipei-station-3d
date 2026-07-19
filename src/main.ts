@@ -2,11 +2,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
-import { buildStationGroup } from './builder';
+import { buildStationGroup, toWorld } from './builder';
 import { buildGraph, findPath, routeSteps, listLandmarks } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { setupUI } from './ui';
+import {
+  startFollow, advance, back, atEnd, currentNodeId, remainingEdges,
+  buildPositionMarker, type FollowState,
+} from './follow';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 
@@ -64,8 +68,35 @@ async function boot(): Promise<void> {
 
   const graph = buildGraph(model);
   let routeEdges: GraphEdge[] | null = null;
+  let followState: FollowState | null = null;
+  let marker: THREE.Group | null = null;
+
+  const nodeWorld = (id: string): THREE.Vector3 => {
+    const n = graph.nodes.get(id)!;
+    return toWorld(n.xy, n.z);
+  };
+
+  function refreshFollow(): void {
+    if (!followState || !routeEdges || !marker) return;
+    marker.position.copy(nodeWorld(currentNodeId(followState)));
+    const progress = `節點 ${followState.index + 1}/${followState.nodeIds.length}`;
+    if (atEnd(followState)) {
+      ui.setFollowInfo('已抵達目的地', progress);
+      return;
+    }
+    const next = routeSteps(model, graph, remainingEdges(routeEdges, followState))[0] ?? '前往下一節點';
+    ui.setFollowInfo(`下一步：${next}`, progress);
+  }
+
+  function exitFollow(): void {
+    if (marker) { scene.remove(marker); marker = null; }
+    followState = null;
+    ui.showFollow(false);
+  }
+
   let routeObj: THREE.Object3D | null = null;
   const clearRoute = () => {
+    exitFollow();
     routeEdges = null;
     if (routeObj) { scene.remove(routeObj); routeObj = null; }
   };
@@ -74,14 +105,26 @@ async function boot(): Promise<void> {
     model, stationGroup,
     landmarks: listLandmarks(model),
     onClear: clearRoute,
+    onStartFollow: () => {
+      if (!routeEdges) return;
+      followState = startFollow(routeEdges);
+      marker = buildPositionMarker();
+      scene.add(marker);
+      ui.showFollow(true);
+      refreshFollow();
+    },
+    onAdvance: () => { if (followState) { followState = advance(followState); refreshFollow(); } },
+    onBack: () => { if (followState) { followState = back(followState); refreshFollow(); } },
+    onExitFollow: exitFollow,
     onRoute: (start, end, accessibleOnly) => {
       clearRoute();
       const path = findPath(graph, start, end, { accessibleOnly });
-      if (!path) { ui.setSteps(['找不到路徑']); return; }
+      if (!path) { ui.setSteps(['找不到路徑']); ui.setFollowReady(false); return; }
       routeEdges = path;
       routeObj = buildRouteObject(graph, path);
       scene.add(routeObj);
       ui.setSteps(routeSteps(model, graph, path));
+      ui.setFollowReady(true);
     },
   });
 
