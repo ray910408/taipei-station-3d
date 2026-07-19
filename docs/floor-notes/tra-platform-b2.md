@@ -12,6 +12,17 @@
 - slab：站體矩形沿用 B1 框架（示意圖無輪廓可描）；R 線站體豎井在站體之外，不開洞。
 - 高鐵月台 system 仍概括為 tra；軌道未畫；無 nav（垂直脈絡用途）。
 
+## Phase 3 增補（轉乘 nav 與 rctp connectors）
+
+- nav 四節點：P4 落點 n-tp-001 (92.8,30.5)、候車 n-tp-002 (77.8,26)；P3 落點 n-tp-003 (91.7,9)、
+  候車 n-tp-004 (76.7,4.5)。落點 xy 取 B3 前廳（n-rc-017/018）垂直投影 clamp 進帶內（距帶緣 1m）——
+  與 B3 量測位置的 y 錯位 P4=8.3m、P3=13.6m，歸因 tra-b2-map 帶位置等距示意
+  （詳 mrt-r-concourse-b3.md Phase 3 增補）。
+- connectors c-{stair,esc,elv}-rctp-*×8（P4 經 n-rc-017、P3 經 n-rc-018）；電梯 accessible:true、
+  位置語意推定 conf 2（tra-b3-map 各月台群含電梯、trtc-section 無障礙符號）。
+- demo 終點移至 n-tp-002；月台帶重錨（對齊 trtc 框架）列 Phase 4+ 資料債，需更佳來源。
+
 ## 仍未確定
 - 月台實際長度與東西端點（圖為等長示意）。
 - 「往捷運 To MRT」梯群在月台東段的精確位置（圖示等距，未據以建 connector——B2 無 nav）。
+- 月台帶 y 位置與 B3 轉乘豎井量測有 8–14m 系統性偏差（帶重錨待更佳來源）。

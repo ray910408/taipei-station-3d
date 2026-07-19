@@ -199,6 +199,166 @@
       "confidence": 3,
       "status": "traced",
       "note": "月台中段電梯（淡水信義線2），B4↔B3"
+    },
+    {
+      "id": "c-stair-rctp-1",
+      "kind": "stair",
+      "system": "tra",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-017"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-001"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第4月台往捷運轉乘樓梯（B3 TR區↔B2）"
+    },
+    {
+      "id": "c-esc-rctp-1",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-017"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-001"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第4月台轉乘電扶梯上行"
+    },
+    {
+      "id": "c-esc-rctp-2",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-017"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-001"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第4月台轉乘電扶梯下行"
+    },
+    {
+      "id": "c-elv-rctp-1",
+      "kind": "elevator",
+      "system": "tra",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-017"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-001"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第4月台轉乘電梯（tra-b2-map 往捷運群含電梯、trtc-section 無障礙符號佐證）"
+    },
+    {
+      "id": "c-stair-rctp-2",
+      "kind": "stair",
+      "system": "tra",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-018"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-003"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第3月台往捷運轉乘樓梯（B3 TR區↔B2）"
+    },
+    {
+      "id": "c-esc-rctp-3",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-018"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-003"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第3月台轉乘電扶梯上行"
+    },
+    {
+      "id": "c-esc-rctp-4",
+      "kind": "escalator",
+      "system": "tra",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-018"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-003"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第3月台轉乘電扶梯下行"
+    },
+    {
+      "id": "c-elv-rctp-2",
+      "kind": "elevator",
+      "system": "tra",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-018"
+        },
+        {
+          "floor": "tra-platform-b2",
+          "node": "n-tp-003"
+        }
+      ],
+      "source": "tra-b3-map",
+      "confidence": 2,
+      "note": "第3月台轉乘電梯（同 P4 佐證）"
     }
   ]
 }

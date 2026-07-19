@@ -16,36 +16,42 @@ const model = assembleModel(stationDoc, {
 }, connectorsDoc);
 const graph = buildGraph(model);
 
-describe('真實資料 demo 路徑', () => {
+describe('真實資料 demo 路徑（Phase 3：終點延伸至臺鐵第4月台）', () => {
   const demo = model.station.demo!;
 
-  it('station.demo 已設定為 B4 月台中段 → B3 臺鐵轉乘閘門內', () => {
-    expect(demo).toEqual({ start: 'n-rp-003', end: 'n-rc-006' });
+  it('station.demo 為 B4 月台中段 → B2 第4月台候車點', () => {
+    expect(demo).toEqual({ start: 'n-rp-003', end: 'n-tp-002' });
   });
 
-  it('一般路徑存在：電扶梯上樓、出捷運閘門、進臺鐵轉乘閘門', () => {
+  it('一般路徑存在：出捷運閘門、進臺鐵轉乘閘門、經 rctp 轉乘設施上月台', () => {
     const path = findPath(graph, demo.start, demo.end);
     expect(path).not.toBeNull();
-    expect(path!.some((e) => e.kind === 'escalator')).toBe(true);
     expect(path!.filter((e) => e.kind === 'gate').length).toBeGreaterThanOrEqual(2);
-    expect(path![path!.length - 1].to).toBe('n-rc-006');
+    expect(path!.some((e) => e.connector?.includes('rctp'))).toBe(true);
+    expect(path![path!.length - 1].to).toBe('n-tp-002');
   });
 
-  it('無障礙路徑存在且全程 accessible（電梯 + 無障礙閘門）', () => {
+  it('無障礙路徑全程 accessible：電梯上月台、走無障礙轉乘閘門', () => {
     const path = findPath(graph, demo.start, demo.end, { accessibleOnly: true });
     expect(path).not.toBeNull();
     expect(path!.every((e) => e.accessible)).toBe(true);
-    expect(path!.some((e) => e.kind === 'elevator')).toBe(true);
+    expect(path!.some((e) => e.connector === 'c-elv-rctp-1')).toBe(true);
+    expect(path!.some((e) => e.gate === 'g-rc-tra-acc')).toBe(true);
   });
 
-  it('B4 → B1 臺鐵付費區（次要路線）可達', () => {
-    const path = findPath(graph, 'n-rp-003', 'n-tc-003');
+  it('第3月台亦可達（無障礙）', () => {
+    const path = findPath(graph, demo.start, 'n-tp-004', { accessibleOnly: true });
     expect(path).not.toBeNull();
+    expect(path!.some((e) => e.connector === 'c-elv-rctp-2')).toBe(true);
   });
 
-  it('文字步驟數量合理且首步為步行', () => {
-    const steps = routeSteps(model, graph, findPath(graph, demo.start, demo.end)!);
-    expect(steps.length).toBeGreaterThanOrEqual(4);
-    expect(steps[0]).toMatch(/^步行約 \d+ 公尺$/);
+  it('B4 → B1 臺鐵付費區（次要路線）仍可達', () => {
+    expect(findPath(graph, 'n-rp-003', 'n-tc-003')).not.toBeNull();
+  });
+
+  it('文字步驟含搭電梯至月台層、末步為步行', () => {
+    const steps = routeSteps(model, graph, findPath(graph, demo.start, demo.end, { accessibleOnly: true })!);
+    expect(steps.some((s) => s.includes('搭電梯至「臺鐵/高鐵月台層」'))).toBe(true);
+    expect(steps[steps.length - 1]).toMatch(/^步行約 \d+ 公尺$/);
   });
 });

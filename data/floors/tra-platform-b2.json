@@ -73,5 +73,41 @@
       "status": "traced",
       "note": "台鐵第四月台（北端；往捷運梯群在東段）"
     }
-  ]
+  ],
+  "nav": {
+    "nodes": [
+      {
+        "id": "n-tp-001",
+        "xy": [92.8, 30.5],
+        "area": "a-tp-plat-4"
+      },
+      {
+        "id": "n-tp-002",
+        "xy": [77.8, 26],
+        "area": "a-tp-plat-4"
+      },
+      {
+        "id": "n-tp-003",
+        "xy": [91.7, 9],
+        "area": "a-tp-plat-3"
+      },
+      {
+        "id": "n-tp-004",
+        "xy": [76.7, 4.5],
+        "area": "a-tp-plat-3"
+      }
+    ],
+    "edges": [
+      {
+        "from": "n-tp-001",
+        "to": "n-tp-002",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tp-003",
+        "to": "n-tp-004",
+        "kind": "walk"
+      }
+    ]
+  }
 }
