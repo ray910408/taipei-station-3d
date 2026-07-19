@@ -34,3 +34,11 @@
   `npm run validate:glb` 跑 Khronos 驗證；viewer `?geom=glb` 載入。雙軌契約＝group name（樓層開關）
   與 userData.kind（透明度）經 extras 保留，由 tests/glb-roundtrip.test.ts 守住。
   資料改動後記得重新 export，GLB 不會自動更新。
+
+## Phase 3 增補慣例
+
+- **nav node `name`**：選用欄位 `{ zh, en? }`——起訖選擇清單只列具名節點（`listLandmarks`），
+  命名格式「地點（限定語）」如「臺鐵第4月台（候車）」。
+- **跟隨模式**：位置推進唯一入口＝`follow.ts` 的 `advance()`；之後的定位技術（PDR 等）掛同一介面，
+  不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material（GLB 軌 material 可能共用），
+  由 tests/follow-emphasis.test.ts 守住不洩漏。
