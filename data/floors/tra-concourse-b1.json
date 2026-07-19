@@ -155,6 +155,24 @@
       "source": "tra-b1-map",
       "confidence": 2,
       "note": "東剪票口寬閘門（推定於群北端）"
+    },
+    {
+      "id": "g-tc-tra-out-e",
+      "kind": "faregate",
+      "system": "tra",
+      "direction": "out",
+      "accessible": false,
+      "line": [
+        [82, -6],
+        [82, 0]
+      ],
+      "connects": [
+        "a-tc-tra-paid",
+        "a-tc-unpaid-e"
+      ],
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "note": "東剪票口出站閘門列（推定於進站列南側並設）"
     }
   ],
   "nav": {
@@ -235,6 +253,13 @@
         "from": "n-tc-006",
         "to": "n-tc-003",
         "kind": "walk"
+      },
+      {
+        "from": "n-tc-003",
+        "to": "n-tc-002",
+        "kind": "gate",
+        "gate": "g-tc-tra-out-e",
+        "bidir": false
       }
     ]
   }
