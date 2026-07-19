@@ -24,6 +24,14 @@ export function setupUI(opts: {
   const floorsDiv = document.querySelector<HTMLDivElement>('#floors')!;
   const stepsOl = document.querySelector<HTMLOListElement>('#steps')!;
 
+  for (const [btnId, cls] of [['btn-bigtext', 'big-text'], ['btn-contrast', 'high-contrast']] as const) {
+    const b = document.querySelector<HTMLButtonElement>(`#${btnId}`)!;
+    b.addEventListener('click', () => {
+      const on = document.body.classList.toggle(cls);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
   for (const meta of model.station.floors) {
     const label = document.createElement('label');
     const cb = document.createElement('input');

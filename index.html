@@ -23,12 +23,30 @@
     #follow-next { font-size: 16px; font-weight: 700; margin: 8px 0 2px; }
     #follow-progress { color: #9fb0c4; margin-bottom: 4px; }
     #btn-advance { font-size: 16px; }
+    #panel button { min-height: 36px; }
+    body.big-text #panel { font-size: 18px; width: 300px; }
+    body.big-text #follow-next { font-size: 22px; }
+    body.big-text #panel button { font-size: 18px; min-height: 44px; }
+    body.high-contrast #panel { background: #000; border-color: #fff; color: #fff; }
+    body.high-contrast #panel button { background: #ffd60a; color: #000; font-weight: 700; }
+    body.high-contrast #panel button:disabled { background: #555; color: #bbb; }
+    body.high-contrast #follow-progress { color: #fff; }
+    @media (max-width: 600px) {
+      #panel { top: auto; bottom: 0; left: 0; right: 0; width: auto;
+        border-radius: 12px 12px 0 0; max-height: 48vh; overflow-y: auto; }
+      #panel button { min-height: 44px; padding: 8px 14px; }
+      #steps { max-height: 20vh; }
+    }
   </style>
 </head>
 <body>
   <div id="app"></div>
   <div id="panel">
     <h1>台北車站室內 3D 導航</h1>
+    <div id="a11y-toggles">
+      <button id="btn-bigtext" aria-pressed="false">大字</button>
+      <button id="btn-contrast" aria-pressed="false">高對比</button>
+    </div>
     <div id="geom-mode"></div>
     <div id="floors"></div>
     <label>起點 <select id="sel-start"></select></label>
