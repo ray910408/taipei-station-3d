@@ -119,7 +119,18 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     const floor = model.floors.get(meta.id);
     for (const n of floor?.nav?.nodes ?? []) nodePos.set(n.id, toWorld(n.xy, meta.elevation));
   }
+  const SPACING = 1.6;
+  const groups = new Map<string, StationModel['connectors']>();
   for (const c of model.connectors) {
+    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
+    const members = groups.get(key) ?? [];
+    members.push(c);
+    groups.set(key, members);
+  }
+  for (const c of model.connectors) {
+    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
+    const members = groups.get(key)!;
+    const offset = (members.indexOf(c) - (members.length - 1) / 2) * SPACING;
     for (let i = 0; i < c.levels.length - 1; i++) {
       const a = nodePos.get(c.levels[i].node);
       const b = nodePos.get(c.levels[i + 1].node);
@@ -136,6 +147,11 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         mesh.lookAt(b);
         mesh.rotateY(Math.PI / 2); // BoxGeometry 長軸為 x，lookAt 對齊 z 後轉回
       }
+      // 同錨點梯群純視覺錯開，nav 資料不動
+      const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x);
+      if (lateral.length() < 1e-6) lateral.set(1, 0, 0);
+      else lateral.normalize();
+      mesh.position.addScaledVector(lateral, offset);
       mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
       connGroup.add(mesh);
     }
