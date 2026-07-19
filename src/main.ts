@@ -120,6 +120,11 @@ async function boot(): Promise<void> {
     onExitFollow: exitFollow,
     onRoute: (start, end, accessibleOnly) => {
       clearRoute();
+      if (start === end) {
+        ui.setSteps(['起點與終點相同，請選擇不同地標']);
+        ui.setFollowReady(false);
+        return;
+      }
       const path = findPath(graph, start, end, { accessibleOnly });
       if (!path) { ui.setSteps(['找不到路徑']); ui.setFollowReady(false); return; }
       routeEdges = path;

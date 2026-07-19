@@ -33,6 +33,10 @@ describe('buildGraph', () => {
 });
 
 describe('findPath', () => {
+  it('起訖同點回傳空陣列（非 null）——main.ts 防呆依賴此契約', () => {
+    expect(findPath(graph, 'n-pl-001', 'n-pl-001')).toEqual([]);
+  });
+
   it('一般模式走電扶梯 + 單向閘門', () => {
     const path = findPath(graph, 'n-pl-001', 'n-ha-002');
     expect(path).not.toBeNull();
