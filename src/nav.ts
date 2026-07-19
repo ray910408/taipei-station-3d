@@ -78,6 +78,11 @@ export function buildGraph(model: StationModel): NavGraph {
   return { nodes, adj };
 }
 
+/** 起訖相同時回傳提示訊息，否則 null——main.ts onRoute 防呆的可測試判斷（QA ISSUE-001）。 */
+export function sameEndpointMessage(start: string, end: string): string | null {
+  return start === end ? '起點與終點相同，請選擇不同地標' : null;
+}
+
 export function findPath(
   graph: NavGraph, start: string, goal: string,
   opts: { accessibleOnly?: boolean } = {},

@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, toWorld } from './builder';
-import { buildGraph, findPath, routeSteps, listLandmarks } from './nav';
+import { buildGraph, findPath, routeSteps, listLandmarks, sameEndpointMessage } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { setupUI } from './ui';
@@ -120,8 +120,9 @@ async function boot(): Promise<void> {
     onExitFollow: exitFollow,
     onRoute: (start, end, accessibleOnly) => {
       clearRoute();
-      if (start === end) {
-        ui.setSteps(['起點與終點相同，請選擇不同地標']);
+      const sameMsg = sameEndpointMessage(start, end);
+      if (sameMsg) {
+        ui.setSteps([sameMsg]);
         ui.setFollowReady(false);
         return;
       }

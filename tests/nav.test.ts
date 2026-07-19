@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assembleModel } from '../src/loader';
-import { buildGraph, findPath, routeSteps, listLandmarks } from '../src/nav';
+import { buildGraph, findPath, routeSteps, listLandmarks, sameEndpointMessage } from '../src/nav';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
 import plat from './fixtures/mini/data/floors/plat-b2.json';
@@ -99,5 +99,12 @@ describe('nav node name / listLandmarks', () => {
     expect(lm).toHaveLength(1);
     expect(lm[0]).toMatchObject({ floor: 'hall-b1', id: 'n-ha-002', label: '測試出口' });
     expect(lm[0].floorLabel).toContain('測試大廳');
+  });
+});
+
+describe('sameEndpointMessage', () => {
+  it('同點回訊息、異點回 null', () => {
+    expect(sameEndpointMessage('a', 'a')).toBe('起點與終點相同，請選擇不同地標');
+    expect(sameEndpointMessage('a', 'b')).toBeNull();
   });
 });

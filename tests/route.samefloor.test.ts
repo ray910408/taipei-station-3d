@@ -73,4 +73,21 @@ describe('同樓層路線不繞別層（QA ISSUE-002 回歸）', () => {
       }
     }
   });
+
+  it('南端→北端總成本受鏈序保護（舊鏈 001→002→003 為 156m，應紅）', () => {
+    const path = findPath(graph, 'n-rp-001', 'n-rp-005')!;
+    const total = path.reduce((s, e) => s + e.length, 0);
+    expect(total).toBeLessThan(120); // 現行 002-001-003 鏈 ≈ 108.4
+  });
+
+  it('南端→中段總成本受鏈序保護（舊鏈為 95m，應紅）', () => {
+    const path = findPath(graph, 'n-rp-001', 'n-rp-003')!;
+    const total = path.reduce((s, e) => s + e.length, 0);
+    expect(total).toBeLessThan(60); // 現行直邊 ≈ 47.4
+  });
+
+  it('樓梯轉乘懲罰 +25（c-stair-rprc-1 同 xy，幾何長=高差 7）', () => {
+    const stair = (graph.adj.get('n-rp-001') ?? []).find((e) => e.kind === 'stair')!;
+    expect(stair.length).toBeCloseTo(7 + 25, 6);
+  });
 });
