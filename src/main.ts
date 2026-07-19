@@ -124,7 +124,7 @@ async function boot(): Promise<void> {
       routeObj = buildRouteObject(graph, path);
       scene.add(routeObj);
       ui.setSteps(routeSteps(model, graph, path));
-      ui.setFollowReady(true);
+      ui.setFollowReady(path.length > 0); // 起訖同點時 findPath 回空陣列，不可進入跟隨
     },
   });
 
