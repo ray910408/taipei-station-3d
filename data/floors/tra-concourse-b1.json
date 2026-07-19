@@ -167,12 +167,18 @@
       {
         "id": "n-tc-002",
         "xy": [92, 12],
-        "area": "a-tc-unpaid-e"
+        "area": "a-tc-unpaid-e",
+        "name": {
+          "zh": "B1 東剪票口外（非付費）"
+        }
       },
       {
         "id": "n-tc-003",
         "xy": [70, 12],
-        "area": "a-tc-tra-paid"
+        "area": "a-tc-tra-paid",
+        "name": {
+          "zh": "B1 臺鐵東付費島"
+        }
       },
       {
         "id": "n-tc-004",

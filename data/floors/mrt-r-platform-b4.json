@@ -130,7 +130,10 @@
       {
         "id": "n-rp-001",
         "xy": [104.9, -60.6],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "淡水信義線月台（南端）"
+        }
       },
       {
         "id": "n-rp-002",
@@ -140,7 +143,10 @@
       {
         "id": "n-rp-003",
         "xy": [118, -15],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "淡水信義線月台（中段）"
+        }
       },
       {
         "id": "n-rp-004",
@@ -150,7 +156,10 @@
       {
         "id": "n-rp-005",
         "xy": [137.2, 42.9],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "淡水信義線月台（北端）"
+        }
       },
       {
         "id": "n-rp-006",

@@ -276,7 +276,10 @@
       {
         "id": "n-rc-001",
         "xy": [104.9, -60.6],
-        "area": "a-rc-paid"
+        "area": "a-rc-paid",
+        "name": {
+          "zh": "R線大廳南段（付費區）"
+        }
       },
       {
         "id": "n-rc-002",
@@ -291,7 +294,10 @@
       {
         "id": "n-rc-004",
         "xy": [112.8, 26.4],
-        "area": "a-rc-unpaid-n"
+        "area": "a-rc-unpaid-n",
+        "name": {
+          "zh": "R線大廳 詢問處1外（非付費）"
+        }
       },
       {
         "id": "n-rc-005",
@@ -301,7 +307,10 @@
       {
         "id": "n-rc-006",
         "xy": [90.7, 16.3],
-        "area": "a-rc-tra-paid"
+        "area": "a-rc-tra-paid",
+        "name": {
+          "zh": "台鐵轉乘區（B3）"
+        }
       },
       {
         "id": "n-rc-007",
