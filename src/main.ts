@@ -90,7 +90,7 @@ async function boot(): Promise<void> {
   }
 
   function exitFollow(): void {
-    if (marker) { scene.remove(marker); marker = null; }
+    if (marker) scene.remove(marker); // marker 建一次重用，避免反覆進出累積 GPU 資源
     followState = null;
     setFloorEmphasis(stationGroup, null);
     ui.showFollow(false);
@@ -108,9 +108,9 @@ async function boot(): Promise<void> {
     landmarks: listLandmarks(model),
     onClear: clearRoute,
     onStartFollow: () => {
-      if (!routeEdges) return;
+      if (!routeEdges || routeEdges.length === 0) return;
       followState = startFollow(routeEdges);
-      marker = buildPositionMarker();
+      if (!marker) marker = buildPositionMarker();
       scene.add(marker);
       ui.showFollow(true);
       refreshFollow();
@@ -136,7 +136,7 @@ async function boot(): Promise<void> {
     renderer.setSize(innerWidth, innerHeight);
   });
   renderer.setAnimationLoop(() => {
-    if (marker && followState) controls.target.lerp(marker.position, 0.08);
+    if (followState && marker) controls.target.lerp(marker.position, 0.08);
     controls.update();
     renderer.render(scene, camera);
   });

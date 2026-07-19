@@ -105,4 +105,43 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     expect(matA.opacity).toBeCloseTo(0.8, 5);
     expect(matB.opacity).toBeCloseTo(0.8 * 0.15, 5);
   });
+
+  it('null 還原 transparent 旗標並清除快照（終審 I-1）', () => {
+    const g = new THREE.Group();
+    const fa = new THREE.Group();
+    fa.name = 'floor-a';
+    const opaque = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ opacity: 1, transparent: false }),
+    );
+    fa.add(opaque);
+    g.add(fa);
+    setFloorEmphasis(g, 'floor-b'); // fa 被調暗
+    expect((opaque.material as THREE.MeshStandardMaterial).transparent).toBe(true);
+    setFloorEmphasis(g, null);
+    const m = opaque.material as THREE.MeshStandardMaterial;
+    expect(m.transparent).toBe(false);
+    expect(m.opacity).toBeCloseTo(1, 5);
+    expect(opaque.userData.baseOpacity).toBeUndefined();
+    expect(opaque.userData.baseTransparent).toBeUndefined();
+  });
+
+  it('還原後外部改 opacity（slider），下次聚焦以新值為基準（終審 I-1）', () => {
+    const g = new THREE.Group();
+    const fa = new THREE.Group();
+    fa.name = 'floor-a';
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ opacity: 0.9, transparent: true }),
+    );
+    fa.add(mesh);
+    g.add(fa);
+    setFloorEmphasis(g, 'floor-b');
+    setFloorEmphasis(g, null);
+    (mesh.material as THREE.MeshStandardMaterial).opacity = 0.1; // 模擬 slider
+    setFloorEmphasis(g, 'floor-b');
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1 * 0.15, 5);
+    setFloorEmphasis(g, null);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1, 5);
+  });
 });

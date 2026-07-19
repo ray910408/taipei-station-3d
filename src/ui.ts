@@ -65,6 +65,10 @@ export function setupUI(opts: {
   }
   const demo = model.station.demo;
   if (demo) { selStart.value = demo.start; selEnd.value = demo.end; }
+  for (const sel of [selStart, selEnd]) {
+    // 改起訖即失效既有路線——否則「開始導航」會沿舊 routeEdges 走（與畫面選擇不符）
+    sel.addEventListener('change', () => { opts.onClear(); setSteps([]); setFollowReady(false); });
+  }
 
   const opacity = document.querySelector<HTMLInputElement>('#opacity')!;
   opacity.addEventListener('input', () => {
@@ -75,6 +79,8 @@ export function setupUI(opts: {
       if (m && (mesh.userData.kind === 'slab' || mesh.userData.kind === 'shell')) {
         m.opacity = (mesh.userData.kind === 'slab' ? 0.9 : 0.08) * k * (1 / 0.6);
         m.transparent = true;
+        // 跟隨會話中同步快照，退出/下一次聚焦以 slider 新值為基準
+        if (mesh.userData.baseOpacity !== undefined) mesh.userData.baseOpacity = m.opacity;
       }
     });
   });

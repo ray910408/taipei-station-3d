@@ -230,6 +230,11 @@
         "kind": "gate",
         "gate": "g-tc-tra-acc-e",
         "bidir": true
+      },
+      {
+        "from": "n-tc-006",
+        "to": "n-tc-003",
+        "kind": "walk"
       }
     ]
   }

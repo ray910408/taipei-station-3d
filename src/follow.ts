@@ -50,12 +50,27 @@ export function setFloorEmphasis(stationGroup: THREE.Group, activeFloorId: strin
       const mesh = obj as THREE.Mesh;
       const m = mesh.material as THREE.MeshStandardMaterial | undefined;
       if (!m?.isMaterial) return;
-      if (mesh.userData.baseOpacity === undefined) {
-        // GLB 軌 material 可能跨 mesh 共用——首次調整前 clone，避免調暗洩漏到其他樓層
+      if (activeFloorId === null) {
+        // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次跟隨會話，
+        // 下次跟隨重新取樣，期間的透明度 slider 變更才不會被舊快照蓋掉
+        if (mesh.userData.baseOpacity !== undefined) {
+          m.opacity = mesh.userData.baseOpacity as number;
+          m.transparent = mesh.userData.baseTransparent as boolean;
+          delete mesh.userData.baseOpacity;
+          delete mesh.userData.baseTransparent;
+        }
+        return;
+      }
+      if (!mesh.userData.matCloned) {
+        // GLB 軌 material 可能跨 mesh 共用——調整前 clone 一次（跨會話不重複），避免調暗洩漏
         mesh.material = m.clone();
-        mesh.userData.baseOpacity = (mesh.material as THREE.MeshStandardMaterial).opacity;
+        mesh.userData.matCloned = true;
       }
       const mat = mesh.material as THREE.MeshStandardMaterial;
+      if (mesh.userData.baseOpacity === undefined) {
+        mesh.userData.baseOpacity = mat.opacity;
+        mesh.userData.baseTransparent = mat.transparent;
+      }
       mat.transparent = true;
       mat.opacity = (mesh.userData.baseOpacity as number) * (dim ? 0.15 : 1);
     });
