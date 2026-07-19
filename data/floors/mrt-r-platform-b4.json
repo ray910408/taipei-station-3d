@@ -169,12 +169,12 @@
     ],
     "edges": [
       {
-        "from": "n-rp-001",
-        "to": "n-rp-002",
+        "from": "n-rp-002",
+        "to": "n-rp-001",
         "kind": "walk"
       },
       {
-        "from": "n-rp-002",
+        "from": "n-rp-001",
         "to": "n-rp-003",
         "kind": "walk"
       },
