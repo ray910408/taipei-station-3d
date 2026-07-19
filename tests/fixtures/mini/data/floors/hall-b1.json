@@ -17,7 +17,7 @@
   "nav": {
     "nodes": [
       { "id": "n-ha-001", "xy": [-5, 0], "area": "a-ha-paid" },
-      { "id": "n-ha-002", "xy": [2, 0], "area": "a-ha-unpaid" },
+      { "id": "n-ha-002", "xy": [2, 0], "area": "a-ha-unpaid", "name": { "zh": "測試出口" } },
       { "id": "n-ha-003", "xy": [-5, 3], "area": "a-ha-paid" },
       { "id": "n-ha-004", "xy": [2, 3], "area": "a-ha-unpaid" }
     ],

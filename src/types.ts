@@ -30,7 +30,7 @@ export interface Poi extends Provenance {
   id: string; kind: PoiKind; system?: string; position: Vec2; name?: LocalizedName;
 }
 
-export interface NavNode { id: string; xy: Vec2; area?: string }
+export interface NavNode { id: string; xy: Vec2; area?: string; name?: LocalizedName }
 export interface NavEdge {
   from: string; to: string; kind: 'walk' | 'gate' | 'platform-edge'; gate?: string; bidir?: boolean;
 }

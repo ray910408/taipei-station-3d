@@ -1,6 +1,6 @@
 import type { StationModel, Vec2 } from './types';
 
-export interface GraphNode { id: string; floor: string; xy: Vec2; z: number }
+export interface GraphNode { id: string; floor: string; xy: Vec2; z: number; name?: string }
 export interface GraphEdge {
   from: string; to: string;
   kind: 'walk' | 'gate' | 'platform-edge' | 'stair' | 'escalator' | 'elevator';
@@ -23,7 +23,7 @@ export function buildGraph(model: StationModel): NavGraph {
     const floor = model.floors.get(meta.id);
     if (!floor?.nav) continue;
     for (const n of floor.nav.nodes) {
-      nodes.set(n.id, { id: n.id, floor: meta.id, xy: n.xy, z: meta.elevation });
+      nodes.set(n.id, { id: n.id, floor: meta.id, xy: n.xy, z: meta.elevation, name: n.name?.zh });
     }
   }
 
@@ -142,4 +142,23 @@ export function routeSteps(model: StationModel, graph: NavGraph, edges: GraphEdg
   }
   flushWalk();
   return steps;
+}
+
+export interface Landmark { floor: string; floorLabel: string; id: string; label: string }
+
+export function listLandmarks(model: StationModel): Landmark[] {
+  const out: Landmark[] = [];
+  for (const meta of model.station.floors) {
+    const floor = model.floors.get(meta.id);
+    for (const n of floor?.nav?.nodes ?? []) {
+      if (!n.name) continue;
+      out.push({
+        floor: meta.id,
+        floorLabel: `${meta.labels['complex'] ?? ''} ${meta.name.zh}`.trim(),
+        id: n.id,
+        label: n.name.zh,
+      });
+    }
+  }
+  return out;
 }

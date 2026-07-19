@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assembleModel } from '../src/loader';
-import { buildGraph, findPath, routeSteps } from '../src/nav';
+import { buildGraph, findPath, routeSteps, listLandmarks } from '../src/nav';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
 import plat from './fixtures/mini/data/floors/plat-b2.json';
@@ -74,5 +74,19 @@ describe('routeSteps', () => {
       '通過測試系統閘門',
       '步行約 3 公尺',
     ]);
+  });
+});
+
+describe('nav node name / listLandmarks', () => {
+  it('buildGraph 保留節點中文名', () => {
+    expect(graph.nodes.get('n-ha-002')?.name).toBe('測試出口');
+    expect(graph.nodes.get('n-pl-001')?.name).toBeUndefined();
+  });
+
+  it('listLandmarks 僅列具名節點，依樓層順序', () => {
+    const lm = listLandmarks(model);
+    expect(lm).toHaveLength(1);
+    expect(lm[0]).toMatchObject({ floor: 'hall-b1', id: 'n-ha-002', label: '測試出口' });
+    expect(lm[0].floorLabel).toContain('測試大廳');
   });
 });
