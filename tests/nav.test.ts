@@ -81,7 +81,7 @@ describe('routeSteps', () => {
     const path = findPath(graph, 'n-pl-001', 'n-ha-002', { accessibleOnly: true })!;
     expect(routeSteps(model, graph, path)).toEqual([
       '步行約 5 公尺',
-      '搭電梯至「測試大廳」',
+      '搭電梯上至「測試大廳」',
       '通過測試系統閘門',
       '步行約 3 公尺',
     ]);

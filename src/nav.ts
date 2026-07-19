@@ -150,7 +150,7 @@ export function routeSteps(model: StationModel, graph: NavGraph, edges: GraphEdg
       const name = floorZh(dest.floor);
       if (e.kind === 'escalator') steps.push(`搭電扶梯${goingUp ? '上' : '下'}至「${name}」`);
       else if (e.kind === 'stair') steps.push(`走樓梯${goingUp ? '上' : '下'}至「${name}」`);
-      else steps.push(`搭電梯至「${name}」`);
+      else steps.push(`搭電梯${goingUp ? '上' : '下'}至「${name}」`);
     }
   }
   flushWalk();
