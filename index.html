@@ -34,6 +34,7 @@
     @media (max-width: 600px) {
       #panel { top: auto; bottom: 0; left: 0; right: 0; width: auto;
         border-radius: 12px 12px 0 0; max-height: 48vh; overflow-y: auto; }
+      body.big-text #panel { width: auto; } /* 大字的 300px 特異度較高，窄幅需同權重覆蓋 */
       #panel button { min-height: 44px; padding: 8px 14px; }
       #steps { max-height: 20vh; }
     }
