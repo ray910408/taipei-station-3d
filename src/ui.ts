@@ -10,26 +10,46 @@ export interface UIHandles {
   showArrive(on: boolean): void;
 }
 
+export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
+
+/** 依 query 過濾後、按樓層（floorLabel，保原始順序）分組——下拉全列不截斷（B4 修復）。 */
+export function groupLandmarks(landmarks: Landmark[], query: string): LandmarkGroup[] {
+  const q = query.trim();
+  const matched = q
+    ? landmarks.filter((l) => (l.label + l.floorLabel).includes(q))
+    : landmarks;
+  const groups: LandmarkGroup[] = [];
+  for (const lm of matched) {
+    const last = groups[groups.length - 1];
+    if (last?.floorLabel === lm.floorLabel) last.items.push(lm);
+    else groups.push({ floorLabel: lm.floorLabel, items: [lm] });
+  }
+  return groups;
+}
+
 /** 搜尋欄＋過濾清單：focus/input 顯示符合項，pointerdown 選取（先於 blur）。 */
 function attachSearch(
   input: HTMLInputElement, list: HTMLUListElement,
   landmarks: Landmark[], onPick: (lm: Landmark) => void, onEdit?: () => void,
 ): void {
   const render = (q: string): void => {
-    const items = q
-      ? landmarks.filter((l) => (l.label + l.floorLabel).includes(q))
-      : landmarks;
-    list.replaceChildren(...items.slice(0, 12).map((lm) => {
-      const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = `${lm.label}（${lm.floorLabel}）`;
-      btn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // 防 input blur 先收清單
-      btn.addEventListener('click', () => { list.hidden = true; onPick(lm); });
-      li.append(btn);
-      return li;
+    const groups = groupLandmarks(landmarks, q);
+    list.replaceChildren(...groups.flatMap((g) => {
+      const head = document.createElement('li');
+      head.className = 'group-label';
+      head.textContent = g.floorLabel;
+      return [head, ...g.items.map((lm) => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = lm.label; // 樓層資訊由組標頭承載，不再逐筆重複
+        btn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // 防 input blur 先收清單
+        btn.addEventListener('click', () => { list.hidden = true; onPick(lm); });
+        li.append(btn);
+        return li;
+      })];
     }));
-    list.hidden = items.length === 0;
+    list.hidden = groups.length === 0;
   };
   input.addEventListener('focus', () => render(input.value.trim()));
   input.addEventListener('input', () => { onEdit?.(); render(input.value.trim()); });
