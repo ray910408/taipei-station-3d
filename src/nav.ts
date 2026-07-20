@@ -1,4 +1,5 @@
 import type { StationModel, Vec2 } from './types';
+import { segmentClear } from './visibility';
 
 export interface GraphNode { id: string; floor: string; xy: Vec2; z: number; name?: string }
 export interface GraphEdge {
@@ -60,6 +61,33 @@ export function buildGraph(model: StationModel): NavGraph {
       };
       addEdge({ from: e.from, to: e.to, ...base });
       if (e.bidir !== false) addEdge({ from: e.to, to: e.from, ...base });
+    }
+  }
+
+  // 自動視線邊：同 area 內兩兩節點，直線落在 area polygon 內且不穿 units 障礙
+  // → 補 walk 邊。手繪邊優先（已有直接邊者跳過）；跨 area 一律不補（閘門拓撲不動）。
+  const hasDirect = (a: string, b: string) => (adj.get(a) ?? []).some((e) => e.to === b);
+  for (const meta of model.station.floors) {
+    const floor = model.floors.get(meta.id);
+    if (!floor?.nav) continue;
+    const areaPoly = new Map((floor.areas ?? []).map((a) => [a.id, a.polygon]));
+    const unitPolys = (floor.units ?? []).map((u) => u.polygon);
+    const ns = floor.nav.nodes;
+    for (let i = 0; i < ns.length; i++) {
+      for (let j = i + 1; j < ns.length; j++) {
+        const na = ns[i];
+        const nb = ns[j];
+        if (!na.area || na.area !== nb.area) continue;
+        const poly = areaPoly.get(na.area);
+        if (!poly || hasDirect(na.id, nb.id) || hasDirect(nb.id, na.id)) continue;
+        if (!segmentClear(na.xy, nb.xy, poly, unitPolys)) continue;
+        const ga = nodes.get(na.id)!;
+        const gb = nodes.get(nb.id)!;
+        const len = dist3(ga, gb);
+        const base = { kind: 'walk' as const, accessible: true, length: len, cost: len };
+        addEdge({ from: na.id, to: nb.id, ...base });
+        addEdge({ from: nb.id, to: na.id, ...base });
+      }
     }
   }
 
