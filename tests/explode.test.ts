@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { assembleModel } from '../src/loader';
-import { floorOffsetY, easeInOutCubic, EXPLODE_GAP } from '../src/explode';
+import { buildConnectorsGroup } from '../src/builder';
+import { floorOffsetY, easeInOutCubic, EXPLODE_GAP, disposeDeep } from '../src/explode';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
 import plat from './fixtures/mini/data/floors/plat-b2.json';
@@ -32,5 +33,21 @@ describe('easeInOutCubic', () => {
     expect(easeInOutCubic(0)).toBe(0);
     expect(easeInOutCubic(1)).toBe(1);
     expect(easeInOutCubic(0.5)).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('disposeDeep', () => {
+  it('釋放 geometry 與獨占 material（每幀重建洩漏防線，終審 I-1）', () => {
+    const g = buildConnectorsGroup(model);
+    let geo = 0;
+    let mat = 0;
+    g.traverse((o) => {
+      const mesh = o as unknown as { geometry?: { addEventListener(t: string, f: () => void): void }; material?: { addEventListener(t: string, f: () => void): void } };
+      mesh.geometry?.addEventListener('dispose', () => { geo++; });
+      mesh.material?.addEventListener('dispose', () => { mat++; });
+    });
+    disposeDeep(g);
+    expect(geo).toBeGreaterThan(0);
+    expect(mat).toBe(geo); // 每 mesh 一幾何一獨占材質，全數釋放
   });
 });

@@ -13,7 +13,7 @@ export interface UIHandles {
 /** 搜尋欄＋過濾清單：focus/input 顯示符合項，pointerdown 選取（先於 blur）。 */
 function attachSearch(
   input: HTMLInputElement, list: HTMLUListElement,
-  landmarks: Landmark[], onPick: (lm: Landmark) => void,
+  landmarks: Landmark[], onPick: (lm: Landmark) => void, onEdit?: () => void,
 ): void {
   const render = (q: string): void => {
     const items = q
@@ -21,15 +21,21 @@ function attachSearch(
       : landmarks;
     list.replaceChildren(...items.slice(0, 12).map((lm) => {
       const li = document.createElement('li');
-      li.textContent = `${lm.label}（${lm.floorLabel}）`;
-      li.addEventListener('pointerdown', (ev) => { ev.preventDefault(); list.hidden = true; onPick(lm); });
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = `${lm.label}（${lm.floorLabel}）`;
+      btn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // 防 input blur 先收清單
+      btn.addEventListener('click', () => { list.hidden = true; onPick(lm); });
+      li.append(btn);
       return li;
     }));
     list.hidden = items.length === 0;
   };
   input.addEventListener('focus', () => render(input.value.trim()));
-  input.addEventListener('input', () => render(input.value.trim()));
-  input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 120));
+  input.addEventListener('input', () => { onEdit?.(); render(input.value.trim()); });
+  input.addEventListener('blur', () => setTimeout(() => {
+    if (!list.contains(document.activeElement)) list.hidden = true;
+  }, 120));
 }
 
 export function setupUI(opts: {
@@ -37,6 +43,7 @@ export function setupUI(opts: {
   landmarks: Landmark[];
   onRoute(start: string, end: string, accessibleOnly: boolean): void;
   onCancelRoute(): void;
+  onRouteInvalid(): void;
   onStartNav(): void;
   onAdvance(): void;
   onBack(): void;
@@ -103,6 +110,13 @@ export function setupUI(opts: {
   const tryRoute = (): void => {
     if (startId && endId) opts.onRoute(startId, endId, accToggle.checked);
   };
+  // 使用者編輯已選欄位文字＝選擇失效：清 ID、清統計、停用開始導航（終審 I-2）
+  const invalidateRoute = (): void => {
+    routeStatsDiv.textContent = '';
+    stepsOl.replaceChildren();
+    btnStartNav.disabled = true;
+    opts.onRouteInvalid();
+  };
   attachSearch(endInput, $<HTMLUListElement>('#end-results'), opts.landmarks, (lm) => {
     endId = lm.id;
     endInput.value = lm.label;
@@ -111,11 +125,18 @@ export function setupUI(opts: {
     routeCard.hidden = false;
     if (!startId) startInput.focus();
     else tryRoute();
+  }, () => {
+    endId = null;
+    routeDest.textContent = '';
+    invalidateRoute();
   });
   attachSearch(startInput, $<HTMLUListElement>('#start-results'), opts.landmarks, (lm) => {
     startId = lm.id;
     startInput.value = lm.label;
     tryRoute();
+  }, () => {
+    startId = null;
+    invalidateRoute();
   });
   accToggle.addEventListener('change', tryRoute);
   $('#btn-swap').addEventListener('click', () => {

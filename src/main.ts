@@ -11,7 +11,7 @@ import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
-import { floorOffsetY, applyExplode, easeInOutCubic } from './explode';
+import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
 import { CameraRig, frameGoal, chaseGoal } from './camera';
 import {
   startFollow, advance, back, atEnd, currentNodeId, remainingEdges,
@@ -92,8 +92,6 @@ async function boot(): Promise<void> {
     return toWorld(n.xy, n.z + floorOffsetY(model, n.floor, factor));
   };
   const nodeWorld = (id: string): THREE.Vector3 => nodeWorldAt(id, explodeFactor);
-  const disposeDeep = (obj: THREE.Object3D): void =>
-    obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
 
   function refreshRoute(): void {
     if (routeObj) { scene.remove(routeObj); disposeDeep(routeObj); routeObj = null; }
@@ -199,6 +197,7 @@ async function boot(): Promise<void> {
       setMode('preview');
     },
     onCancelRoute: () => setMode('overview'),
+    onRouteInvalid: () => { routeEdges = null; refreshRoute(); },
     onStartNav: () => {
       if (!routeEdges?.length) return;
       followState = startFollow(routeEdges);
@@ -214,7 +213,10 @@ async function boot(): Promise<void> {
       refreshNav();
     },
     onBack: () => { if (followState) { followState = back(followState); refreshNav(); } },
-    onRecenter: () => { chaseAuto = true; },
+    onRecenter: () => {
+      if (followState) refreshNav(); // transition=重設雙層同框、一般=恢復 chase（終審 I-3）
+      else chaseAuto = true;
+    },
     onExitNav: () => setMode('overview'),
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
   });
@@ -239,7 +241,8 @@ async function boot(): Promise<void> {
       refreshScene();
       if (t >= 1) explodeAnim = null;
     }
-    if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)) {
+    if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)
+        && routeEdges && !verticalStep(routeEdges, followState)) {
       const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
       rig.goal = chaseGoal(marker.position, nodeWorld(nextId));
     }

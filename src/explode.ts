@@ -23,3 +23,15 @@ export function applyExplode(stationGroup: THREE.Group, model: StationModel, fac
     child.position.y = floorOffsetY(model, child.name, factor);
   }
 }
+
+/** 釋放 runtime 重建物（route/connectors）的 GPU 資源：geometry＋獨占 material。
+ *  floor/GLB mesh 不經此函數——其 material 可能共用，不得在此處置。 */
+export function disposeDeep(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    mesh.geometry?.dispose();
+    const m = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (Array.isArray(m)) for (const x of m) x.dispose();
+    else m?.dispose();
+  });
+}

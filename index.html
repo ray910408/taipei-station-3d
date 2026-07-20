@@ -21,8 +21,11 @@
     input[type="search"] { flex: 1; padding: 8px 10px; background: #14171c; color: var(--fg);
       border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
     .results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow-y: auto; }
-    .results li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
-    .results li:hover { background: #2a313c; }
+    .results li { margin: 0; }
+    .results button { display: block; width: 100%; text-align: left; padding: 8px 10px;
+      min-height: 0; background: none; border: 0; border-radius: 6px; color: var(--fg);
+      font-size: 14px; cursor: pointer; }
+    .results button:hover, .results button:focus { background: #2a313c; }
 
     #searchbar { top: 12px; left: 12px; width: 300px; }
     #route-card { top: 12px; left: 12px; width: 320px; }
