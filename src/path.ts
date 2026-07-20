@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import type { GraphEdge, NavGraph } from './nav';
 import { toWorld } from './builder';
 
-export function buildRouteObject(graph: NavGraph, edges: GraphEdge[]): THREE.Group {
+export function buildRouteObject(
+  graph: NavGraph,
+  edges: GraphEdge[],
+  offsetY: (floorId: string) => number = () => 0,
+): THREE.Group {
   const group = new THREE.Group();
   group.name = 'route';
   if (edges.length === 0) return group;
@@ -10,7 +14,7 @@ export function buildRouteObject(graph: NavGraph, edges: GraphEdge[]): THREE.Gro
   const ids = [edges[0].from, ...edges.map((e) => e.to)];
   const pts = ids.map((id) => {
     const n = graph.nodes.get(id)!;
-    return toWorld(n.xy, n.z + 1.2); // 浮在樓面上方
+    return toWorld(n.xy, n.z + offsetY(n.floor) + 1.2); // 浮在（可能爆炸位移後的）樓面上方
   });
 
   const curve = new THREE.CatmullRomCurve3(pts);
