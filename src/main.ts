@@ -10,6 +10,7 @@ import {
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
+import { attachPoiIcons } from './icons';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -85,6 +86,7 @@ async function boot(): Promise<void> {
     stationGroup = buildStationGroup(model);
   }
   scene.add(stationGroup);
+  attachPoiIcons(stationGroup, model); // json/glb 兩軌通用（GLB 不含 Sprite，一律 runtime 附掛）
 
   document.querySelector<HTMLDivElement>('#geom-mode')!.innerHTML = geomMode === 'glb'
     ? '幾何：GLB <a href="./">切回 runtime</a>'

@@ -163,13 +163,6 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       bar.userData.kind = 'gate';
       g.add(bar);
     }
-    for (const poi of floor.pois ?? []) {
-      const marker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.4, 8, 8), mat(THEME.poi[poi.kind].bg, 1));
-      marker.position.copy(toWorld(poi.position, meta.elevation + 1.2));
-      marker.userData.kind = `poi-${poi.kind}`;
-      g.add(marker);
-    }
     root.add(g);
   }
 
