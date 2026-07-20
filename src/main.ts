@@ -11,6 +11,7 @@ import {
 import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { attachPoiIcons } from './icons';
+import { createLabelLayer } from './labels';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -104,6 +105,8 @@ async function boot(): Promise<void> {
   renderer.shadowMap.autoUpdate = false; // 場景靜止時省 shadow pass；變更點才 needsUpdate
   renderer.shadowMap.needsUpdate = true;
   document.querySelector('#app')!.append(renderer.domElement);
+  const labelLayer = createLabelLayer(
+    document.querySelector<HTMLElement>('#app')!, stationGroup, model);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(60, -18, 0);
   controls.enableDamping = true;
@@ -278,6 +281,7 @@ async function boot(): Promise<void> {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    labelLayer.resize(innerWidth, innerHeight);
   });
 
   renderer.setAnimationLoop(() => {
@@ -294,7 +298,9 @@ async function boot(): Promise<void> {
     }
     rig.tick();
     controls.update();
+    labelLayer.update(camera, mode, explodeFactor);
     renderer.render(scene, camera);
+    labelLayer.render(scene, camera);
   });
 }
 
