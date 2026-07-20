@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GraphEdge } from './nav';
+import { THEME } from './theme';
 
 // 跟隨模式狀態：路線＝節點序列，index＝目前所在節點。
 // 推進事件只走 advance()——Phase 4 PDR 自動推進掛同一介面。
@@ -28,13 +29,13 @@ export function buildPositionMarker(): THREE.Group {
   g.name = 'position-marker';
   const cone = new THREE.Mesh(
     new THREE.ConeGeometry(0.9, 2.2, 16),
-    new THREE.MeshBasicMaterial({ color: '#ffb020' }),
+    new THREE.MeshBasicMaterial({ color: THEME.route.marker, toneMapped: false }),
   );
   cone.rotation.x = Math.PI; // 尖端朝下指樓面
   cone.position.y = 1.1;
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(1.4, 0.12, 8, 24),
-    new THREE.MeshBasicMaterial({ color: '#ffb020' }),
+    new THREE.MeshBasicMaterial({ color: THEME.route.marker, toneMapped: false }),
   );
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.1;
@@ -88,7 +89,7 @@ export function setFloorEmphasis(
         mesh.userData.baseTransparent = mat.transparent;
       }
       mat.transparent = true;
-      mat.opacity = (mesh.userData.baseOpacity as number) * (dim ? 0.15 : 1);
+      mat.opacity = (mesh.userData.baseOpacity as number) * (dim ? THEME.emphasis.dim : 1);
     });
   }
 }

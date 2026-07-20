@@ -5,6 +5,7 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { assembleModel } from '../src/loader';
 import { buildStationGroup } from '../src/builder';
 import { setFloorEmphasis, updateBaseOpacity } from '../src/follow';
+import { THEME } from '../src/theme';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
@@ -12,6 +13,8 @@ import b2 from '../data/floors/tra-platform-b2.json';
 import b3 from '../data/floors/mrt-r-concourse-b3.json';
 import b4 from '../data/floors/mrt-r-platform-b4.json';
 import { Blob } from 'node:buffer';
+
+const DIM = THEME.emphasis.dim;
 
 (globalThis as { Blob?: typeof Blob }).Blob ??= Blob;
 class NodeFileReader {
@@ -57,7 +60,7 @@ function checkEmphasis(station: THREE.Object3D, active: string): void {
       // 當前樓層與 connectors 保持基準
       now.forEach((v, i) => expect(v, `${child.name}[${i}]`).toBeCloseTo(base[i], 5));
     } else {
-      now.forEach((v, i) => expect(v, `${child.name}[${i}]`).toBeCloseTo(base[i] * 0.15, 5));
+      now.forEach((v, i) => expect(v, `${child.name}[${i}]`).toBeCloseTo(base[i] * DIM, 5));
     }
   }
   // 還原
@@ -103,7 +106,7 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     const matA = (fa.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
     const matB = (fb.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(matA.opacity).toBeCloseTo(0.8, 5);
-    expect(matB.opacity).toBeCloseTo(0.8 * 0.15, 5);
+    expect(matB.opacity).toBeCloseTo(0.8 * DIM, 5);
   });
 
   it('null 還原 transparent 旗標並清除快照（終審 I-1）', () => {
@@ -140,7 +143,7 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     setFloorEmphasis(g, null);
     (mesh.material as THREE.MeshStandardMaterial).opacity = 0.1; // 模擬 slider
     setFloorEmphasis(g, 'floor-b');
-    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1 * 0.15, 5);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1 * DIM, 5);
     setFloorEmphasis(g, null);
     expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.1, 5);
   });
@@ -157,7 +160,7 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     g.add(fa);
     setFloorEmphasis(g, 'floor-b'); // fa 被調暗 → 0.135
     updateBaseOpacity(mesh, 0.45);
-    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.45 * 0.15, 5);
+    expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.45 * DIM, 5);
     setFloorEmphasis(g, null);
     expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.45, 5);
     // 非會話中：直接生效
@@ -181,7 +184,7 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     setFloorEmphasis(g, ['floor-a', 'floor-b']);
     expect((a.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
     expect((b.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
-    expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8 * 0.15, 5);
+    expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8 * DIM, 5);
     setFloorEmphasis(g, null);
     expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
   });

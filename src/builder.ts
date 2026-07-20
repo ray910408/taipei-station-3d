@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { StationModel, Vec2 } from './types';
-import { AREA_COLORS, GATE_COLORS } from './palette';
+import { THEME } from './theme';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
   return new THREE.Vector3(xy[0], y, -xy[1]);
@@ -39,6 +39,7 @@ export function buildConnectorsGroup(
   model: StationModel,
   offsetY: (floorId: string) => number = () => 0,
 ): THREE.Group {
+  const M = THEME.materials;
   const connGroup = new THREE.Group();
   connGroup.name = 'connectors';
   const nodePos = new Map<string, THREE.Vector3>();
@@ -63,14 +64,14 @@ export function buildConnectorsGroup(
       const a = nodePos.get(c.levels[i].node);
       const b = nodePos.get(c.levels[i + 1].node);
       if (!a || !b) continue;
-      const color = c.kind === 'elevator' ? '#2bb3a3' : '#c8a468';
+      const c2 = c.kind === 'elevator' ? M.connector.elevator : M.connector.stair;
       let mesh: THREE.Mesh;
       if (c.kind === 'elevator') {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(color, 0.7));
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(c2.color, c2.opacity));
         mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
       } else {
         const len = a.distanceTo(b);
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 1.4), mat(color, 0.9));
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 1.4), mat(c2.color, c2.opacity));
         mesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
         mesh.lookAt(b);
         mesh.rotateY(Math.PI / 2); // BoxGeometry 長軸為 x，lookAt 對齊 z 後轉回
@@ -84,10 +85,12 @@ export function buildConnectorsGroup(
       connGroup.add(mesh);
     }
   }
+  applyShadowFlags(connGroup);
   return connGroup;
 }
 
 export function buildStationGroup(model: StationModel): THREE.Group {
+  const M = THEME.materials;
   const root = new THREE.Group();
   root.name = 'station';
 
@@ -100,7 +103,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
 
     // slab：厚 0.3 m、頂面在 elevation
     g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
-      mat('#d9d9d9', 0.9), 'slab'));
+      mat(M.slab.color, M.slab.opacity), 'slab'));
 
     // 外殼：沿 slab 輪廓的半透明立面
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
@@ -108,7 +111,8 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       const a = toWorld(shellPts[i], meta.elevation);
       const b = toWorld(shellPts[i + 1], meta.elevation);
       const len = a.distanceTo(b);
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(len, meta.height, 0.05), mat('#aab4c4', 0.08));
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(len, meta.height, 0.05), mat(M.shell.color, M.shell.opacity));
       wall.position.copy(a.clone().add(b).multiplyScalar(0.5));
       wall.position.y = meta.elevation + meta.height / 2;
       wall.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
@@ -119,10 +123,13 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
       const sunk = a.kind === 'track' ? -1.1 : 0.01 + i * 0.01;
-      g.add(extrudeMesh(a.polygon, [], 0.05, meta.elevation + sunk, mat(AREA_COLORS[a.kind], 0.35), a.kind));
+      g.add(extrudeMesh(
+        a.polygon, [], 0.05, meta.elevation + sunk, mat(M.area[a.kind], M.areaOpacity), a.kind));
     }
     for (const u of floor.units ?? []) {
-      g.add(extrudeMesh(u.polygon, [], u.height, meta.elevation, mat('#9aa5b1', 0.85), `unit-${u.kind}`));
+      const u2 = M.unit[u.kind];
+      g.add(extrudeMesh(
+        u.polygon, [], u.height, meta.elevation, mat(u2.color, u2.opacity), `unit-${u.kind}`));
     }
     for (const w of floor.walls ?? []) {
       for (let i = 0; i < w.polyline.length - 1; i++) {
@@ -130,7 +137,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         const b = toWorld(w.polyline[i + 1], meta.elevation);
         const len = a.distanceTo(b);
         const wallMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(len, w.height, w.width ?? 0.3), mat('#8895a3', 0.9));
+          new THREE.BoxGeometry(len, w.height, w.width ?? 0.3), mat(M.wall.color, M.wall.opacity));
         wallMesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
         wallMesh.position.y = meta.elevation + w.height / 2;
         wallMesh.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
@@ -139,7 +146,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       }
     }
     for (const gate of floor.gates ?? []) {
-      const color = gate.accessible ? GATE_COLORS.accessible : GATE_COLORS.standard;
+      const color = gate.accessible ? M.gate.accessible : M.gate.standard;
       const [p1, p2] = gate.line.map((p) => toWorld(p, meta.elevation));
       for (const p of [p1, p2]) {
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.1, 0.25), mat(color, 1));
@@ -157,7 +164,8 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       g.add(bar);
     }
     for (const poi of floor.pois ?? []) {
-      const marker = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), mat('#f0e050', 1));
+      const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 8, 8), mat(THEME.poi[poi.kind].bg, 1));
       marker.position.copy(toWorld(poi.position, meta.elevation + 1.2));
       marker.userData.kind = `poi-${poi.kind}`;
       g.add(marker);
@@ -166,5 +174,19 @@ export function buildStationGroup(model: StationModel): THREE.Group {
   }
 
   root.add(buildConnectorsGroup(model));
+  applyShadowFlags(root);
   return root;
+}
+
+/** 依 userData.kind 佈 shadow 旗標——json/glb 兩軌與每幀重建的 connectors 共用。 */
+export function applyShadowFlags(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || typeof mesh.userData.kind !== 'string') return;
+    const kind = mesh.userData.kind;
+    if (kind === 'slab') { mesh.castShadow = true; mesh.receiveShadow = true; }
+    else if (kind === 'wall' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
+      mesh.castShadow = true;
+    }
+  });
 }

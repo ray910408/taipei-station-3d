@@ -52,6 +52,13 @@ describe('toWorld', () => {
 describe('buildStationGroup', () => {
   const group = buildStationGroup(model);
 
+  it('slab 帶 shadow 旗標（applyShadowFlags）', () => {
+    const hallGroup = group.children.find((c) => c.name === 'hall-b1') as THREE.Group;
+    const slab = hallGroup.children.find((c) => c.userData.kind === 'slab') as THREE.Mesh;
+    expect(slab.castShadow).toBe(true);
+    expect(slab.receiveShadow).toBe(true);
+  });
+
   it('每樓一個 group + connectors group', () => {
     const names = group.children.map((c) => c.name);
     expect(names).toContain('hall-b1');

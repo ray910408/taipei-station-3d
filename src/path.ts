@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { GraphEdge, NavGraph } from './nav';
 import { toWorld } from './builder';
+import { THEME } from './theme';
 
 export function buildRouteObject(
   graph: NavGraph,
@@ -19,17 +20,20 @@ export function buildRouteObject(
 
   const curve = new THREE.CatmullRomCurve3(pts);
   const tube = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, Math.max(16, pts.length * 8), 0.45, 8, false),
-    new THREE.MeshBasicMaterial({ color: '#00d0ff' }),
+    new THREE.TubeGeometry(curve, Math.max(16, pts.length * 8), THEME.route.radius, 8, false),
+    new THREE.MeshBasicMaterial({ color: THEME.route.color, toneMapped: false }),
   );
   group.add(tube);
 
   const endpoint = (p: THREE.Vector3, color: string) => {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(1.0, 12, 12), new THREE.MeshBasicMaterial({ color }));
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(1.0, 12, 12),
+      new THREE.MeshBasicMaterial({ color, toneMapped: false }),
+    );
     s.position.copy(p);
     return s;
   };
-  group.add(endpoint(pts[0], '#40ff90'));
-  group.add(endpoint(pts[pts.length - 1], '#ff5060'));
+  group.add(endpoint(pts[0], THEME.route.pinStart));
+  group.add(endpoint(pts[pts.length - 1], THEME.route.pinEnd));
   return group;
 }
