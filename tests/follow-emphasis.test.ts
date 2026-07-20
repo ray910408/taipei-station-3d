@@ -164,4 +164,25 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     updateBaseOpacity(mesh, 0.2);
     expect((mesh.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.2, 5);
   });
+
+  it('陣列參數：兩樓層同時保持基準、其餘調暗（transition 雙層）', () => {
+    const g = new THREE.Group();
+    const mk = (name: string) => {
+      const f = new THREE.Group();
+      f.name = name;
+      f.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial({ opacity: 0.8, transparent: true })));
+      g.add(f);
+      return f.children[0] as THREE.Mesh;
+    };
+    const a = mk('floor-a');
+    const b = mk('floor-b');
+    const c = mk('floor-c');
+    setFloorEmphasis(g, ['floor-a', 'floor-b']);
+    expect((a.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
+    expect((b.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
+    expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8 * 0.15, 5);
+    setFloorEmphasis(g, null);
+    expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
+  });
 });

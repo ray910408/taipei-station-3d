@@ -53,15 +53,20 @@ export function updateBaseOpacity(mesh: THREE.Mesh, newBase: number): void {
   m.opacity = newBase * factor;
 }
 
-export function setFloorEmphasis(stationGroup: THREE.Group, activeFloorId: string | null): void {
+export function setFloorEmphasis(
+  stationGroup: THREE.Group,
+  active: string | readonly string[] | null,
+): void {
+  const activeSet = active === null ? null
+    : new Set(typeof active === 'string' ? [active] : active);
   for (const child of stationGroup.children) {
     if (child.name === 'connectors') continue;
-    const dim = activeFloorId !== null && child.name !== activeFloorId;
+    const dim = activeSet !== null && !activeSet.has(child.name);
     child.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       const m = mesh.material as THREE.MeshStandardMaterial | undefined;
       if (!m?.isMaterial) return;
-      if (activeFloorId === null) {
+      if (activeSet === null) {
         // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次跟隨會話，
         // 下次跟隨重新取樣，期間的透明度 slider 變更才不會被舊快照蓋掉
         if (mesh.userData.baseOpacity !== undefined) {
