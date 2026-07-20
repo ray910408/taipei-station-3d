@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
-import { THEME } from './theme';
+import { THEME, applyUITheme } from './theme';
 import {
   buildGraph, findPath, routeSteps, routeStats, formatStats,
   listLandmarks, sameEndpointMessage,
@@ -36,6 +36,7 @@ for (const [p, mod] of Object.entries(floorModules)) {
 const EXPLODE_MS = 800;
 
 async function boot(): Promise<void> {
+  applyUITheme();
   const model = assembleModel(stationDoc, floorDocsByFile, connectorsDoc);
 
   const scene = new THREE.Scene();
