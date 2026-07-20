@@ -33,6 +33,7 @@ function tracerSavePlugin(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [tracerSavePlugin()],
+  server: { port: Number(process.env.PORT) || 5173 },
   build: {
     rollupOptions: {
       input: {

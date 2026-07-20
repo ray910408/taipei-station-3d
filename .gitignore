@@ -8,3 +8,4 @@ dist/
 *.log
 public/models/
 .gstack/
+docs/superpowers
