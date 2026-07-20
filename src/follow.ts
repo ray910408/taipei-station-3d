@@ -43,15 +43,19 @@ export function buildPositionMarker(): THREE.Group {
   return g;
 }
 
-/** slider 於跟隨會話中更新基準值：保留當前 dim 係數（0.15 或 1），退出後還原至新基準。
- *  非會話中（無快照）則直接設定 opacity。 */
+const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
+  Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+
+/** slider 於跟隨會話中更新基準值：保留當前 dim 係數，退出後還原至新基準。
+ *  非會話中（無快照）則直接設定 opacity。雙材質 mesh 對每個 slot 套同一基準。 */
 export function updateBaseOpacity(mesh: THREE.Mesh, newBase: number): void {
-  const m = mesh.material as THREE.MeshStandardMaterial;
-  const oldBase = mesh.userData.baseOpacity as number | undefined;
-  if (oldBase === undefined) { m.opacity = newBase; return; }
-  const factor = oldBase > 0 ? m.opacity / oldBase : 1;
-  mesh.userData.baseOpacity = newBase;
-  m.opacity = newBase * factor;
+  const bases = mesh.userData.baseOpacity as number[] | undefined;
+  materialsOf(mesh).forEach((m, i) => {
+    if (bases === undefined) { m.opacity = newBase; return; }
+    const factor = bases[i] > 0 ? m.opacity / bases[i] : 1;
+    bases[i] = newBase;
+    m.opacity = newBase * factor;
+  });
 }
 
 export function setFloorEmphasis(
@@ -65,14 +69,14 @@ export function setFloorEmphasis(
     const dim = activeSet !== null && !activeSet.has(child.name);
     child.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
-      const m = mesh.material as THREE.MeshStandardMaterial | undefined;
-      if (!m?.isMaterial) return;
+      let list = materialsOf(mesh);
+      if (list.length === 0 || !list[0].isMaterial) return;
       if (activeSet === null) {
-        // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次跟隨會話，
-        // 下次跟隨重新取樣，期間的透明度 slider 變更才不會被舊快照蓋掉
+        // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次跟隨會話
         if (mesh.userData.baseOpacity !== undefined) {
-          m.opacity = mesh.userData.baseOpacity as number;
-          m.transparent = mesh.userData.baseTransparent as boolean;
+          const bases = mesh.userData.baseOpacity as number[];
+          const flags = mesh.userData.baseTransparent as boolean[];
+          list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; });
           delete mesh.userData.baseOpacity;
           delete mesh.userData.baseTransparent;
         }
@@ -80,16 +84,21 @@ export function setFloorEmphasis(
       }
       if (!mesh.userData.matCloned) {
         // GLB 軌 material 可能跨 mesh 共用——調整前 clone 一次（跨會話不重複），避免調暗洩漏
-        mesh.material = m.clone();
+        mesh.material = Array.isArray(mesh.material)
+          ? mesh.material.map((m) => m.clone())
+          : (mesh.material as THREE.Material).clone();
         mesh.userData.matCloned = true;
+        list = materialsOf(mesh);
       }
-      const mat = mesh.material as THREE.MeshStandardMaterial;
       if (mesh.userData.baseOpacity === undefined) {
-        mesh.userData.baseOpacity = mat.opacity;
-        mesh.userData.baseTransparent = mat.transparent;
+        mesh.userData.baseOpacity = list.map((m) => m.opacity);
+        mesh.userData.baseTransparent = list.map((m) => m.transparent);
       }
-      mat.transparent = true;
-      mat.opacity = (mesh.userData.baseOpacity as number) * (dim ? THEME.emphasis.dim : 1);
+      const bases = mesh.userData.baseOpacity as number[];
+      list.forEach((m, i) => {
+        m.transparent = true;
+        m.opacity = bases[i] * (dim ? THEME.emphasis.dim : 1);
+      });
     });
   }
 }

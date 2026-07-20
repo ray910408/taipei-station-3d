@@ -4,6 +4,7 @@ import { assembleModel } from '../src/loader';
 import { buildGraph, findPath } from '../src/nav';
 import { buildStationGroup, toWorld } from '../src/builder';
 import { buildRouteObject } from '../src/path';
+import { THEME } from '../src/theme';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
 import plat from './fixtures/mini/data/floors/plat-b2.json';
@@ -108,6 +109,34 @@ describe('buildStationGroup', () => {
     const b = nodePosition('n-rc-010');
     const expected = new THREE.Vector3(a.x, (a.y + b.y) / 2, a.z);
     expect(connectorPosition(fullGroup, 'c-elv-rprc-1').distanceTo(expected)).toBeLessThan(1e-6);
+  });
+
+  it('slab 為頂亮側暗雙材質（side = cap × sideDarken）', () => {
+    const hallGroup = group.children.find((c) => c.name === 'hall-b1') as THREE.Group;
+    const slab = hallGroup.children.find((c) => c.userData.kind === 'slab') as THREE.Mesh;
+    expect(Array.isArray(slab.material)).toBe(true);
+    const [cap, side] = slab.material as THREE.MeshStandardMaterial[];
+    expect(side.color.r).toBeCloseTo(cap.color.r * THEME.body.sideDarken, 2);
+    expect(side.color.g).toBeCloseTo(cap.color.g * THEME.body.sideDarken, 2);
+  });
+
+  it('每樓層 units（含實體 unit 者）恰一個合併 edges LineSegments', () => {
+    for (const meta of fullModel.station.floors) {
+      const g2 = fullGroup.children.find((c) => c.name === meta.id) as THREE.Group;
+      const hasSolidUnit = (fullModel.floors.get(meta.id)?.units ?? [])
+        .some((u) => u.kind !== 'stair-void');
+      expect(
+        g2.children.filter((c) => c.userData.kind === 'edges').length, meta.id,
+      ).toBe(hasSolidUnit ? 1 : 0);
+    }
+  });
+
+  it('area 色塊不透明（體塊語言）', () => {
+    const hallGroup = group.children.find((c) => c.name === 'hall-b1') as THREE.Group;
+    const paid = hallGroup.children.find((c) => c.userData.kind === 'paid') as THREE.Mesh;
+    const m = paid.material as THREE.MeshStandardMaterial;
+    expect(m.opacity).toBe(1);
+    expect(m.transparent).toBe(false);
   });
 });
 

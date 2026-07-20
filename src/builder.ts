@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { StationModel, Vec2 } from './types';
 import { THEME } from './theme';
 
@@ -16,7 +17,7 @@ function ringToShape(outline: Vec2[], holes: Vec2[][] = []): THREE.Shape {
 // (x, y, 0) → (x, 0, -y)，與 toWorld 一致。
 function extrudeMesh(
   outline: Vec2[], holes: Vec2[][], depth: number, baseY: number,
-  material: THREE.Material, kind: string,
+  material: THREE.Material | THREE.Material[], kind: string,
 ): THREE.Mesh {
   const geo = new THREE.ExtrudeGeometry(ringToShape(outline, holes), { depth, bevelEnabled: false });
   geo.rotateX(-Math.PI / 2);
@@ -31,6 +32,34 @@ function mat(color: string, opacity: number): THREE.MeshStandardMaterial {
     color, roughness: 1, metalness: 0,
     transparent: opacity < 1, opacity, side: THREE.DoubleSide,
   });
+}
+
+/** 頂亮側暗雙材質 [cap, side]：ExtrudeGeometry 蓋面 materialIndex 0、側面 1（three 原生分組）。 */
+function matPair(color: string, opacity: number): [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial] {
+  const side = new THREE.Color(color).multiplyScalar(THEME.body.sideDarken);
+  return [mat(color, opacity), mat(`#${side.getHexString()}`, opacity)];
+}
+
+/** 全樓層 units 描邊合併為一個 LineSegments（每層 +1 draw call）；stair-void 半透明井不描。 */
+function buildUnitEdges(units: { kind: string; polygon: Vec2[]; height: number }[], elevation: number): THREE.LineSegments | null {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const u of units) {
+    if (u.kind === 'stair-void') continue;
+    const geo = new THREE.ExtrudeGeometry(ringToShape(u.polygon), { depth: u.height, bevelEnabled: false });
+    geo.rotateX(-Math.PI / 2);
+    const edges = new THREE.EdgesGeometry(geo, 20); // 20°：略過近共面碎邊
+    edges.translate(0, elevation, 0);
+    geo.dispose();
+    parts.push(edges);
+  }
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts);
+  for (const p of parts) p.dispose();
+  const line = new THREE.LineSegments(merged, new THREE.LineBasicMaterial({
+    color: THEME.body.edge, transparent: true, opacity: THEME.body.edgeOpacity,
+  }));
+  line.userData.kind = 'edges';
+  return line;
 }
 
 // connectors：斜坡（stair/escalator）與豎井（elevator）。
@@ -101,9 +130,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     g.name = meta.id;
     g.userData = { floorId: meta.id, kind: 'floor' };
 
-    // slab：厚 0.3 m、頂面在 elevation
+    // slab：厚 0.3 m、頂面在 elevation（頂亮側暗）
     g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
-      mat(M.slab.color, M.slab.opacity), 'slab'));
+      matPair(M.slab.color, M.slab.opacity), 'slab'));
 
     // 外殼：沿 slab 輪廓的半透明立面
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
@@ -129,8 +158,10 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];
       g.add(extrudeMesh(
-        u.polygon, [], u.height, meta.elevation, mat(u2.color, u2.opacity), `unit-${u.kind}`));
+        u.polygon, [], u.height, meta.elevation, matPair(u2.color, u2.opacity), `unit-${u.kind}`));
     }
+    const edgeLine = buildUnitEdges(floor.units ?? [], meta.elevation);
+    if (edgeLine) g.add(edgeLine);
     for (const w of floor.walls ?? []) {
       for (let i = 0; i < w.polyline.length - 1; i++) {
         const a = toWorld(w.polyline[i], meta.elevation);
@@ -175,8 +206,10 @@ export function buildStationGroup(model: StationModel): THREE.Group {
 export function applyShadowFlags(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh || typeof mesh.userData.kind !== 'string') return;
-    const kind = mesh.userData.kind;
+    if (!mesh.isMesh) return;
+    const kind = typeof mesh.userData.kind === 'string' ? mesh.userData.kind
+      : typeof mesh.parent?.userData.kind === 'string' ? mesh.parent.userData.kind : null;
+    if (kind === null) return;
     if (kind === 'slab') { mesh.castShadow = true; mesh.receiveShadow = true; }
     else if (kind === 'wall' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
       mesh.castShadow = true;

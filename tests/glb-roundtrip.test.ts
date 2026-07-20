@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel } from '../src/loader';
-import { buildStationGroup } from '../src/builder';
+import { applyShadowFlags, buildStationGroup } from '../src/builder';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
@@ -39,9 +39,14 @@ function parseGlb(buf: ArrayBuffer): Promise<GLTF> {
   return new Promise((resolve, reject) => new GLTFLoader().parse(buf, '', resolve, reject));
 }
 
-function meshCount(o: THREE.Object3D): number {
+// 雙材質 mesh 經 GLB 拆成 2 primitives：以「材質槽數」為雙軌 parity 單位
+function drawUnits(o: THREE.Object3D): number {
   let n = 0;
-  o.traverse((x) => { if ((x as THREE.Mesh).isMesh) n++; });
+  o.traverse((x) => {
+    const mesh = x as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    n += Array.isArray(mesh.material) ? mesh.material.length : 1;
+  });
   return n;
 }
 
@@ -63,11 +68,11 @@ describe('GLB round-trip parity（雙軌契約）', () => {
     expect(names(loaded)).toEqual(names(built));
   });
 
-  it('各子 group 的 mesh 數量一致', () => {
+  it('各子 group 的材質槽數一致', () => {
     for (const child of built.children) {
       const twin = loaded.children.find((c) => c.name === child.name)!;
       expect(twin, child.name).toBeTruthy();
-      expect(meshCount(twin), child.name).toBe(meshCount(child));
+      expect(drawUnits(twin), child.name).toBe(drawUnits(child));
     }
   });
 
@@ -94,5 +99,17 @@ describe('GLB round-trip parity（雙軌契約）', () => {
     });
     expect(slab).toBe(1);
     expect(shell).toBeGreaterThan(0);
+  });
+
+  it('GLB 軌：雙材質拆 primitive 後 applyShadowFlags 仍佈 slab 旗標（parent fallback）', () => {
+    applyShadowFlags(loaded);
+    const floor = loaded.children.find((c) => c.name === 'mrt-r-platform-b4')!;
+    let ok = false;
+    floor.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      const kind = o.userData.kind ?? o.parent?.userData.kind;
+      if (mesh.isMesh && kind === 'slab' && mesh.castShadow && mesh.receiveShadow) ok = true;
+    });
+    expect(ok).toBe(true);
   });
 });

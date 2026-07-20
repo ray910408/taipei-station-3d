@@ -42,8 +42,8 @@ const opacities = (root: THREE.Object3D): number[] => {
   const out: number[] = [];
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    const m = mesh.material as THREE.MeshStandardMaterial | undefined;
-    if (mesh.isMesh && m?.isMaterial) out.push(m.opacity);
+    const list = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+    for (const m of list) if ((m as THREE.Material).isMaterial) out.push((m as THREE.MeshStandardMaterial).opacity);
   });
   return out;
 };
