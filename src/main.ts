@@ -9,7 +9,8 @@ import {
   listLandmarks, sameEndpointMessage,
 } from './nav';
 import type { GraphEdge } from './nav';
-import { buildRouteObject } from './path';
+import { buildRouteObject, setRouteFloor, tickRouteArrows } from './path';
+import { applyFloorVisibility, makeTween, tweenAt, type Tween } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
 import { setupUI } from './ui';
@@ -132,6 +133,7 @@ async function boot(): Promise<void> {
   let marker: THREE.Group | null = null;
   let routeObj: THREE.Object3D | null = null;
   let chaseAuto = true;
+  let markerTween: Tween | null = null;
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -145,6 +147,8 @@ async function boot(): Promise<void> {
     if (routeEdges?.length) {
       routeObj = buildRouteObject(graph, routeEdges, offsetAt(explodeFactor));
       scene.add(routeObj);
+      if (mode === 'nav' && followState)
+        setRouteFloor(routeObj, graph.nodes.get(currentNodeId(followState))!.floor);
     }
   }
 
@@ -156,6 +160,7 @@ async function boot(): Promise<void> {
     disposeDeep(connObj);
     connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
     stationGroup.add(connObj);
+    connObj.visible = mode !== 'nav'; // 每幀重建物重申單樓層制的 connectors 規則（navview 同義）
     refreshRoute();
     if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
@@ -175,6 +180,9 @@ async function boot(): Promise<void> {
   function exitNav(): void {
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
     followState = null;
+    markerTween = null;
+    applyFloorVisibility(stationGroup, 'overview', null);
+    if (routeObj) setRouteFloor(routeObj, null);
     ui.setTransition(null);
     ui.showArrive(false);
   }
@@ -187,6 +195,8 @@ async function boot(): Promise<void> {
 
   function setMode(m: Mode): void {
     mode = m;
+    controls.maxPolarAngle = m === 'nav' ? THREE.MathUtils.degToRad(78) : Math.PI; // nav 防翻到樓下
+    if (m !== 'nav') applyFloorVisibility(stationGroup, m, null);
     ui.setMode(m);
     setExplode(MODE_EXPLODE[m]);
     if (m === 'overview') {
@@ -204,18 +214,10 @@ async function boot(): Promise<void> {
     if (!followState || !routeEdges || !marker) return;
     marker.position.copy(nodeWorld(currentNodeId(followState)));
     const cur = graph.nodes.get(currentNodeId(followState))!;
+    applyFloorVisibility(stationGroup, 'nav', cur.floor);
+    if (routeObj) setRouteFloor(routeObj, cur.floor);
     const vEdge = verticalStep(routeEdges, followState);
-    if (vEdge) {
-      // vertical transition 呈現：雙層強調＋橫幅＋同框兩端（盤問 Q3）
-      setFloorEmphasis(stationGroup, [cur.floor, graph.nodes.get(vEdge.to)!.floor]);
-      ui.setTransition(transitionLabel(model, graph, vEdge));
-      chaseAuto = false;
-      rig.goal = frameGoal([nodeWorld(vEdge.from), nodeWorld(vEdge.to)], camera.aspect);
-    } else {
-      setFloorEmphasis(stationGroup, cur.floor);
-      ui.setTransition(null);
-      chaseAuto = true;
-    }
+    ui.setTransition(vEdge ? transitionLabel(model, graph, vEdge) : null);
     const remain = remainingEdges(routeEdges, followState);
     const progress = `節點 ${followState.index + 1}/${followState.nodeIds.length}`;
     if (atEnd(followState)) {
@@ -255,15 +257,20 @@ async function boot(): Promise<void> {
       refreshNav();
     },
     onAdvance: () => {
-      if (!followState) return;
+      if (!followState || !marker) return;
+      const fromPos = marker.position.clone();
       followState = advance(followState);
-      chaseAuto = true; // 推進恢復跟隨；transition 中 refreshNav 會再關
+      chaseAuto = true;
       refreshNav();
+      markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
+      marker.position.copy(fromPos);
     },
-    onBack: () => { if (followState) { followState = back(followState); refreshNav(); } },
+    onBack: () => {
+      if (followState) { markerTween = null; followState = back(followState); refreshNav(); }
+    },
     onRecenter: () => {
-      if (followState) refreshNav(); // transition=重設雙層同框、一般=恢復 chase（終審 I-3）
-      else chaseAuto = true;
+      chaseAuto = true;
+      if (followState) refreshNav();
     },
     onExitNav: () => setMode('overview'),
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
@@ -291,6 +298,12 @@ async function boot(): Promise<void> {
       refreshScene();
       if (t >= 1) explodeAnim = null;
     }
+    if (markerTween && marker) {
+      const { pos, done } = tweenAt(markerTween, performance.now());
+      marker.position.copy(pos);
+      if (done) markerTween = null;
+    }
+    tickRouteArrows(performance.now());
     if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)
         && routeEdges && !verticalStep(routeEdges, followState)) {
       const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];

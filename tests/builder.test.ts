@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { assembleModel } from '../src/loader';
 import { buildGraph, findPath } from '../src/nav';
 import { buildStationGroup, toWorld } from '../src/builder';
-import { buildRouteObject } from '../src/path';
+import { buildRouteObject, setRouteFloor } from '../src/path';
 import { THEME } from '../src/theme';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
@@ -140,13 +140,30 @@ describe('buildStationGroup', () => {
   });
 });
 
-describe('buildRouteObject', () => {
-  it('路徑物件含管線與起終點', () => {
-    const graph = buildGraph(model);
-    const path = findPath(graph, 'n-pl-001', 'n-ha-002')!;
-    const route = buildRouteObject(graph, path);
+describe('buildRouteObject（per-floor run＋link＋pin）', () => {
+  const graph = buildGraph(model);
+  const path = findPath(graph, 'n-pl-001', 'n-ha-002')!; // 跨層：plat-b2 →（電扶梯）→ hall-b1
+  const route = buildRouteObject(graph, path);
+
+  it('run/link/pin 結構與樓層標記', () => {
     expect(route.name).toBe('route');
-    expect(route.children.length).toBeGreaterThanOrEqual(3); // tube + 2 spheres
-    expect(route.children.filter((c) => (c as THREE.Group).isGroup).length).toBe(2); // 起訖 pin
+    const runs = route.children.filter((c) => !(c as THREE.Group).isGroup && typeof c.userData.floor === 'string');
+    const links = route.children.filter((c) => c.userData.link === true);
+    const pins = route.children.filter((c) => (c as THREE.Group).isGroup);
+    expect(runs.length).toBe(1);  // plat-b2 段只有 1 節點（無管）；hall-b1 段 2 節點成管
+    expect(links.length).toBe(1); // 電扶梯跨層 link
+    expect(pins.length).toBe(2);
+    expect(pins[0].userData.floor).toBe('plat-b2');
+    expect(pins[1].userData.floor).toBe('hall-b1');
+  });
+
+  it('setRouteFloor：nav 只留當前層 run 與 pin、link 隱藏；null 全顯', () => {
+    setRouteFloor(route, 'hall-b1');
+    for (const c of route.children) {
+      const expected = c.userData.link ? false : c.userData.floor === 'hall-b1';
+      expect(c.visible, String(c.userData.floor ?? 'link')).toBe(expected);
+    }
+    setRouteFloor(route, null);
+    for (const c of route.children) expect(c.visible).toBe(true);
   });
 });
