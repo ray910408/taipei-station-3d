@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { THEME } from './theme';
 
 export interface CameraGoal { pos: THREE.Vector3; target: THREE.Vector3 }
 
-export const CHASE_BACK = 22; // chase cam 後方水平距離（公尺）
-export const CHASE_UP = 16;   // chase cam 高度
+export const CHASE_BACK = THEME.nav.chaseBack; // chase cam 後方水平距離（公尺）
+export const CHASE_UP = THEME.nav.chaseUp;     // chase cam 高度；back/up ≈ 27° 俯角
 
 const FIT_MARGIN = 1.3;
 const MIN_RADIUS = 12; // 兩點很近（如單一豎井）時仍拉出能看清兩層的距離

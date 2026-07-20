@@ -14,15 +14,23 @@ export const THEME = {
       shadow: { mapSize: 2048, bounds: 180, near: 10, far: 600, bias: -0.0005, normalBias: 0.5 },
     },
   },
+  // 體塊語言（Phase 5）：頂亮側暗＋描邊
+  body: { sideDarken: 0.8, edge: '#9aa0a6', edgeOpacity: 0.35 },
+  // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
+  nav: {
+    chaseBack: 14, chaseUp: 7,
+    markerSpeed: 3, segMinMs: 600, segMaxMs: 2500,
+    crossfadeMs: 900,
+  },
   materials: {
     slab: { color: '#ffffff', opacity: 0.95 },
     shell: { color: '#dadce0', opacity: 0.06 },
     wall: { color: '#dadce0', opacity: 1 },
     area: {
-      platform: '#f6c945', paid: '#f28b82', unpaid: '#aecbfa',
-      corridor: '#ceead6', track: '#3c4043', restricted: '#dadce0',
+      platform: '#f3e8c9', paid: '#fce8e6', unpaid: '#e8f0fe',
+      corridor: '#e6f4ea', track: '#3c4043', restricted: '#e8eaed',
     } satisfies Record<AreaKind, string>,
-    areaOpacity: 0.55,
+    areaOpacity: 1,
     unit: {
       column: { color: '#c4c7cc', opacity: 1 },
       shop: { color: '#f3e2c7', opacity: 1 },
@@ -36,7 +44,11 @@ export const THEME = {
       elevator: { color: '#1a73e8', opacity: 0.55 },
     },
   },
-  route: { color: '#1a73e8', radius: 0.5, pinStart: '#188038', pinEnd: '#d93025', marker: '#1a73e8' },
+  route: {
+    color: '#1a73e8', radius: 0.9, linkRadius: 0.45,
+    arrowInterval: 5, arrowSpeed: 0.5,
+    pinStart: '#188038', pinEnd: '#d93025', marker: '#1a73e8',
+  },
   emphasis: { dim: 0.15 },
   poi: {
     tvm: { bg: '#1a73e8', glyph: '票' },
@@ -47,7 +59,7 @@ export const THEME = {
   } satisfies Record<PoiKind, { bg: string; glyph: string }>,
   poiSize: 2.4,
   labels: {
-    floorTagMinExplode: 0.6, landmarkMaxDist: 320,
+    floorTagMinExplode: 0.6, landmarkMaxDist: 320, floorTagStagger: 10,
     floorTag: { bg: '#ffffffe6', fg: '#202124' },
     landmark: { bg: '#ffffffcc', fg: '#3c4043' },
   },
