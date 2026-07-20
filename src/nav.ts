@@ -215,3 +215,27 @@ export function listLandmarks(model: StationModel): Landmark[] {
   }
   return out;
 }
+
+export interface RouteStats { meters: number; seconds: number }
+
+const WALK_SPEED = 1.2; // m/s，車站人流保守值
+// ponytail: 固定候梯＋乘行秒數；Phase 4 有實測數據再校
+const CONNECTOR_SECONDS: Record<'stair' | 'escalator' | 'elevator', number> = {
+  escalator: 40, stair: 50, elevator: 60,
+};
+
+export function routeStats(edges: GraphEdge[]): RouteStats {
+  let meters = 0;
+  let seconds = 0;
+  for (const e of edges) {
+    meters += e.length;
+    if (e.kind === 'stair' || e.kind === 'escalator' || e.kind === 'elevator')
+      seconds += CONNECTOR_SECONDS[e.kind];
+    else seconds += e.length / WALK_SPEED;
+  }
+  return { meters, seconds };
+}
+
+export function formatStats(s: RouteStats): string {
+  return `約 ${Math.max(1, Math.round(s.meters))} 公尺・約 ${Math.max(1, Math.ceil(s.seconds / 60))} 分鐘`;
+}
