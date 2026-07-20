@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
-import { buildStationGroup, buildConnectorsGroup, toWorld } from './builder';
+import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
+import { THEME } from './theme';
 import {
   buildGraph, findPath, routeSteps, routeStats, formatStats,
   listLandmarks, sameEndpointMessage,
@@ -38,12 +39,35 @@ async function boot(): Promise<void> {
   const model = assembleModel(stationDoc, floorDocsByFile, connectorsDoc);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#14171c');
-  scene.add(new THREE.HemisphereLight('#cfd8e3', '#2a2f38', 1.1));
-  const dirLight = new THREE.DirectionalLight('#ffffff', 0.9);
-  dirLight.position.set(150, 200, 120);
-  scene.add(dirLight);
-  scene.add(new THREE.GridHelper(500, 50, '#2c333d', '#232830'));
+  scene.background = new THREE.Color(THEME.scene.background);
+  scene.add(new THREE.HemisphereLight(
+    THEME.lights.hemi.sky, THEME.lights.hemi.ground, THEME.lights.hemi.intensity));
+  const sun = new THREE.DirectionalLight(THEME.lights.sun.color, THEME.lights.sun.intensity);
+  sun.position.set(...THEME.lights.sun.position);
+  sun.target.position.set(...THEME.lights.sun.target);
+  sun.castShadow = true;
+  const sh = THEME.lights.sun.shadow;
+  sun.shadow.mapSize.set(sh.mapSize, sh.mapSize);
+  sun.shadow.camera.left = -sh.bounds;
+  sun.shadow.camera.right = sh.bounds;
+  sun.shadow.camera.top = sh.bounds;
+  sun.shadow.camera.bottom = -sh.bounds;
+  sun.shadow.camera.near = sh.near;
+  sun.shadow.camera.far = sh.far;
+  sun.shadow.bias = sh.bias;
+  sun.shadow.normalBias = sh.normalBias; // 薄 extrude slab 抗 acne 主力
+  sun.shadow.camera.updateProjectionMatrix(); // three 不會因 bounds 變更自動重算
+  scene.add(sun, sun.target);
+
+  // 地面：柔和承影面（取代 debug grid）
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(THEME.scene.groundSize, THEME.scene.groundSize),
+    new THREE.MeshStandardMaterial({ color: THEME.scene.ground, roughness: 1 }),
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = THEME.scene.groundY;
+  ground.receiveShadow = true;
+  scene.add(ground);
 
   // 幾何雙軌：預設 runtime extrude；?geom=glb 載入離線匯出檔
   const geomMode = new URLSearchParams(location.search).get('geom') === 'glb' ? 'glb' : 'json';
@@ -55,6 +79,7 @@ async function boot(): Promise<void> {
     const found = gltf.scene.getObjectByName('station');
     if (!found) throw new Error('station.glb 內找不到名為 station 的節點');
     stationGroup = found as THREE.Group;
+    applyShadowFlags(stationGroup);
   } else {
     stationGroup = buildStationGroup(model);
   }
@@ -67,12 +92,28 @@ async function boot(): Promise<void> {
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
   camera.position.set(220, 140, 260);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, THEME.render.maxPixelRatio));
   renderer.setSize(innerWidth, innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = THEME.render.toneMappingExposure;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false; // 場景靜止時省 shadow pass；變更點才 needsUpdate
+  renderer.shadowMap.needsUpdate = true;
   document.querySelector('#app')!.append(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(60, -18, 0);
   controls.enableDamping = true;
   const rig = new CameraRig(camera, controls);
+  // 開場：從初始視角滑入、框住整棟爆炸後的建築
+  const framePts: THREE.Vector3[] = [];
+  for (const meta of model.station.floors) {
+    const floor = model.floors.get(meta.id);
+    if (!floor) continue;
+    const y = meta.elevation + floorOffsetY(model, meta.id, 1);
+    for (const p of floor.slab.outline) framePts.push(toWorld(p, y));
+  }
+  rig.goal = frameGoal(framePts, camera.aspect);
 
   const graph = buildGraph(model);
   const landmarks = listLandmarks(model);
@@ -111,6 +152,7 @@ async function boot(): Promise<void> {
     stationGroup.add(connObj);
     refreshRoute();
     if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
+    renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
   }
 
   function setExplode(target: number): void {
@@ -221,9 +263,10 @@ async function boot(): Promise<void> {
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
   });
 
-  // nav 中拖曳＝暫停自動跟隨（回正鈕/推進恢復）
+  // 使用者拖曳＝接管鏡頭（任何模式）；nav 中另暫停自動跟隨
   renderer.domElement.addEventListener('pointerdown', () => {
-    if (mode === 'nav') { chaseAuto = false; rig.cancel(); }
+    rig.cancel();
+    if (mode === 'nav') chaseAuto = false;
   });
 
   setMode('overview'); // boot：實高 → 爆炸圖展開動畫
