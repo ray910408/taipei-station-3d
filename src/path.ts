@@ -25,15 +25,20 @@ export function buildRouteObject(
   );
   group.add(tube);
 
-  const endpoint = (p: THREE.Vector3, color: string) => {
-    const s = new THREE.Mesh(
-      new THREE.SphereGeometry(1.0, 12, 12),
-      new THREE.MeshBasicMaterial({ color, toneMapped: false }),
-    );
-    s.position.copy(p);
-    return s;
+  // 水滴 pin：球頭＋倒錐尾（Google 風）；隨 route 每次重建、照常走 disposeDeep
+  const pin = (p: THREE.Vector3, color: string): THREE.Group => {
+    const g = new THREE.Group();
+    const m = new THREE.MeshBasicMaterial({ color, toneMapped: false });
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.62, 1.8, 20), m);
+    tail.rotation.x = Math.PI; // 尖端朝下指樓面
+    tail.position.y = 0.9;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.95, 20, 16), m);
+    head.position.y = 2.2;
+    g.add(tail, head);
+    g.position.copy(p);
+    return g;
   };
-  group.add(endpoint(pts[0], THEME.route.pinStart));
-  group.add(endpoint(pts[pts.length - 1], THEME.route.pinEnd));
+  group.add(pin(pts[0], THEME.route.pinStart));
+  group.add(pin(pts[pts.length - 1], THEME.route.pinEnd));
   return group;
 }

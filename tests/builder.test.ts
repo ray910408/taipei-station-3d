@@ -118,5 +118,6 @@ describe('buildRouteObject', () => {
     const route = buildRouteObject(graph, path);
     expect(route.name).toBe('route');
     expect(route.children.length).toBeGreaterThanOrEqual(3); // tube + 2 spheres
+    expect(route.children.filter((c) => (c as THREE.Group).isGroup).length).toBe(2); // 起訖 pin
   });
 });
