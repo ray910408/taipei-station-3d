@@ -1,126 +1,179 @@
-import type * as THREE from 'three';
-import { updateBaseOpacity } from './follow';
 import type { Landmark } from './nav';
+import type { Mode } from './mode';
 import type { StationModel } from './types';
 
 export interface UIHandles {
-  setSteps(steps: string[]): void;
-  showFollow(on: boolean): void;
-  setFollowInfo(next: string, progress: string): void;
-  setFollowReady(on: boolean): void;
+  setMode(mode: Mode): void;
+  setPreview(stats: string, steps: string[], ready: boolean): void;
+  setNavInfo(next: string, remain: string, progress: string): void;
+  setTransition(label: string | null): void;
+  showArrive(on: boolean): void;
+}
+
+/** 搜尋欄＋過濾清單：focus/input 顯示符合項，pointerdown 選取（先於 blur）。 */
+function attachSearch(
+  input: HTMLInputElement, list: HTMLUListElement,
+  landmarks: Landmark[], onPick: (lm: Landmark) => void,
+): void {
+  const render = (q: string): void => {
+    const items = q
+      ? landmarks.filter((l) => (l.label + l.floorLabel).includes(q))
+      : landmarks;
+    list.replaceChildren(...items.slice(0, 12).map((lm) => {
+      const li = document.createElement('li');
+      li.textContent = `${lm.label}（${lm.floorLabel}）`;
+      li.addEventListener('pointerdown', (ev) => { ev.preventDefault(); list.hidden = true; onPick(lm); });
+      return li;
+    }));
+    list.hidden = items.length === 0;
+  };
+  input.addEventListener('focus', () => render(input.value.trim()));
+  input.addEventListener('input', () => render(input.value.trim()));
+  input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 120));
 }
 
 export function setupUI(opts: {
   model: StationModel;
-  stationGroup: THREE.Group;
   landmarks: Landmark[];
-  onRoute: (start: string, end: string, accessibleOnly: boolean) => void;
-  onClear: () => void;
-  onStartFollow: () => void;
-  onAdvance: () => void;
-  onBack: () => void;
-  onExitFollow: () => void;
+  onRoute(start: string, end: string, accessibleOnly: boolean): void;
+  onCancelRoute(): void;
+  onStartNav(): void;
+  onAdvance(): void;
+  onBack(): void;
+  onRecenter(): void;
+  onExitNav(): void;
+  onFloorFocus(id: string | null): void;
 }): UIHandles {
-  const { model, stationGroup } = opts;
-  const floorsDiv = document.querySelector<HTMLDivElement>('#floors')!;
-  const stepsOl = document.querySelector<HTMLOListElement>('#steps')!;
+  const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
+  const searchbar = $('#searchbar');
+  const routeCard = $('#route-card');
+  const navBanner = $('#nav-banner');
+  const transitionBanner = $('#transition-banner');
+  const arriveCard = $('#arrive-card');
+  const floorButtons = $('#floor-buttons');
+  const endInput = $<HTMLInputElement>('#end-input');
+  const startInput = $<HTMLInputElement>('#start-input');
+  const accToggle = $<HTMLInputElement>('#acc-toggle');
+  const routeDest = $('#route-dest');
+  const routeStatsDiv = $('#route-stats');
+  const stepsOl = $<HTMLOListElement>('#steps');
+  const btnStartNav = $<HTMLButtonElement>('#btn-start-nav');
 
+  // a11y 切換（沿用 Phase 3）
   for (const [btnId, cls] of [['btn-bigtext', 'big-text'], ['btn-contrast', 'high-contrast']] as const) {
-    const b = document.querySelector<HTMLButtonElement>(`#${btnId}`)!;
+    const b = $<HTMLButtonElement>(`#${btnId}`);
     b.addEventListener('click', () => {
       const on = document.body.classList.toggle(cls);
       b.setAttribute('aria-pressed', String(on));
     });
   }
 
-  for (const meta of model.station.floors) {
-    const label = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = true;
-    cb.addEventListener('change', () => {
-      const g = stationGroup.children.find((c) => c.name === meta.id);
-      if (g) g.visible = cb.checked;
-    });
-    label.append(cb, ` ${meta.labels['complex'] ?? ''} ${meta.name.zh}`);
-    floorsDiv.append(label);
-  }
-
-  const selStart = document.querySelector<HTMLSelectElement>('#sel-start')!;
-  const selEnd = document.querySelector<HTMLSelectElement>('#sel-end')!;
-  for (const sel of [selStart, selEnd]) {
-    const groups = new Map<string, HTMLOptGroupElement>();
-    for (const lm of opts.landmarks) {
-      let og = groups.get(lm.floorLabel);
-      if (!og) {
-        og = document.createElement('optgroup');
-        og.label = lm.floorLabel;
-        groups.set(lm.floorLabel, og);
-        sel.append(og);
-      }
-      const o = document.createElement('option');
-      o.value = lm.id;
-      o.textContent = lm.label;
-      og.append(o);
-    }
-  }
-  const demo = model.station.demo;
-  if (demo) { selStart.value = demo.start; selEnd.value = demo.end; }
-  for (const sel of [selStart, selEnd]) {
-    // 改起訖即失效既有路線——否則「開始導航」會沿舊 routeEdges 走（與畫面選擇不符）
-    sel.addEventListener('change', () => { opts.onClear(); setSteps([]); setFollowReady(false); });
-  }
-
-  const opacity = document.querySelector<HTMLInputElement>('#opacity')!;
-  opacity.addEventListener('input', () => {
-    const k = Number(opacity.value) / 100;
-    stationGroup.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      const m = mesh.material as THREE.MeshStandardMaterial | undefined;
-      if (m && (mesh.userData.kind === 'slab' || mesh.userData.kind === 'shell')) {
-        m.transparent = true;
-        // 跟隨會話中保留 dim 係數更新基準（updateBaseOpacity）；非會話中直接生效
-        updateBaseOpacity(mesh, (mesh.userData.kind === 'slab' ? 0.9 : 0.08) * k * (1 / 0.6));
-      }
-    });
+  // 設定角落
+  const settingsMenu = $('#settings-menu');
+  $('#btn-settings').addEventListener('click', () => {
+    settingsMenu.hidden = !settingsMenu.hidden;
+    $('#btn-settings').setAttribute('aria-expanded', String(!settingsMenu.hidden));
   });
 
-  const btnRoute = document.querySelector<HTMLButtonElement>('#btn-route')!;
-  const btnAcc = document.querySelector<HTMLButtonElement>('#btn-route-acc')!;
-  const btnClear = document.querySelector<HTMLButtonElement>('#btn-clear')!;
-  const btnFollow = document.querySelector<HTMLButtonElement>('#btn-follow')!;
-  const followPanel = document.querySelector<HTMLDivElement>('#follow-panel')!;
-  const followNext = document.querySelector<HTMLDivElement>('#follow-next')!;
-  const followProgress = document.querySelector<HTMLDivElement>('#follow-progress')!;
-  document.querySelector<HTMLButtonElement>('#btn-advance')!.addEventListener('click', () => opts.onAdvance());
-  document.querySelector<HTMLButtonElement>('#btn-back')!.addEventListener('click', () => opts.onBack());
-  document.querySelector<HTMLButtonElement>('#btn-exit-follow')!.addEventListener('click', () => opts.onExitFollow());
-  btnFollow.addEventListener('click', () => opts.onStartFollow());
-  const canRoute = opts.landmarks.length >= 2;
-  btnRoute.disabled = !canRoute;
-  btnAcc.disabled = !canRoute;
-  if (!canRoute) btnRoute.title = btnAcc.title = '資料尚無具名節點（landmarks）';
-  btnRoute.addEventListener('click', () => opts.onRoute(selStart.value, selEnd.value, false));
-  btnAcc.addEventListener('click', () => opts.onRoute(selStart.value, selEnd.value, true));
-  btnClear.addEventListener('click', () => { opts.onClear(); setSteps([]); setFollowReady(false); });
+  // 樓層按鈕：點=聚焦、再點=取消（盤問 Q7；overview 限定，setMode 時隱藏並重置）
+  let focusedFloor: string | null = null;
+  const resetFloorFocus = (): void => {
+    focusedFloor = null;
+    for (const b of floorButtons.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
+  };
+  for (const meta of opts.model.station.floors) {
+    const b = document.createElement('button');
+    b.textContent = meta.labels['complex'] ?? meta.id;
+    b.dataset.floorId = meta.id;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => {
+      focusedFloor = focusedFloor === meta.id ? null : meta.id;
+      for (const other of floorButtons.querySelectorAll('button'))
+        other.setAttribute('aria-pressed', String(other.dataset.floorId === focusedFloor));
+      opts.onFloorFocus(focusedFloor);
+    });
+    floorButtons.append(b);
+  }
 
-  function setSteps(steps: string[]): void {
+  // 兩段式搜尋（盤問 Q6）：先終點、後起點，齊了自動算路線
+  let startId: string | null = null;
+  let endId: string | null = null;
+  const labelOf = (id: string | null): string =>
+    opts.landmarks.find((l) => l.id === id)?.label ?? '';
+  const tryRoute = (): void => {
+    if (startId && endId) opts.onRoute(startId, endId, accToggle.checked);
+  };
+  attachSearch(endInput, $<HTMLUListElement>('#end-results'), opts.landmarks, (lm) => {
+    endId = lm.id;
+    endInput.value = lm.label;
+    routeDest.textContent = `終點：${lm.label}（${lm.floorLabel}）`;
+    searchbar.hidden = true;
+    routeCard.hidden = false;
+    if (!startId) startInput.focus();
+    else tryRoute();
+  });
+  attachSearch(startInput, $<HTMLUListElement>('#start-results'), opts.landmarks, (lm) => {
+    startId = lm.id;
+    startInput.value = lm.label;
+    tryRoute();
+  });
+  accToggle.addEventListener('change', tryRoute);
+  $('#btn-swap').addEventListener('click', () => {
+    [startId, endId] = [endId, startId];
+    startInput.value = labelOf(startId);
+    endInput.value = labelOf(endId);
+    routeDest.textContent = endId ? `終點：${labelOf(endId)}` : '';
+    tryRoute();
+  });
+
+  const resetEndpoints = (): void => {
+    startId = null;
+    endId = null;
+    startInput.value = '';
+    endInput.value = '';
+    routeDest.textContent = '';
+    routeStatsDiv.textContent = '';
+    stepsOl.replaceChildren();
+    btnStartNav.disabled = true;
+  };
+
+  $('#btn-cancel-route').addEventListener('click', () => opts.onCancelRoute());
+  btnStartNav.addEventListener('click', () => opts.onStartNav());
+  $('#btn-advance').addEventListener('click', () => opts.onAdvance());
+  $('#btn-back').addEventListener('click', () => opts.onBack());
+  $('#btn-recenter').addEventListener('click', () => opts.onRecenter());
+  $('#btn-exit-nav').addEventListener('click', () => opts.onExitNav());
+  $('#btn-finish').addEventListener('click', () => opts.onExitNav());
+
+  function setMode(mode: Mode): void {
+    document.body.dataset.mode = mode;
+    searchbar.hidden = mode !== 'overview';
+    floorButtons.hidden = mode !== 'overview';
+    routeCard.hidden = mode !== 'preview';
+    navBanner.hidden = mode !== 'nav';
+    if (mode !== 'nav') { transitionBanner.hidden = true; arriveCard.hidden = true; }
+    if (mode !== 'overview') resetFloorFocus();
+    if (mode === 'overview') resetEndpoints();
+  }
+  function setPreview(stats: string, steps: string[], ready: boolean): void {
+    routeStatsDiv.textContent = stats;
     stepsOl.replaceChildren(...steps.map((s) => {
       const li = document.createElement('li');
       li.textContent = s;
       return li;
     }));
+    btnStartNav.disabled = !ready;
   }
-  function showFollow(on: boolean): void {
-    followPanel.style.display = on ? 'block' : 'none';
-    for (const b of [btnRoute, btnAcc, btnClear, btnFollow]) b.style.display = on ? 'none' : '';
-    selStart.disabled = on;
-    selEnd.disabled = on;
+  function setNavInfo(next: string, remain: string, progress: string): void {
+    $('#nav-next').textContent = next;
+    $('#nav-remain').textContent = remain;
+    $('#nav-progress').textContent = progress;
   }
-  function setFollowInfo(next: string, progress: string): void {
-    followNext.textContent = next;
-    followProgress.textContent = progress;
+  function setTransition(label: string | null): void {
+    transitionBanner.hidden = label === null;
+    if (label !== null) transitionBanner.textContent = label;
   }
-  function setFollowReady(on: boolean): void { btnFollow.disabled = !on; }
-  return { setSteps, showFollow, setFollowInfo, setFollowReady };
+  function showArrive(on: boolean): void { arriveCard.hidden = !on; }
+
+  return { setMode, setPreview, setNavInfo, setTransition, showArrive };
 }

@@ -5,67 +5,130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>台北車站室內 3D 導航</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #14171c; color: #e8e8e8;
+    :root { --bg: #1e232bea; --line: #3a4250; --fg: #e8e8e8; --muted: #9fb0c4; --primary: #2b5ea7; }
+    html, body { margin: 0; height: 100%; background: #14171c; color: var(--fg);
       font-family: "Noto Sans TC", system-ui, sans-serif; }
     #app { position: fixed; inset: 0; }
-    #panel { position: fixed; top: 12px; right: 12px; width: 260px; background: #1e232bcc;
-      border: 1px solid #3a4250; border-radius: 8px; padding: 12px; font-size: 14px; z-index: 10; }
-    #panel h1 { font-size: 15px; margin: 0 0 8px; }
-    #panel label { display: block; margin: 4px 0; cursor: pointer; }
-    #panel select { width: 100%; margin-top: 2px; padding: 4px; background: #14171c;
-      color: #e8e8e8; border: 1px solid #3a4250; border-radius: 4px; }
-    #panel button { margin: 6px 6px 0 0; padding: 5px 10px; background: #2b5ea7; color: #fff;
-      border: 0; border-radius: 5px; cursor: pointer; }
-    #panel button:disabled { background: #444; cursor: not-allowed; }
-    #steps { margin: 8px 0 0; padding-left: 20px; max-height: 40vh; overflow-y: auto; }
+    [hidden] { display: none !important; }
+    .card { position: fixed; z-index: 10; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 12px; padding: 12px; font-size: 14px; backdrop-filter: blur(6px);
+      box-shadow: 0 4px 16px #0008; }
+    button { padding: 6px 12px; min-height: 36px; background: #2a313c; color: var(--fg);
+      border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 14px; }
+    button.primary { background: var(--primary); border-color: transparent; color: #fff; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; }
+    input[type="search"] { flex: 1; padding: 8px 10px; background: #14171c; color: var(--fg);
+      border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+    .results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+    .results li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+    .results li:hover { background: #2a313c; }
+
+    #searchbar { top: 12px; left: 12px; width: 300px; }
+    #route-card { top: 12px; left: 12px; width: 320px; }
+    #route-dest { color: var(--muted); margin: 4px 0; }
+    #route-stats { font-size: 16px; font-weight: 700; margin: 6px 0; }
+    #steps { margin: 6px 0 0; padding-left: 20px; max-height: 30vh; overflow-y: auto; }
+
+    #floor-buttons { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+    #floor-buttons button { width: 44px; height: 44px; border-radius: 50%; padding: 0; }
+    #floor-buttons button[aria-pressed="true"] { background: var(--primary); color: #fff; }
+
+    #nav-banner { top: 12px; left: 50%; transform: translateX(-50%); min-width: 340px; text-align: center; }
+    #nav-next { font-size: 18px; font-weight: 700; }
+    #nav-remain { color: var(--muted); margin: 4px 0; }
+    #nav-progress { color: var(--muted); font-size: 12px; }
+
+    #transition-banner { position: fixed; z-index: 11; top: 130px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: #fff; font-size: 18px; font-weight: 700;
+      padding: 12px 20px; border-radius: 999px; box-shadow: 0 4px 16px #0008; }
+
+    #arrive-card { top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center;
+      font-size: 18px; font-weight: 700; }
+    #arrive-card button { margin-top: 10px; }
+
+    #settings { position: fixed; left: 12px; bottom: 12px; z-index: 10; }
+    #settings-menu { position: absolute; bottom: 48px; left: 0; background: var(--bg);
+      border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 190px; }
+    #settings-menu button { display: block; width: 100%; margin: 4px 0; }
+    #geom-mode { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    #geom-mode a { color: #7fb3ff; }
+
     #overlay { position: fixed; inset: 0; background: #000c; color: #ff8080; padding: 24px;
       white-space: pre-wrap; font-family: monospace; display: none; z-index: 99; overflow: auto; }
-    #follow-next { font-size: 16px; font-weight: 700; margin: 8px 0 2px; }
-    #follow-progress { color: #9fb0c4; margin-bottom: 4px; }
-    #btn-advance { font-size: 16px; }
-    #panel button { min-height: 36px; }
-    body.big-text #panel { font-size: 18px; width: 300px; }
-    body.big-text #follow-next { font-size: 22px; }
-    body.big-text #panel button { font-size: 18px; min-height: 44px; }
-    body.high-contrast #panel { background: #000; border-color: #fff; color: #fff; }
-    body.high-contrast #panel button { background: #ffd60a; color: #000; font-weight: 700; }
-    body.high-contrast #panel button:disabled { background: #555; color: #bbb; }
-    body.high-contrast #follow-progress { color: #fff; }
+
+    body.big-text .card { font-size: 18px; }
+    body.big-text #nav-next { font-size: 24px; }
+    body.big-text button { font-size: 18px; min-height: 44px; }
+    body.high-contrast .card, body.high-contrast #settings-menu { background: #000; border-color: #fff; }
+    body.high-contrast button.primary { background: #ffd60a; color: #000; font-weight: 700; }
+    body.high-contrast #nav-remain, body.high-contrast #nav-progress,
+    body.high-contrast #route-dest { color: #fff; }
+
     @media (max-width: 600px) {
-      #panel { top: auto; bottom: 0; left: 0; right: 0; width: auto;
-        border-radius: 12px 12px 0 0; max-height: 48vh; overflow-y: auto; }
-      body.big-text #panel { width: auto; } /* 大字的 300px 特異度較高，窄幅需同權重覆蓋 */
-      #panel button { min-height: 44px; padding: 8px 14px; }
-      #steps { max-height: 20vh; }
+      #searchbar { left: 12px; right: 12px; width: auto; }
+      #route-card, #nav-banner { top: auto; bottom: 0; left: 0; right: 0; width: auto;
+        min-width: 0; transform: none; border-radius: 12px 12px 0 0; max-height: 55vh; overflow-y: auto; }
+      #transition-banner { top: 12px; }
+      button { min-height: 44px; }
     }
   </style>
 </head>
-<body>
+<body data-mode="overview">
   <div id="app"></div>
-  <div id="panel">
-    <h1>台北車站室內 3D 導航</h1>
-    <div id="follow-panel" style="display:none" aria-live="polite">
-      <div id="follow-next"></div>
-      <div id="follow-progress"></div>
-      <button id="btn-advance">我到了</button>
-      <button id="btn-back">上一步</button>
-      <button id="btn-exit-follow">結束導航</button>
+
+  <div id="searchbar" class="card">
+    <input id="end-input" type="search" placeholder="搜尋目的地…" autocomplete="off" />
+    <ul id="end-results" class="results" hidden></ul>
+  </div>
+
+  <div id="floor-buttons"></div>
+
+  <div id="route-card" class="card" hidden>
+    <div class="row">
+      <input id="start-input" type="search" placeholder="選擇起點…" autocomplete="off" />
+      <button id="btn-swap" title="交換起訖">⇅</button>
     </div>
-    <div id="a11y-toggles">
+    <ul id="start-results" class="results" hidden></ul>
+    <div id="route-dest"></div>
+    <label class="row"><input id="acc-toggle" type="checkbox" /> 無障礙路線</label>
+    <div id="route-stats"></div>
+    <details><summary>路線步驟</summary><ol id="steps"></ol></details>
+    <div class="row">
+      <button id="btn-start-nav" class="primary" disabled>開始導航</button>
+      <button id="btn-cancel-route">返回</button>
+    </div>
+  </div>
+
+  <div id="nav-banner" class="card" hidden aria-live="polite">
+    <div id="nav-next"></div>
+    <div id="nav-remain"></div>
+    <div id="nav-progress"></div>
+    <div class="row" style="justify-content: center">
+      <button id="btn-advance" class="primary">我到了</button>
+      <button id="btn-back">上一步</button>
+      <button id="btn-recenter">回正</button>
+      <button id="btn-exit-nav">結束導航</button>
+    </div>
+  </div>
+
+  <div id="transition-banner" hidden></div>
+
+  <div id="arrive-card" class="card" hidden>
+    <div>已抵達目的地</div>
+    <button id="btn-finish" class="primary">結束</button>
+  </div>
+
+  <div id="settings">
+    <button id="btn-settings" title="設定" aria-expanded="false">⚙</button>
+    <div id="settings-menu" hidden>
       <button id="btn-bigtext" aria-pressed="false">大字</button>
       <button id="btn-contrast" aria-pressed="false">高對比</button>
+      <div id="geom-mode"></div>
     </div>
-    <div id="geom-mode"></div>
-    <div id="floors"></div>
-    <label>起點 <select id="sel-start"></select></label>
-    <label>終點 <select id="sel-end"></select></label>
-    <label>樓層透明度 <input id="opacity" type="range" min="10" max="100" value="60" /></label>
-    <button id="btn-route">一般路徑</button>
-    <button id="btn-route-acc">無障礙路徑</button>
-    <button id="btn-clear">清除</button>
-    <button id="btn-follow" disabled>開始導航</button>
-    <ol id="steps"></ol>
   </div>
+
   <div id="overlay"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

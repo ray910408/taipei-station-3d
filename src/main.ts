@@ -2,11 +2,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel, LoaderError } from './loader';
-import { buildStationGroup, toWorld } from './builder';
-import { buildGraph, findPath, routeSteps, listLandmarks, sameEndpointMessage } from './nav';
+import { buildStationGroup, buildConnectorsGroup, toWorld } from './builder';
+import {
+  buildGraph, findPath, routeSteps, routeStats, formatStats,
+  listLandmarks, sameEndpointMessage,
+} from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject } from './path';
 import { setupUI } from './ui';
+import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
+import { floorOffsetY, applyExplode, easeInOutCubic } from './explode';
+import { CameraRig, frameGoal, chaseGoal } from './camera';
 import {
   startFollow, advance, back, atEnd, currentNodeId, remainingEdges,
   buildPositionMarker, setFloorEmphasis, type FollowState,
@@ -26,15 +32,17 @@ for (const [p, mod] of Object.entries(floorModules)) {
   floorDocsByFile[p.replace('../data/', '')] = (mod as { default: unknown }).default;
 }
 
+const EXPLODE_MS = 800;
+
 async function boot(): Promise<void> {
   const model = assembleModel(stationDoc, floorDocsByFile, connectorsDoc);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#14171c');
   scene.add(new THREE.HemisphereLight('#cfd8e3', '#2a2f38', 1.1));
-  const dir = new THREE.DirectionalLight('#ffffff', 0.9);
-  dir.position.set(150, 200, 120);
-  scene.add(dir);
+  const dirLight = new THREE.DirectionalLight('#ffffff', 0.9);
+  dirLight.position.set(150, 200, 120);
+  scene.add(dirLight);
   scene.add(new THREE.GridHelper(500, 50, '#2c333d', '#232830'));
 
   // 幾何雙軌：預設 runtime extrude；?geom=glb 載入離線匯出檔
@@ -52,8 +60,7 @@ async function boot(): Promise<void> {
   }
   scene.add(stationGroup);
 
-  const modeDiv = document.querySelector<HTMLDivElement>('#geom-mode')!;
-  modeDiv.innerHTML = geomMode === 'glb'
+  document.querySelector<HTMLDivElement>('#geom-mode')!.innerHTML = geomMode === 'glb'
     ? '幾何：GLB <a href="./">切回 runtime</a>'
     : '幾何：runtime <a href="?geom=glb">切至 GLB</a>';
 
@@ -65,84 +72,178 @@ async function boot(): Promise<void> {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(60, -18, 0);
   controls.enableDamping = true;
+  const rig = new CameraRig(camera, controls);
 
   const graph = buildGraph(model);
+  const landmarks = listLandmarks(model);
+
+  let mode: Mode = 'overview';
+  let explodeFactor = 0; // boot 時由實高動畫展開至 overview 爆炸
+  let explodeAnim: { from: number; to: number; t0: number } | null = null;
   let routeEdges: GraphEdge[] | null = null;
   let followState: FollowState | null = null;
   let marker: THREE.Group | null = null;
+  let routeObj: THREE.Object3D | null = null;
+  let chaseAuto = true;
 
-  const nodeWorld = (id: string): THREE.Vector3 => {
+  const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
+  const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
     const n = graph.nodes.get(id)!;
-    return toWorld(n.xy, n.z);
+    return toWorld(n.xy, n.z + floorOffsetY(model, n.floor, factor));
   };
+  const nodeWorld = (id: string): THREE.Vector3 => nodeWorldAt(id, explodeFactor);
+  const disposeDeep = (obj: THREE.Object3D): void =>
+    obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
 
-  function refreshFollow(): void {
+  function refreshRoute(): void {
+    if (routeObj) { scene.remove(routeObj); disposeDeep(routeObj); routeObj = null; }
+    if (routeEdges?.length) {
+      routeObj = buildRouteObject(graph, routeEdges, offsetAt(explodeFactor));
+      scene.add(routeObj);
+    }
+  }
+
+  let connObj: THREE.Object3D = stationGroup.getObjectByName('connectors')!;
+  function refreshScene(): void {
+    applyExplode(stationGroup, model, explodeFactor);
+    // connectors 豎井/斜坡需隨層距拉伸——重建（幾何小、便宜；舊物件釋放 GPU 資源）
+    stationGroup.remove(connObj);
+    disposeDeep(connObj);
+    connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
+    stationGroup.add(connObj);
+    refreshRoute();
+    if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
+  }
+
+  function setExplode(target: number): void {
+    if (Math.abs(target - explodeFactor) > 1e-3)
+      explodeAnim = { from: explodeFactor, to: target, t0: performance.now() };
+  }
+
+  function routePoints(factor: number): THREE.Vector3[] {
+    if (!routeEdges?.length) return [];
+    const ids = [routeEdges[0].from, ...routeEdges.map((e) => e.to)];
+    return ids.map((id) => nodeWorldAt(id, factor));
+  }
+
+  function exitNav(): void {
+    if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
+    followState = null;
+    ui.setTransition(null);
+    ui.showArrive(false);
+  }
+
+  function clearRoute(): void {
+    exitNav();
+    routeEdges = null;
+    refreshRoute();
+  }
+
+  function setMode(m: Mode): void {
+    mode = m;
+    ui.setMode(m);
+    setExplode(MODE_EXPLODE[m]);
+    if (m === 'overview') {
+      clearRoute();
+      setFloorEmphasis(stationGroup, null);
+    }
+    if (m === 'preview') {
+      setFloorEmphasis(stationGroup, null); // 跨樓層路線需全樓層可見
+      rig.goal = frameGoal(routePoints(MODE_EXPLODE[m]), camera.aspect); // 以目標爆炸係數框路徑
+    }
+    if (m === 'nav') chaseAuto = true;
+  }
+
+  function refreshNav(): void {
     if (!followState || !routeEdges || !marker) return;
     marker.position.copy(nodeWorld(currentNodeId(followState)));
-    setFloorEmphasis(stationGroup, graph.nodes.get(currentNodeId(followState))!.floor);
+    const cur = graph.nodes.get(currentNodeId(followState))!;
+    const vEdge = verticalStep(routeEdges, followState);
+    if (vEdge) {
+      // vertical transition 呈現：雙層強調＋橫幅＋同框兩端（盤問 Q3）
+      setFloorEmphasis(stationGroup, [cur.floor, graph.nodes.get(vEdge.to)!.floor]);
+      ui.setTransition(transitionLabel(model, graph, vEdge));
+      chaseAuto = false;
+      rig.goal = frameGoal([nodeWorld(vEdge.from), nodeWorld(vEdge.to)], camera.aspect);
+    } else {
+      setFloorEmphasis(stationGroup, cur.floor);
+      ui.setTransition(null);
+      chaseAuto = true;
+    }
+    const remain = remainingEdges(routeEdges, followState);
     const progress = `節點 ${followState.index + 1}/${followState.nodeIds.length}`;
     if (atEnd(followState)) {
-      ui.setFollowInfo('已抵達目的地', progress);
+      ui.setNavInfo('已抵達目的地', '', progress);
+      ui.showArrive(true);
       return;
     }
-    const next = routeSteps(model, graph, remainingEdges(routeEdges, followState))[0] ?? '前往下一節點';
-    ui.setFollowInfo(`下一步：${next}`, progress);
+    ui.showArrive(false);
+    const next = routeSteps(model, graph, remain)[0] ?? '前往下一節點';
+    ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(routeStats(remain))}`, progress);
   }
-
-  function exitFollow(): void {
-    if (marker) scene.remove(marker); // marker 建一次重用，避免反覆進出累積 GPU 資源
-    followState = null;
-    setFloorEmphasis(stationGroup, null);
-    ui.showFollow(false);
-  }
-
-  let routeObj: THREE.Object3D | null = null;
-  const clearRoute = () => {
-    exitFollow();
-    routeEdges = null;
-    if (routeObj) { scene.remove(routeObj); routeObj = null; }
-  };
 
   const ui = setupUI({
-    model, stationGroup,
-    landmarks: listLandmarks(model),
-    onClear: clearRoute,
-    onStartFollow: () => {
-      if (!routeEdges || routeEdges.length === 0) return;
+    model, landmarks,
+    onRoute: (start, end, accessibleOnly) => {
+      const sameMsg = sameEndpointMessage(start, end);
+      const path = sameMsg ? null : findPath(graph, start, end, { accessibleOnly });
+      if (!path || path.length === 0) {
+        routeEdges = null;
+        refreshRoute();
+        ui.setPreview(sameMsg ?? '找不到路徑', [], false);
+        return;
+      }
+      routeEdges = path;
+      refreshRoute();
+      ui.setPreview(formatStats(routeStats(path)), routeSteps(model, graph, path), true);
+      setMode('preview');
+    },
+    onCancelRoute: () => setMode('overview'),
+    onStartNav: () => {
+      if (!routeEdges?.length) return;
       followState = startFollow(routeEdges);
       if (!marker) marker = buildPositionMarker();
       scene.add(marker);
-      ui.showFollow(true);
-      refreshFollow();
+      setMode('nav');
+      refreshNav();
     },
-    onAdvance: () => { if (followState) { followState = advance(followState); refreshFollow(); } },
-    onBack: () => { if (followState) { followState = back(followState); refreshFollow(); } },
-    onExitFollow: exitFollow,
-    onRoute: (start, end, accessibleOnly) => {
-      clearRoute();
-      const sameMsg = sameEndpointMessage(start, end);
-      if (sameMsg) {
-        ui.setSteps([sameMsg]);
-        ui.setFollowReady(false);
-        return;
-      }
-      const path = findPath(graph, start, end, { accessibleOnly });
-      if (!path) { ui.setSteps(['找不到路徑']); ui.setFollowReady(false); return; }
-      routeEdges = path;
-      routeObj = buildRouteObject(graph, path);
-      scene.add(routeObj);
-      ui.setSteps(routeSteps(model, graph, path));
-      ui.setFollowReady(path.length > 0); // 起訖同點時 findPath 回空陣列，不可進入跟隨
+    onAdvance: () => {
+      if (!followState) return;
+      followState = advance(followState);
+      chaseAuto = true; // 推進恢復跟隨；transition 中 refreshNav 會再關
+      refreshNav();
     },
+    onBack: () => { if (followState) { followState = back(followState); refreshNav(); } },
+    onRecenter: () => { chaseAuto = true; },
+    onExitNav: () => setMode('overview'),
+    onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
   });
+
+  // nav 中拖曳＝暫停自動跟隨（回正鈕/推進恢復）
+  renderer.domElement.addEventListener('pointerdown', () => {
+    if (mode === 'nav') { chaseAuto = false; rig.cancel(); }
+  });
+
+  setMode('overview'); // boot：實高 → 爆炸圖展開動畫
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
   });
+
   renderer.setAnimationLoop(() => {
-    if (followState && marker) controls.target.lerp(marker.position, 0.08);
+    if (explodeAnim) {
+      const t = Math.min(1, (performance.now() - explodeAnim.t0) / EXPLODE_MS);
+      explodeFactor = explodeAnim.from + (explodeAnim.to - explodeAnim.from) * easeInOutCubic(t);
+      refreshScene();
+      if (t >= 1) explodeAnim = null;
+    }
+    if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)) {
+      const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
+      rig.goal = chaseGoal(marker.position, nodeWorld(nextId));
+    }
+    rig.tick();
     controls.update();
     renderer.render(scene, camera);
   });
