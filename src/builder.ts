@@ -33,6 +33,60 @@ function mat(color: string, opacity: number): THREE.MeshStandardMaterial {
   });
 }
 
+// connectors：斜坡（stair/escalator）與豎井（elevator）。
+// offsetY 供爆炸圖重建：各樓層錨點 y 加位移，豎井/斜坡自然拉伸。
+export function buildConnectorsGroup(
+  model: StationModel,
+  offsetY: (floorId: string) => number = () => 0,
+): THREE.Group {
+  const connGroup = new THREE.Group();
+  connGroup.name = 'connectors';
+  const nodePos = new Map<string, THREE.Vector3>();
+  for (const meta of model.station.floors) {
+    const floor = model.floors.get(meta.id);
+    for (const n of floor?.nav?.nodes ?? [])
+      nodePos.set(n.id, toWorld(n.xy, meta.elevation + offsetY(meta.id)));
+  }
+  const SPACING = 1.6;
+  const groups = new Map<string, StationModel['connectors']>();
+  for (const c of model.connectors) {
+    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
+    const members = groups.get(key) ?? [];
+    members.push(c);
+    groups.set(key, members);
+  }
+  for (const c of model.connectors) {
+    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
+    const members = groups.get(key)!;
+    const offset = (members.indexOf(c) - (members.length - 1) / 2) * SPACING;
+    for (let i = 0; i < c.levels.length - 1; i++) {
+      const a = nodePos.get(c.levels[i].node);
+      const b = nodePos.get(c.levels[i + 1].node);
+      if (!a || !b) continue;
+      const color = c.kind === 'elevator' ? '#2bb3a3' : '#c8a468';
+      let mesh: THREE.Mesh;
+      if (c.kind === 'elevator') {
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(color, 0.7));
+        mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
+      } else {
+        const len = a.distanceTo(b);
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 1.4), mat(color, 0.9));
+        mesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
+        mesh.lookAt(b);
+        mesh.rotateY(Math.PI / 2); // BoxGeometry 長軸為 x，lookAt 對齊 z 後轉回
+      }
+      // 同錨點梯群純視覺錯開，nav 資料不動
+      const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x);
+      if (lateral.length() < 1e-6) lateral.set(1, 0, 0);
+      else lateral.normalize();
+      mesh.position.addScaledVector(lateral, offset);
+      mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
+      connGroup.add(mesh);
+    }
+  }
+  return connGroup;
+}
+
 export function buildStationGroup(model: StationModel): THREE.Group {
   const root = new THREE.Group();
   root.name = 'station';
@@ -111,51 +165,6 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     root.add(g);
   }
 
-  // connectors：斜坡（stair/escalator）與豎井（elevator）
-  const connGroup = new THREE.Group();
-  connGroup.name = 'connectors';
-  const nodePos = new Map<string, THREE.Vector3>();
-  for (const meta of model.station.floors) {
-    const floor = model.floors.get(meta.id);
-    for (const n of floor?.nav?.nodes ?? []) nodePos.set(n.id, toWorld(n.xy, meta.elevation));
-  }
-  const SPACING = 1.6;
-  const groups = new Map<string, StationModel['connectors']>();
-  for (const c of model.connectors) {
-    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
-    const members = groups.get(key) ?? [];
-    members.push(c);
-    groups.set(key, members);
-  }
-  for (const c of model.connectors) {
-    const key = c.levels.slice(0, 2).map((level) => level.node).sort().join('|');
-    const members = groups.get(key)!;
-    const offset = (members.indexOf(c) - (members.length - 1) / 2) * SPACING;
-    for (let i = 0; i < c.levels.length - 1; i++) {
-      const a = nodePos.get(c.levels[i].node);
-      const b = nodePos.get(c.levels[i + 1].node);
-      if (!a || !b) continue;
-      const color = c.kind === 'elevator' ? '#2bb3a3' : '#c8a468';
-      let mesh: THREE.Mesh;
-      if (c.kind === 'elevator') {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(color, 0.7));
-        mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
-      } else {
-        const len = a.distanceTo(b);
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 1.4), mat(color, 0.9));
-        mesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
-        mesh.lookAt(b);
-        mesh.rotateY(Math.PI / 2); // BoxGeometry 長軸為 x，lookAt 對齊 z 後轉回
-      }
-      // 同錨點梯群純視覺錯開，nav 資料不動
-      const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x);
-      if (lateral.length() < 1e-6) lateral.set(1, 0, 0);
-      else lateral.normalize();
-      mesh.position.addScaledVector(lateral, offset);
-      mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
-      connGroup.add(mesh);
-    }
-  }
-  root.add(connGroup);
+  root.add(buildConnectorsGroup(model));
   return root;
 }
