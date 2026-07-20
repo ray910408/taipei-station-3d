@@ -138,7 +138,10 @@
       {
         "id": "n-rp-002",
         "xy": [92.9, -81.4],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "??????? ?????"
+        }
       },
       {
         "id": "n-rp-003",
@@ -151,7 +154,10 @@
       {
         "id": "n-rp-004",
         "xy": [129.5, 20.8],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "??????? ????"
+        }
       },
       {
         "id": "n-rp-005",
@@ -164,7 +170,10 @@
       {
         "id": "n-rp-006",
         "xy": [122.2, -6.8],
-        "area": "a-rp-platform"
+        "area": "a-rp-platform",
+        "name": {
+          "zh": "??????? ?????"
+        }
       }
     ],
     "edges": [

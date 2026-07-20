@@ -284,7 +284,10 @@
       {
         "id": "n-rc-002",
         "xy": [129.5, 20.8],
-        "area": "a-rc-paid"
+        "area": "a-rc-paid",
+        "name": {
+          "zh": "R??? ?????????"
+        }
       },
       {
         "id": "n-rc-003",
@@ -302,7 +305,10 @@
       {
         "id": "n-rc-005",
         "xy": [102.7, 13.2],
-        "area": "a-rc-unpaid-n"
+        "area": "a-rc-unpaid-n",
+        "name": {
+          "zh": "????????B3 ????"
+        }
       },
       {
         "id": "n-rc-006",
@@ -315,12 +321,18 @@
       {
         "id": "n-rc-007",
         "xy": [136.4, 37.8],
-        "area": "a-rc-unpaid-n"
+        "area": "a-rc-unpaid-n",
+        "name": {
+          "zh": "B3 ?B1 ?????"
+        }
       },
       {
         "id": "n-rc-008",
         "xy": [113, 5.9],
-        "area": "a-rc-paid"
+        "area": "a-rc-paid",
+        "name": {
+          "zh": "R??? ??????????"
+        }
       },
       {
         "id": "n-rc-009",
@@ -330,12 +342,18 @@
       {
         "id": "n-rc-010",
         "xy": [92.9, -81.4],
-        "area": "a-rc-paid"
+        "area": "a-rc-paid",
+        "name": {
+          "zh": "R??? ??????????"
+        }
       },
       {
         "id": "n-rc-011",
         "xy": [120, 38],
-        "area": "a-rc-unpaid-n"
+        "area": "a-rc-unpaid-n",
+        "name": {
+          "zh": "B3 ?B1 ???"
+        }
       },
       {
         "id": "n-rc-012",
@@ -350,7 +368,10 @@
       {
         "id": "n-rc-014",
         "xy": [122.2, -6.8],
-        "area": "a-rc-paid"
+        "area": "a-rc-paid",
+        "name": {
+          "zh": "R??? ??????????"
+        }
       },
       {
         "id": "n-rc-015",
@@ -365,12 +386,18 @@
       {
         "id": "n-rc-017",
         "xy": [92.8, 38.8],
-        "area": "a-rc-tra-paid"
+        "area": "a-rc-tra-paid",
+        "name": {
+          "zh": "B3 ????? ?4????"
+        }
       },
       {
         "id": "n-rc-018",
         "xy": [91.7, 22.6],
-        "area": "a-rc-tra-paid"
+        "area": "a-rc-tra-paid",
+        "name": {
+          "zh": "B3 ????? ?3????"
+        }
       }
     ],
     "edges": [

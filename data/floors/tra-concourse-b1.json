@@ -206,7 +206,10 @@
       {
         "id": "n-tc-005",
         "xy": [92, 21],
-        "area": "a-tc-unpaid-e"
+        "area": "a-tc-unpaid-e",
+        "name": {
+          "zh": "B1 ???? ????"
+        }
       },
       {
         "id": "n-tc-006",
@@ -216,12 +219,18 @@
       {
         "id": "n-tc-007",
         "xy": [76, 26],
-        "area": "a-tc-tra-paid"
+        "area": "a-tc-tra-paid",
+        "name": {
+          "zh": "B1 ??? ?4????"
+        }
       },
       {
         "id": "n-tc-008",
         "xy": [76, 6],
-        "area": "a-tc-tra-paid"
+        "area": "a-tc-tra-paid",
+        "name": {
+          "zh": "B1 ??? ?3????"
+        }
       }
     ],
     "edges": [
