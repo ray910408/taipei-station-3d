@@ -86,8 +86,9 @@ describe('同樓層路線不繞別層（QA ISSUE-002 回歸）', () => {
     expect(total).toBeLessThan(60); // 現行直邊 ≈ 47.4
   });
 
-  it('樓梯轉乘懲罰 +25（c-stair-rprc-1 同 xy，幾何長=高差 7）', () => {
+  it('樓梯轉乘懲罰計入 cost、length 為高差 7（c-stair-rprc-1 同 xy）', () => {
     const stair = (graph.adj.get('n-rp-001') ?? []).find((e) => e.kind === 'stair')!;
-    expect(stair.length).toBeCloseTo(7 + 25, 6);
+    expect(stair.cost).toBeCloseTo(7 + 25, 6);
+    expect(stair.length).toBeCloseTo(7, 6);
   });
 });

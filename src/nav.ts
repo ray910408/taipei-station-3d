@@ -4,7 +4,10 @@ export interface GraphNode { id: string; floor: string; xy: Vec2; z: number; nam
 export interface GraphEdge {
   from: string; to: string;
   kind: 'walk' | 'gate' | 'platform-edge' | 'stair' | 'escalator' | 'elevator';
-  accessible: boolean; length: number; gate?: string; gateSystem?: string; connector?: string;
+  accessible: boolean;
+  length: number;      // 真實 3D 公尺（顯示、統計用）
+  cost: number;        // A* 鬆弛用；connector 邊 = length + 轉乘懲罰
+  gate?: string; gateSystem?: string; connector?: string;
 }
 export interface NavGraph { nodes: Map<string, GraphNode>; adj: Map<string, GraphEdge[]> }
 
@@ -46,10 +49,12 @@ export function buildGraph(model: StationModel): NavGraph {
       const b = nodes.get(e.to);
       if (!a || !b) continue;
       const gate = e.kind === 'gate' ? gateById.get(e.gate ?? '') : undefined;
+      const len = dist3(a, b);
       const base: Omit<GraphEdge, 'from' | 'to'> = {
         kind: e.kind,
         accessible: gate ? gate.accessible : true,
-        length: dist3(a, b),
+        length: len,
+        cost: len,
         gate: gate?.id,
         gateSystem: gate?.system,
       };
@@ -65,10 +70,12 @@ export function buildGraph(model: StationModel): NavGraph {
       const a = nodes.get(lo.node);
       const b = nodes.get(hi.node);
       if (!a || !b) continue;
+      const len = dist3(a, b);
       const base: Omit<GraphEdge, 'from' | 'to'> = {
         kind: c.kind,
         accessible: c.accessible,
-        length: dist3(a, b) + TRANSFER_PENALTY[c.kind],
+        length: len,
+        cost: len + TRANSFER_PENALTY[c.kind],
         connector: c.id,
       };
       if (c.direction === 'up' || c.direction === 'both') addEdge({ from: lo.node, to: hi.node, ...base });
@@ -116,7 +123,7 @@ export function findPath(
     open.delete(current);
     for (const e of graph.adj.get(current) ?? []) {
       if (opts.accessibleOnly && !e.accessible) continue;
-      const tentative = (g.get(current) ?? Infinity) + e.length;
+      const tentative = (g.get(current) ?? Infinity) + e.cost;
       if (tentative < (g.get(e.to) ?? Infinity)) {
         g.set(e.to, tentative);
         cameFrom.set(e.to, e);

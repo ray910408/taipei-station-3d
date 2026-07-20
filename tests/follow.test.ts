@@ -3,7 +3,7 @@ import { startFollow, advance, back, atEnd, currentNodeId, remainingEdges } from
 import type { GraphEdge } from '../src/nav';
 
 const e = (from: string, to: string): GraphEdge =>
-  ({ from, to, kind: 'walk', accessible: true, length: 5 });
+  ({ from, to, kind: 'walk', accessible: true, length: 5, cost: 5 });
 const edges = [e('a', 'b'), e('b', 'c'), e('c', 'd')];
 
 describe('follow 狀態機', () => {

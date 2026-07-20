@@ -31,11 +31,13 @@ describe('buildGraph', () => {
     expect(down).toBeUndefined();
   });
 
-  it('垂直邊含轉乘懲罰（電扶梯 +20、電梯 +40 公尺當量）', () => {
+  it('垂直邊 cost 含轉乘懲罰、length 為幾何長（cost/length 拆分）', () => {
     const esc = (graph.adj.get('n-pl-001') ?? []).find((e) => e.kind === 'escalator')!;
-    expect(esc.length).toBeCloseTo(5 + 20, 6); // 幾何長 = 高差 5
+    expect(esc.cost).toBeCloseTo(5 + 20, 6);
+    expect(esc.length).toBeCloseTo(5, 6);
     const elv = (graph.adj.get('n-pl-002') ?? []).find((e) => e.kind === 'elevator')!;
-    expect(elv.length).toBeCloseTo(Math.hypot(5, 3, 5) + 40, 6);
+    expect(elv.cost).toBeCloseTo(Math.hypot(5, 3, 5) + 40, 6);
+    expect(elv.length).toBeCloseTo(Math.hypot(5, 3, 5), 6);
   });
 });
 
