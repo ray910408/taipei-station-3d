@@ -3,7 +3,7 @@ import type { AreaKind, UnitKind } from './types';
 /** Map Presentation System 唯一視覺真源：3D 材質、光影、UI CSS vars 全由此驅動。
  *  tracer(2D) 不在此列——其編輯配色留在 palette.ts。 */
 export const THEME = {
-  scene: { background: '#f1f0ec', ground: '#e7e5e0', groundY: -30, groundSize: 1200 },
+  scene: { background: '#eceae5', ground: '#dcd9d2', groundY: -30, groundSize: 1200 },
   render: { maxPixelRatio: 2, toneMappingExposure: 1.05 },
   lights: {
     hemi: { sky: '#ffffff', ground: '#d8d4cd', intensity: 0.9 },
@@ -15,7 +15,7 @@ export const THEME = {
     },
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
-  body: { sideDarken: 0.8, edge: '#9aa0a6', edgeOpacity: 0.35 },
+  body: { sideDarken: 0.8, edge: '#80868b', edgeOpacity: 0.55 },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
   nav: {
     chaseBack: 14, chaseUp: 7,
