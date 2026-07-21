@@ -13,6 +13,7 @@ import { buildRouteObject, tickRouteArrows } from './path';
 import { makeTween, tweenAt, swapFactors, applyFloorFade, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
+import { attachFpsOverlay } from './fps';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -109,6 +110,7 @@ async function boot(): Promise<void> {
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
   camera.position.set(220, 140, 260);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const fpsTick = attachFpsOverlay(renderer);
   renderer.setPixelRatio(Math.min(devicePixelRatio, THEME.render.maxPixelRatio));
   renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -350,6 +352,7 @@ async function boot(): Promise<void> {
     labelLayer.update(camera, mode, explodeFactor);
     renderer.render(scene, camera);
     labelLayer.render(scene, camera);
+    fpsTick?.();
   });
 }
 
