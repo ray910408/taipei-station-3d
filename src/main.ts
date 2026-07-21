@@ -137,7 +137,7 @@ async function boot(): Promise<void> {
     const y = meta.elevation + floorOffsetY(model, meta.id, 1);
     for (const p of floor.slab.outline) framePts.push(toWorld(p, y));
   }
-  rig.goal = frameGoal(framePts, camera.aspect);
+  const overviewGoal = () => frameGoal(framePts, camera.aspect);
 
   const graph = buildGraph(model);
   const landmarks = listLandmarks(model);
@@ -233,6 +233,7 @@ async function boot(): Promise<void> {
     if (m === 'overview') {
       clearRoute();
       setFloorEmphasis(stationGroup, null);
+      rig.goal = overviewGoal(); // H-3：結束導航/取消預覽一律回全覽框景（boot 同路徑）
     }
     if (m === 'preview') {
       setFloorEmphasis(stationGroup, null); // 跨樓層路線需全樓層可見
