@@ -245,6 +245,13 @@ async function boot(): Promise<void> {
     if (m === 'nav') chaseAuto = true;
   }
 
+  /** 抵達後相機後拉：框住最後兩節點展示終點周邊（P-6）。 */
+  function arriveGoal(): void {
+    if (!followState) return;
+    const pts = followState.nodeIds.slice(-2).map((id) => nodeWorld(id));
+    rig.goal = frameGoal(pts, camera.aspect);
+  }
+
   function refreshNav(): void {
     if (!followState || !routeEdges || !marker) return;
     marker.position.copy(nodeWorld(currentNodeId(followState)));
@@ -347,7 +354,10 @@ async function boot(): Promise<void> {
     if (markerTween && marker) {
       const { pos, done } = tweenAt(markerTween, performance.now());
       marker.position.copy(pos);
-      if (done) markerTween = null;
+      if (done) {
+        markerTween = null;
+        if (mode === 'nav' && followState && atEnd(followState)) arriveGoal(); // P-6：滑行到站才後拉
+      }
     }
     if (floorSwap) {
       const { fromFactor, toFactor, done } = swapFactors(floorSwap, performance.now(), THEME.emphasis.dim);
