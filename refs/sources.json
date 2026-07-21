@@ -138,6 +138,14 @@
       "file": "refs/site/isometric-guide-2014.png",
       "captured": "2026-07-17",
       "license_note": "第三方作品：僅交叉比對，不直接描圖"
+    },
+    {
+      "id": "taipei-underground-malls-map",
+      "title": "臺北車站地下層及周邊地下街全區圖（Y／Z／R／K 區）",
+      "file": "refs/site/taipei-underground-malls-map.url",
+      "url": "https://www-ws.gov.taipei/Download.ashx?icon=..pdf&n=6Ie65YyX6LuK56uZ5Zyw5LiL5bGk5Y%2BK5ZGo6YKK5Zyw5LiL6KGX5Zyw6LK85byP6Kmz57Sw5Zyw5ZyW5qij5byPLnBkZg%3D%3D&u=LzAwMS9VcGxvYWQvMzA4L3JlbGZpbGUvMTAxNjIvNzk5NjI1OS8wNGFiNzliZC01MjBlLTRlMzgtYWIxMy01YWE3MDc0ZGJlNzQucGRm",
+      "captured": "2026-07-21",
+      "license_note": "臺北市政府公開導覽圖；本專案僅據拓撲與相對方位建立示意模型，未直接重製底圖"
     }
   ]
 }

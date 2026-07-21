@@ -18,10 +18,10 @@ const model = assembleModel(stationDoc, {
 const landmarks = listLandmarks(model);
 
 describe('groupLandmarks（B4 起始點不見了——12 筆截斷修復）', () => {
-  it('空 query：全 27 筆、4 組、樓層保序、無截斷', () => {
+  it('空 query：全 47 筆、4 組、樓層保序、無截斷', () => {
     const groups = groupLandmarks(landmarks, '');
     expect(groups.length).toBe(4);
-    expect(groups.reduce((n, g) => n + g.items.length, 0)).toBe(27);
+    expect(groups.reduce((n, g) => n + g.items.length, 0)).toBe(47);
     expect(groups.map((g) => g.floorLabel)).toEqual(
       [...new Set(landmarks.map((l) => l.floorLabel))]);
   });

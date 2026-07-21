@@ -17,7 +17,9 @@ export interface Area extends Provenance { id: string; kind: AreaKind; system: s
 export interface Wall extends Provenance { id: string; polyline: Vec2[]; height: number; width?: number }
 
 export type UnitKind = 'column' | 'shop' | 'room' | 'machine' | 'stair-void';
-export interface Unit extends Provenance { id: string; kind: UnitKind; polygon: Vec2[]; height: number }
+export interface Unit extends Provenance {
+  id: string; kind: UnitKind; system?: string; polygon: Vec2[]; height: number;
+}
 
 export interface Gate extends Provenance {
   id: string; kind: 'faregate'; system: string;

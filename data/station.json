@@ -24,6 +24,34 @@
         "zh": "臺鐵"
       },
       "color": "#0070bd"
+    },
+    "y-mall": {
+      "name": {
+        "zh": "台北地下街 Y 區",
+        "en": "Taipei City Mall"
+      },
+      "color": "#f2c94c"
+    },
+    "z-mall": {
+      "name": {
+        "zh": "站前地下街 Z 區",
+        "en": "Station Front Metro Mall"
+      },
+      "color": "#ef6c9d"
+    },
+    "r-mall": {
+      "name": {
+        "zh": "中山地下街 R 區",
+        "en": "Zhongshan Metro Mall"
+      },
+      "color": "#d94b4b"
+    },
+    "k-mall": {
+      "name": {
+        "zh": "K 區地下街",
+        "en": "K Underground Mall"
+      },
+      "color": "#7e57c2"
     }
   },
   "floors": [

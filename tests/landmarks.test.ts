@@ -16,9 +16,9 @@ const model = assembleModel(stationDoc, {
 }, connectorsDoc);
 
 describe('地標池（終審 mutation audit #2：mojibake 回歸鎖）', () => {
-  it('共 27 個地標、Phase 3.5 新增 17 名精確值', () => {
+  it('共 47 個地標，含四區地下街與原有 17 名精確值', () => {
     const byId = new Map(listLandmarks(model).map((l) => [l.id, l.label]));
-    expect(byId.size).toBe(27);
+    expect(byId.size).toBe(47);
     const expected: Record<string, string> = {
       'n-rp-002': '淡水信義線月台 南端電梯口',
       'n-rp-004': '淡水信義線月台 北梯群口',
@@ -37,6 +37,10 @@ describe('地標池（終審 mutation audit #2：mojibake 回歸鎖）', () => {
       'n-tc-005': 'B1 東剪票口 寬閘門外',
       'n-tc-007': 'B1 付費島 第4月台梯口',
       'n-tc-008': 'B1 付費島 第3月台梯口',
+      'n-tc-y-west': 'Y28 北門站連通口',
+      'n-tc-z-east': '站前地下街 Z 區東端',
+      'n-tc-r-north': 'R9 中山站連通口',
+      'n-tc-k-west': 'K12 機場捷運方向',
     };
     for (const [id, label] of Object.entries(expected)) expect(byId.get(id), id).toBe(label);
     for (const label of byId.values()) expect(label).not.toMatch(/\?/);

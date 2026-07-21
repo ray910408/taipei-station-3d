@@ -138,6 +138,23 @@ describe('buildStationGroup', () => {
     expect(m.opacity).toBe(1);
     expect(m.transparent).toBe(false);
   });
+
+  it('四區地下街店鋪依 system 使用不同識別色', () => {
+    const floor = fullGroup.getObjectByName('tra-concourse-b1') as THREE.Group;
+    const colors = new Map<string, string>();
+    for (const child of floor.children) {
+      const system = child.userData.system as string | undefined;
+      if (!system?.endsWith('-mall') || child.userData.kind !== 'unit-shop') continue;
+      const material = (child as THREE.Mesh).material as THREE.MeshStandardMaterial[];
+      colors.set(system, `#${material[0].color.getHexString()}`);
+    }
+    expect(Object.fromEntries(colors)).toEqual({
+      'y-mall': fullModel.station.systems['y-mall'].color,
+      'z-mall': fullModel.station.systems['z-mall'].color,
+      'k-mall': fullModel.station.systems['k-mall'].color,
+      'r-mall': fullModel.station.systems['r-mall'].color,
+    });
+  });
 });
 
 describe('buildRouteObject（per-floor run＋link＋pin）', () => {

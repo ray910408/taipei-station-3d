@@ -3,18 +3,28 @@
   "id": "tra-concourse-b1",
   "slab": {
     "outline": [
-      [-105, -75],
-      [105, -75],
-      [105, -10],
-      [151, 2],
-      [140, 55],
-      [105, 46],
-      [105, 75],
-      [-105, 75]
+      [-155, -135],
+      [155, -135],
+      [155, 40],
+      [160, 40],
+      [160, 480],
+      [110, 480],
+      [110, 80],
+      [95, 80],
+      [95, 130],
+      [-490, 130],
+      [-490, 80],
+      [-105, 80],
+      [-105, 65],
+      [-230, 65],
+      [-230, -65],
+      [-105, -65],
+      [-105, -80],
+      [-155, -80]
     ],
     "source": "tra-b1-map",
     "confidence": 2,
-    "note": "站體矩形＋東翼（往 R 線 B3 通廊）；等角底圖僅供比例參考"
+    "note": "台北車站 B1 與 Y／Z／R／K 四區地下街聯合示意輪廓；站體依臺鐵圖、地下街依官方全區圖與出口序列估算，非測量圖"
   },
   "areas": [
     {
@@ -60,6 +70,96 @@
       "confidence": 2,
       "status": "traced",
       "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
+    },
+    {
+      "id": "a-tc-central",
+      "kind": "unpaid",
+      "system": "shared",
+      "polygon": [
+        [-12, -75],
+        [12, -75],
+        [12, 75],
+        [-12, 75]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "車站 B1 中央南北非付費通廊，串接 Y 與 Z 區"
+    },
+    {
+      "id": "a-tc-west",
+      "kind": "unpaid",
+      "system": "shared",
+      "polygon": [
+        [-105, -65],
+        [-12, -65],
+        [-12, 65],
+        [-105, 65]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated",
+      "note": "車站西側非付費大廳示意，作為 K 區連通骨架"
+    },
+    {
+      "id": "a-tc-y-mall",
+      "kind": "corridor",
+      "system": "y-mall",
+      "polygon": [
+        [-490, 80],
+        [95, 80],
+        [95, 130],
+        [-490, 130]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "台北地下街 Y 區：市民大道下方東西向主通廊，長度壓縮為示意比例"
+    },
+    {
+      "id": "a-tc-z-mall",
+      "kind": "corridor",
+      "system": "z-mall",
+      "polygon": [
+        [-155, -135],
+        [155, -135],
+        [155, -80],
+        [-155, -80]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "站前地下街 Z 區：忠孝西路下方東西向主通廊"
+    },
+    {
+      "id": "a-tc-r-mall",
+      "kind": "corridor",
+      "system": "r-mall",
+      "polygon": [
+        [110, 40],
+        [160, 40],
+        [160, 480],
+        [110, 480]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "中山地下街 R 區：沿捷運淡水信義線向北延伸至中山站方向"
+    },
+    {
+      "id": "a-tc-k-mall",
+      "kind": "corridor",
+      "system": "k-mall",
+      "polygon": [
+        [-230, -65],
+        [-105, -65],
+        [-105, 65],
+        [-230, 65]
+      ],
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated",
+      "note": "K 區地下街：台北車站西側與機場捷運方向連通範圍示意"
     }
   ],
   "units": [
@@ -116,6 +216,321 @@
       "height": 5,
       "source": "tra-b1-map",
       "confidence": 2
+    },
+    {
+      "id": "u-tc-y-n1",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-480, 116],
+        [-360, 116],
+        [-360, 128],
+        [-480, 128]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-n2",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-350, 116],
+        [-230, 116],
+        [-230, 128],
+        [-350, 128]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-n3",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-220, 116],
+        [-100, 116],
+        [-100, 128],
+        [-220, 128]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-n4",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-90, 116],
+        [85, 116],
+        [85, 128],
+        [-90, 128]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-s1",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-480, 82],
+        [-340, 82],
+        [-340, 94],
+        [-480, 94]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-s2",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-330, 82],
+        [-180, 82],
+        [-180, 94],
+        [-330, 94]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-y-s3",
+      "kind": "shop",
+      "system": "y-mall",
+      "polygon": [
+        [-170, 82],
+        [-20, 82],
+        [-20, 94],
+        [-170, 94]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-z-n1",
+      "kind": "shop",
+      "system": "z-mall",
+      "polygon": [
+        [-145, -94],
+        [-35, -94],
+        [-35, -82],
+        [-145, -82]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-z-n2",
+      "kind": "shop",
+      "system": "z-mall",
+      "polygon": [
+        [-25, -94],
+        [145, -94],
+        [145, -82],
+        [-25, -82]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-z-s1",
+      "kind": "shop",
+      "system": "z-mall",
+      "polygon": [
+        [-145, -133],
+        [-25, -133],
+        [-25, -121],
+        [-145, -121]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-z-s2",
+      "kind": "shop",
+      "system": "z-mall",
+      "polygon": [
+        [-15, -133],
+        [145, -133],
+        [145, -121],
+        [-15, -121]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-k-w1",
+      "kind": "shop",
+      "system": "k-mall",
+      "polygon": [
+        [-228, -60],
+        [-210, -60],
+        [-210, -8],
+        [-228, -8]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-k-w2",
+      "kind": "shop",
+      "system": "k-mall",
+      "polygon": [
+        [-228, 8],
+        [-210, 8],
+        [-210, 60],
+        [-228, 60]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-k-e1",
+      "kind": "shop",
+      "system": "k-mall",
+      "polygon": [
+        [-125, -60],
+        [-107, -60],
+        [-107, -8],
+        [-125, -8]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-k-e2",
+      "kind": "shop",
+      "system": "k-mall",
+      "polygon": [
+        [-125, 8],
+        [-107, 8],
+        [-107, 60],
+        [-125, 60]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-w1",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [112, 50],
+        [124, 50],
+        [124, 180],
+        [112, 180]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-w2",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [112, 190],
+        [124, 190],
+        [124, 320],
+        [112, 320]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-w3",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [112, 330],
+        [124, 330],
+        [124, 470],
+        [112, 470]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-e1",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [146, 50],
+        [158, 50],
+        [158, 180],
+        [146, 180]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-e2",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [146, 190],
+        [158, 190],
+        [158, 320],
+        [146, 320]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "u-tc-r-e3",
+      "kind": "shop",
+      "system": "r-mall",
+      "polygon": [
+        [146, 330],
+        [158, 330],
+        [158, 470],
+        [146, 470]
+      ],
+      "height": 3.2,
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
     }
   ],
   "gates": [
@@ -211,6 +626,102 @@
       "source": "tra-b1-map",
       "confidence": 2,
       "note": "示範集：錨定 n-tc-005 寬閘門外"
+    },
+    {
+      "id": "p-tc-y1",
+      "kind": "exit",
+      "system": "y-mall",
+      "position": [-470, 105],
+      "name": {
+        "zh": "Y28／北門站方向"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-y2",
+      "kind": "exit",
+      "system": "y-mall",
+      "position": [70, 105],
+      "name": {
+        "zh": "Y1／台北車站方向"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-z1",
+      "kind": "exit",
+      "system": "z-mall",
+      "position": [-140, -107],
+      "name": {
+        "zh": "Z10／西端出口"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-z2",
+      "kind": "exit",
+      "system": "z-mall",
+      "position": [140, -107],
+      "name": {
+        "zh": "Z2／東端出口"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-r1",
+      "kind": "exit",
+      "system": "r-mall",
+      "position": [135, 130],
+      "name": {
+        "zh": "R1／京站方向"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-r2",
+      "kind": "exit",
+      "system": "r-mall",
+      "position": [135, 465],
+      "name": {
+        "zh": "R9／中山站方向"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 2,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-k1",
+      "kind": "exit",
+      "system": "k-mall",
+      "position": [-215, 0],
+      "name": {
+        "zh": "K12／機場捷運方向"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
+    },
+    {
+      "id": "p-tc-k2",
+      "kind": "exit",
+      "system": "k-mall",
+      "position": [-120, 0],
+      "name": {
+        "zh": "K 區／台北車站連通口"
+      },
+      "source": "taipei-underground-malls-map",
+      "confidence": 1,
+      "status": "estimated"
     }
   ],
   "nav": {
@@ -269,6 +780,186 @@
         "name": {
           "zh": "B1 付費島 第3月台梯口"
         }
+      },
+      {
+        "id": "n-tc-hub",
+        "xy": [0, 0],
+        "area": "a-tc-central",
+        "name": {
+          "zh": "台北車站 B1 中央大廳"
+        }
+      },
+      {
+        "id": "n-tc-north",
+        "xy": [0, 65],
+        "area": "a-tc-central"
+      },
+      {
+        "id": "n-tc-south",
+        "xy": [0, -70],
+        "area": "a-tc-central"
+      },
+      {
+        "id": "n-tc-west",
+        "xy": [-100, 0],
+        "area": "a-tc-west"
+      },
+      {
+        "id": "n-tc-east-n",
+        "xy": [92, 60],
+        "area": "a-tc-unpaid-e"
+      },
+      {
+        "id": "n-tc-y-east",
+        "xy": [70, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "台北地下街 Y 區東端"
+        }
+      },
+      {
+        "id": "n-tc-y-hub",
+        "xy": [0, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "Y 區車站連通口"
+        }
+      },
+      {
+        "id": "n-tc-y-1",
+        "xy": [-100, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "Y 區服飾區"
+        }
+      },
+      {
+        "id": "n-tc-y-2",
+        "xy": [-220, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "Y 區百貨區"
+        }
+      },
+      {
+        "id": "n-tc-y-3",
+        "xy": [-340, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "Y 區電子區"
+        }
+      },
+      {
+        "id": "n-tc-y-west",
+        "xy": [-470, 105],
+        "area": "a-tc-y-mall",
+        "name": {
+          "zh": "Y28 北門站連通口"
+        }
+      },
+      {
+        "id": "n-tc-z-west",
+        "xy": [-140, -107],
+        "area": "a-tc-z-mall",
+        "name": {
+          "zh": "站前地下街 Z 區西端"
+        }
+      },
+      {
+        "id": "n-tc-z-1",
+        "xy": [-60, -107],
+        "area": "a-tc-z-mall",
+        "name": {
+          "zh": "Z 區西廣場"
+        }
+      },
+      {
+        "id": "n-tc-z-hub",
+        "xy": [0, -107],
+        "area": "a-tc-z-mall",
+        "name": {
+          "zh": "Z 區車站連通口"
+        }
+      },
+      {
+        "id": "n-tc-z-2",
+        "xy": [60, -107],
+        "area": "a-tc-z-mall",
+        "name": {
+          "zh": "Z 區東廣場"
+        }
+      },
+      {
+        "id": "n-tc-z-east",
+        "xy": [140, -107],
+        "area": "a-tc-z-mall",
+        "name": {
+          "zh": "站前地下街 Z 區東端"
+        }
+      },
+      {
+        "id": "n-tc-k-west",
+        "xy": [-215, 0],
+        "area": "a-tc-k-mall",
+        "name": {
+          "zh": "K12 機場捷運方向"
+        }
+      },
+      {
+        "id": "n-tc-k-mid",
+        "xy": [-170, 0],
+        "area": "a-tc-k-mall",
+        "name": {
+          "zh": "K 區中央通廊"
+        }
+      },
+      {
+        "id": "n-tc-k-east",
+        "xy": [-120, 0],
+        "area": "a-tc-k-mall",
+        "name": {
+          "zh": "K 區台北車站連通口"
+        }
+      },
+      {
+        "id": "n-tc-r-south",
+        "xy": [135, 55],
+        "area": "a-tc-r-mall",
+        "name": {
+          "zh": "中山地下街 R 區南端"
+        }
+      },
+      {
+        "id": "n-tc-r-1",
+        "xy": [135, 130],
+        "area": "a-tc-r-mall",
+        "name": {
+          "zh": "R1 京站方向"
+        }
+      },
+      {
+        "id": "n-tc-r-2",
+        "xy": [135, 250],
+        "area": "a-tc-r-mall",
+        "name": {
+          "zh": "R 區藝術通廊"
+        }
+      },
+      {
+        "id": "n-tc-r-3",
+        "xy": [135, 370],
+        "area": "a-tc-r-mall",
+        "name": {
+          "zh": "R 區書街"
+        }
+      },
+      {
+        "id": "n-tc-r-north",
+        "xy": [135, 465],
+        "area": "a-tc-r-mall",
+        "name": {
+          "zh": "R9 中山站連通口"
+        }
       }
     ],
     "edges": [
@@ -326,6 +1017,131 @@
       {
         "from": "n-tc-003",
         "to": "n-tc-008",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-hub",
+        "to": "n-tc-north",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-hub",
+        "to": "n-tc-south",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-hub",
+        "to": "n-tc-west",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-north",
+        "to": "n-tc-east-n",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-east-n",
+        "to": "n-tc-005",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-north",
+        "to": "n-tc-y-hub",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-east",
+        "to": "n-tc-y-hub",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-hub",
+        "to": "n-tc-y-1",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-1",
+        "to": "n-tc-y-2",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-2",
+        "to": "n-tc-y-3",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-3",
+        "to": "n-tc-y-west",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-south",
+        "to": "n-tc-z-hub",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-z-west",
+        "to": "n-tc-z-1",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-z-1",
+        "to": "n-tc-z-hub",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-z-hub",
+        "to": "n-tc-z-2",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-z-2",
+        "to": "n-tc-z-east",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-west",
+        "to": "n-tc-k-east",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-k-east",
+        "to": "n-tc-k-mid",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-k-mid",
+        "to": "n-tc-k-west",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-004",
+        "to": "n-tc-r-south",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-y-east",
+        "to": "n-tc-r-1",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-r-south",
+        "to": "n-tc-r-1",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-r-1",
+        "to": "n-tc-r-2",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-r-2",
+        "to": "n-tc-r-3",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-r-3",
+        "to": "n-tc-r-north",
         "kind": "walk"
       }
     ]
