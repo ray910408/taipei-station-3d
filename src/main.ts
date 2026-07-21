@@ -10,7 +10,7 @@ import {
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows } from './path';
-import { makeTween, tweenAt, swapFactors, applyFloorFade, type Tween, type FloorSwap } from './navview';
+import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
@@ -288,6 +288,7 @@ async function boot(): Promise<void> {
     },
     onAdvance: () => {
       if (!followState || !marker) return;
+      if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; } // 連按收斂到節點，不切角
       const fromPos = marker.position.clone();
       followState = advance(followState);
       chaseAuto = true;
@@ -342,10 +343,15 @@ async function boot(): Promise<void> {
       if (done) floorSwap = null;
     }
     tickRouteArrows(performance.now());
-    if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)
-        && routeEdges && !verticalStep(routeEdges, followState)) {
+    if (mode === 'nav' && followState && marker && chaseAuto && routeEdges) {
       const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
-      rig.goal = chaseGoal(marker.position, nodeWorld(nextId));
+      const aim = chaseAim({
+        tween: markerTween,
+        atEnd: atEnd(followState),
+        vertical: verticalStep(routeEdges, followState) !== null,
+        nextPos: nodeWorld(nextId),
+      });
+      if (aim) rig.goal = chaseGoal(marker.position, aim);
     }
     rig.tick();
     controls.update();

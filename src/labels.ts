@@ -7,8 +7,8 @@ import type { Mode } from './mode';
 
 export type LabelKind = 'floor-tag' | 'landmark';
 
-/** 能見度 gate（純函數，node 可測）：nav 全隱（資訊由 DOM banner 承載）；
- *  floor tag 只在爆炸展開後出現；landmark 依鏡頭距離進退。 */
+/** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依鏡頭距離進退，preview/nav 隱藏；
+ *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
   kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number,
 ): boolean {

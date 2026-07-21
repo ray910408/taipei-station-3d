@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { makeTween, tweenAt, swapFactors, applyFloorFade } from '../src/navview';
+import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade } from '../src/navview';
 import { THEME } from '../src/theme';
 
 describe('marker tween（等速滑行）', () => {
@@ -54,5 +54,22 @@ describe('applyFloorFade', () => {
     expect((ma.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
     expect((ma.material as THREE.MeshStandardMaterial).transparent).toBe(false);
     expect(ma.userData.fadeBase).toBeUndefined();
+  });
+});
+
+describe('chaseAim（終審 I-1）', () => {
+  const B = new THREE.Vector3(1, 0, 0);
+  const C = new THREE.Vector3(2, 0, 0);
+  const tw = makeTween(new THREE.Vector3(), B, 0);
+  it('tween 進行中鎖定 tween 終點（轉角不預瞄下下節點）', () => {
+    expect(chaseAim({ tween: tw, atEnd: false, vertical: false, nextPos: C })).toBe(tw.to);
+  });
+  it('最後一段：atEnd 但 tween 未完仍 chase', () => {
+    expect(chaseAim({ tween: tw, atEnd: true, vertical: false, nextPos: B })).toBe(tw.to);
+  });
+  it('無 tween：atEnd/垂直段前 null、否則下一節點', () => {
+    expect(chaseAim({ tween: null, atEnd: true, vertical: false, nextPos: C })).toBeNull();
+    expect(chaseAim({ tween: null, atEnd: false, vertical: true, nextPos: C })).toBeNull();
+    expect(chaseAim({ tween: null, atEnd: false, vertical: false, nextPos: C })).toBe(C);
   });
 });

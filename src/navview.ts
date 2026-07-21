@@ -15,6 +15,16 @@ export function tweenAt(tw: Tween, now: number): { pos: THREE.Vector3; done: boo
   return { pos: tw.from.clone().lerp(tw.to, t), done: t >= 1 };
 }
 
+/** nav 每幀 chase 目標：tween 進行中鎖定 tween 終點（含最後一段——atEnd 但 tween 未完仍 chase）；
+ *  否則沿既有 next-node 規則（atEnd 或垂直段前不 chase）。回傳 null＝本幀不設 chase goal。 */
+export function chaseAim(opts: {
+  tween: Tween | null; atEnd: boolean; vertical: boolean; nextPos: THREE.Vector3;
+}): THREE.Vector3 | null {
+  if (opts.tween) return opts.tween.to;
+  if (opts.atEnd || opts.vertical) return null;
+  return opts.nextPos;
+}
+
 /** 換層柔和過渡（風格關卡裁決版）：疊在 setFloorEmphasis 之後——
  *  from 層視覺 1→dim（factor 1/dim→1）、to 層視覺 dim→1（factor dim→1），線性。 */
 export interface FloorSwap { fromFloor: string; toFloor: string; t0: number }
