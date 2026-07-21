@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { StationModel, Vec2 } from './types';
-import { THEME } from './theme';
+import { THEME, mixHex } from './theme';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
   return new THREE.Vector3(xy[0], y, -xy[1]);
@@ -152,8 +152,12 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
       const sunk = a.kind === 'track' ? -1.1 : 0.01 + i * 0.01;
+      // 圖 2 構圖：月台＝系統色淡化錨點（去塑膠 T3）；系統未知回退 kind 色
+      const sys = model.station.systems[a.system]?.color;
+      const base = a.kind === 'platform' && sys
+        ? mixHex(sys, '#ffffff', THEME.materials.platformWhiten) : M.area[a.kind];
       g.add(extrudeMesh(
-        a.polygon, [], 0.05, meta.elevation + sunk, mat(M.area[a.kind], M.areaOpacity), a.kind));
+        a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];

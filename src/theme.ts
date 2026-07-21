@@ -24,12 +24,13 @@ export const THEME = {
   },
   materials: {
     roughness: 0.85,
+    platformWhiten: 0.55,
     slab: { color: '#ffffff', opacity: 1 },
     shell: { color: '#dadce0', opacity: 0.06 },
     wall: { color: '#dadce0', opacity: 1 },
     area: {
-      platform: '#f3e8c9', paid: '#fce8e6', unpaid: '#e8f0fe',
-      corridor: '#e6f4ea', track: '#3c4043', restricted: '#e8eaed',
+      platform: '#f3e8c9', paid: '#f9efee', unpaid: '#eef3fb',
+      corridor: '#eff5f0', track: '#3c4043', restricted: '#eeeff1',
     } satisfies Record<AreaKind, string>,
     areaOpacity: 1,
     unit: {
@@ -68,6 +69,17 @@ export const THEME = {
 };
 // 注意：不用 `as const`——與 satisfies 併用會撞 TS const-assertion 限制；
 // 需要 tuple 型別的 position/target 已個別斷言。
+
+/** 線性混色（sRGB 分量插值）：t=0 → a、t=1 → b。月台系統色淡化等表現層共用。 */
+export function mixHex(a: string, b: string, t: number): string {
+  const ca = parseInt(a.slice(1), 16);
+  const cb = parseInt(b.slice(1), 16);
+  const ch = (sa: number, sb: number) => Math.round(sa + (sb - sa) * t);
+  const r = ch((ca >> 16) & 255, (cb >> 16) & 255);
+  const g = ch((ca >> 8) & 255, (cb >> 8) & 255);
+  const bl = ch(ca & 255, cb & 255);
+  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')}`;
+}
 
 /** boot 時把 UI tokens 寫入 CSS vars——JS 為唯一真源，index.html :root 僅為 first-paint fallback。 */
 export function applyUITheme(
