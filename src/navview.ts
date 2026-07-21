@@ -48,9 +48,11 @@ export function applyFloorFade(floorGroup: THREE.Object3D, factor: number | null
       if (mesh.userData.fadeBase !== undefined) {
         const bases = mesh.userData.fadeBase as number[];
         const flags = mesh.userData.fadeTransparent as boolean[];
-        list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; });
+        const dws = mesh.userData.fadeDepthWrite as boolean[];
+        list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; m.depthWrite = dws[i]; });
         delete mesh.userData.fadeBase;
         delete mesh.userData.fadeTransparent;
+        delete mesh.userData.fadeDepthWrite;
       }
       return;
     }
@@ -64,9 +66,16 @@ export function applyFloorFade(floorGroup: THREE.Object3D, factor: number | null
     if (mesh.userData.fadeBase === undefined) {
       mesh.userData.fadeBase = list.map((m) => m.opacity);
       mesh.userData.fadeTransparent = list.map((m) => m.transparent);
+      mesh.userData.fadeDepthWrite = list.map((m) => m.depthWrite);
     }
     const bases = mesh.userData.fadeBase as number[];
-    list.forEach((m, i) => { m.transparent = true; m.opacity = Math.min(1, bases[i] * factor); });
+    const dws = mesh.userData.fadeDepthWrite as boolean[];
+    list.forEach((m, i) => {
+      m.transparent = true;
+      m.opacity = Math.min(1, bases[i] * factor);
+      // fade 快照疊在 emphasis 之上：沿 emphasis 當下 depthWrite（調暗層 false）——crossfade 短暫全亮不寫深度屬保守可接受
+      m.depthWrite = dws[i] && m.opacity >= 1;
+    });
   });
 }
 

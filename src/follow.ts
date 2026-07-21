@@ -76,9 +76,11 @@ export function setFloorEmphasis(
         if (mesh.userData.baseOpacity !== undefined) {
           const bases = mesh.userData.baseOpacity as number[];
           const flags = mesh.userData.baseTransparent as boolean[];
-          list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; });
+          const dws = mesh.userData.baseDepthWrite as boolean[];
+          list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; m.depthWrite = dws[i]; });
           delete mesh.userData.baseOpacity;
           delete mesh.userData.baseTransparent;
+          delete mesh.userData.baseDepthWrite;
         }
         return;
       }
@@ -93,11 +95,15 @@ export function setFloorEmphasis(
       if (mesh.userData.baseOpacity === undefined) {
         mesh.userData.baseOpacity = list.map((m) => m.opacity);
         mesh.userData.baseTransparent = list.map((m) => m.transparent);
+        mesh.userData.baseDepthWrite = list.map((m) => m.depthWrite);
       }
       const bases = mesh.userData.baseOpacity as number[];
+      const dws = mesh.userData.baseDepthWrite as boolean[];
       list.forEach((m, i) => {
         m.transparent = true;
         m.opacity = bases[i] * (dim ? THEME.emphasis.dim : 1);
+        // 調暗即不寫深度——SSAO/透明排序不吃隱形樓層；還原走快照防描邊漂移（終審 Important）
+        m.depthWrite = dws[i] && m.opacity >= 1;
       });
     });
   }
