@@ -63,10 +63,22 @@ async function boot(): Promise<void> {
   sun.shadow.camera.updateProjectionMatrix(); // three 不會因 bounds 變更自動重算
   scene.add(sun, sun.target);
 
-  // 地面：柔和承影面（取代 debug grid）
+  // 地面：radial 漸暈、邊緣融進背景色——去除「漂浮在灰板上」的分析圖感
+  const groundCanvas = document.createElement('canvas');
+  groundCanvas.width = groundCanvas.height = 512;
+  {
+    const ctx = groundCanvas.getContext('2d')!;
+    const grad = ctx.createRadialGradient(256, 256, 256 * 0.15, 256, 256, 256 * 0.5);
+    grad.addColorStop(0, THEME.scene.ground);
+    grad.addColorStop(1, THEME.scene.background);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+  }
+  const groundTex = new THREE.CanvasTexture(groundCanvas);
+  groundTex.colorSpace = THREE.SRGBColorSpace;
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(THEME.scene.groundSize, THEME.scene.groundSize),
-    new THREE.MeshStandardMaterial({ color: THEME.scene.ground, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = THEME.scene.groundY;
