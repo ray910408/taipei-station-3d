@@ -42,3 +42,15 @@
 - **跟隨模式**：位置推進唯一入口＝`follow.ts` 的 `advance()`；之後的定位技術（PDR 等）掛同一介面，
   不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material（GLB 軌 material 可能共用），
   由 tests/follow-emphasis.test.ts 守住不洩漏。
+
+## Phase 4／5 增補慣例
+
+- **視覺單一真源**：3D 材質、光影、體塊語言與 UI CSS vars 全部由 `src/theme.ts` 的 `THEME` 驅動，
+  不在各模組寫死色值。`palette.ts` 退居 tracer(2D) 編輯配色專用，兩者不互相引用。
+  `index.html` 的 `:root` fallback（防 first-paint 閃色）必須與 `THEME.ui` 字面同步，
+  由 tests/theme-css-sync.test.ts 守住——改 `THEME.ui` 就要同步改 `:root`。
+- **POI**：`kind` 限 `tvm｜info｜toilet｜exit｜sign` 五種；`position` 為所在樓層 local 座標，
+  慣例錨定鄰近 nav node（`note` 寫明錨到哪個節點與相對距離／付費側），讓圖示落點可追溯、可複驗。
+  圖示由 `icons.ts` 以 canvas 繪製官方站內設施圖例語言（深色圓角方塊＋白 pictogram、
+  出口為白底藍圈），零外部資產——新增 kind 要同步補 `PoiKind` 與 `drawIcon` 分支。
+  現況為每層 3 筆示範集（confidence 2），非完整盤點。
