@@ -13,6 +13,7 @@ import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows } from './path';
 import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
+import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { setupUI } from './ui';
@@ -126,6 +127,9 @@ async function boot(): Promise<void> {
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = THEME.render.envIntensity;
   pmrem.dispose();
+
+  // 地磚微紋理：runtime 附掛（json/glb 兩軌通用；去塑膠 T4）
+  attachFloorTextures(stationGroup, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
   document.querySelector('#app')!.append(renderer.domElement);
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', '台北車站站體 3D 地圖');
