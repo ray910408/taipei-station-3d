@@ -69,3 +69,11 @@ export function applyFloorFade(floorGroup: THREE.Object3D, factor: number | null
     list.forEach((m, i) => { m.transparent = true; m.opacity = Math.min(1, bases[i] * factor); });
   });
 }
+
+/** nav 效能：外殼立面（kind=shell）調暗後近乎不可見（0.06×dim）卻仍整面渲染——
+ *  nav 中整批隱藏，省行動 GPU 半透明 overdraw。 */
+export function setShellVisible(stationGroup: THREE.Object3D, visible: boolean): void {
+  stationGroup.traverse((o) => {
+    if (o.userData.kind === 'shell') o.visible = visible;
+  });
+}

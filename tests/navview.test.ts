@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade } from '../src/navview';
+import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible } from '../src/navview';
 import { THEME } from '../src/theme';
 
 describe('marker tween（等速滑行）', () => {
@@ -71,5 +71,23 @@ describe('chaseAim（終審 I-1）', () => {
     expect(chaseAim({ tween: null, atEnd: true, vertical: false, nextPos: C })).toBeNull();
     expect(chaseAim({ tween: null, atEnd: false, vertical: true, nextPos: C })).toBeNull();
     expect(chaseAim({ tween: null, atEnd: false, vertical: false, nextPos: C })).toBe(C);
+  });
+});
+
+describe('setShellVisible（nav 效能：隱藏外殼立面）', () => {
+  it('只切 kind=shell 的 mesh，其他不動', () => {
+    const g = new THREE.Group();
+    const floor = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    shell.userData.kind = 'shell';
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    slab.userData.kind = 'slab';
+    floor.add(shell, slab);
+    g.add(floor);
+    setShellVisible(g, false);
+    expect(shell.visible).toBe(false);
+    expect(slab.visible).toBe(true);
+    setShellVisible(g, true);
+    expect(shell.visible).toBe(true);
   });
 });

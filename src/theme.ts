@@ -23,7 +23,7 @@ export const THEME = {
     crossfadeMs: 900,
   },
   materials: {
-    slab: { color: '#ffffff', opacity: 0.95 },
+    slab: { color: '#ffffff', opacity: 1 },
     shell: { color: '#dadce0', opacity: 0.06 },
     wall: { color: '#dadce0', opacity: 1 },
     area: {

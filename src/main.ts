@@ -10,7 +10,7 @@ import {
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows } from './path';
-import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, type Tween, type FloorSwap } from './navview';
+import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
@@ -217,6 +217,17 @@ async function boot(): Promise<void> {
 
   function setMode(m: Mode): void {
     mode = m;
+    setShellVisible(stationGroup, m !== 'nav'); // 效能：nav 隱外殼（dim 後不可見卻整面渲染）
+    const wantShadow = m !== 'nav'; // 效能：低視角 nav 影子存在感極低、PCFSoft 採樣昂貴
+    if (renderer.shadowMap.enabled !== wantShadow) {
+      renderer.shadowMap.enabled = wantShadow;
+      if (wantShadow) renderer.shadowMap.needsUpdate = true;
+      scene.traverse((o) => {
+        const mats = (o as THREE.Mesh).material;
+        for (const mt of Array.isArray(mats) ? mats : mats ? [mats] : [])
+          (mt as THREE.Material).needsUpdate = true; // shadow define 變更需重編（首次後有 program cache）
+      });
+    }
     ui.setMode(m);
     setExplode(MODE_EXPLODE[m]);
     if (m === 'overview') {
