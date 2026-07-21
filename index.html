@@ -96,7 +96,7 @@
   <div id="app"></div>
 
   <div id="searchbar" class="card">
-    <input id="end-input" type="search" placeholder="搜尋目的地…" autocomplete="off" />
+    <input id="end-input" type="search" placeholder="搜尋目的地…" autocomplete="off" aria-label="搜尋目的地" />
     <ul id="end-results" class="results" hidden></ul>
   </div>
 
@@ -104,8 +104,8 @@
 
   <div id="route-card" class="card" hidden>
     <div class="row">
-      <input id="start-input" type="search" placeholder="選擇起點…" autocomplete="off" />
-      <button id="btn-swap" title="交換起訖">⇅</button>
+      <input id="start-input" type="search" placeholder="選擇起點…" autocomplete="off" aria-label="選擇起點" />
+      <button id="btn-swap" title="交換起訖" aria-label="交換起訖">⇅</button>
     </div>
     <ul id="start-results" class="results" hidden></ul>
     <div id="route-dest"></div>
@@ -140,7 +140,7 @@
   </div>
 
   <div id="settings">
-    <button id="btn-settings" title="設定" aria-expanded="false">⚙</button>
+    <button id="btn-settings" title="設定" aria-label="設定" aria-expanded="false">⚙</button>
     <div id="settings-menu" hidden>
       <button id="btn-bigtext" aria-pressed="false">大字</button>
       <button id="btn-contrast" aria-pressed="false">高對比</button>

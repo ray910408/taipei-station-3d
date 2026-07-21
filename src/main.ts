@@ -120,6 +120,8 @@ async function boot(): Promise<void> {
   renderer.shadowMap.autoUpdate = false; // 場景靜止時省 shadow pass；變更點才 needsUpdate
   renderer.shadowMap.needsUpdate = true;
   document.querySelector('#app')!.append(renderer.domElement);
+  renderer.domElement.setAttribute('role', 'img');
+  renderer.domElement.setAttribute('aria-label', '台北車站站體 3D 地圖');
   const labelLayer = createLabelLayer(
     document.querySelector<HTMLElement>('#app')!, stationGroup, model);
   const controls = new OrbitControls(camera, renderer.domElement);
