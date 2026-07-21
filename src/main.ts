@@ -10,7 +10,7 @@ import {
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows } from './path';
-import { makeTween, tweenAt, type Tween } from './navview';
+import { makeTween, tweenAt, swapFactors, applyFloorFade, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
 import { setupUI } from './ui';
@@ -137,6 +137,8 @@ async function boot(): Promise<void> {
   let routeObj: THREE.Object3D | null = null;
   let chaseAuto = true;
   let markerTween: Tween | null = null;
+  let floorSwap: FloorSwap | null = null;
+  let lastNavFloor: string | null = null;
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -181,6 +183,14 @@ async function boot(): Promise<void> {
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
     followState = null;
     markerTween = null;
+    if (floorSwap) {
+      for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
+        const g = stationGroup.getObjectByName(id);
+        if (g) applyFloorFade(g, null);
+      }
+      floorSwap = null;
+    }
+    lastNavFloor = null;
     ui.setTransition(null);
     ui.showArrive(false);
   }
@@ -212,6 +222,17 @@ async function boot(): Promise<void> {
     marker.position.copy(nodeWorld(currentNodeId(followState)));
     const cur = graph.nodes.get(currentNodeId(followState))!;
     setFloorEmphasis(stationGroup, cur.floor); // 半透明看見上下樓層（風格關卡回饋 1）
+    if (lastNavFloor !== null && lastNavFloor !== cur.floor) {
+      if (floorSwap) { // 前一場未完先收尾，避免殘留錯誤透明度
+        for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
+          const g = stationGroup.getObjectByName(id);
+          if (g) applyFloorFade(g, null);
+        }
+        setFloorEmphasis(stationGroup, cur.floor); // 舊快照還原後重套，連續換層不覆寫新 dim
+      }
+      floorSwap = { fromFloor: lastNavFloor, toFloor: cur.floor, t0: performance.now() };
+    }
+    lastNavFloor = cur.floor;
     const vEdge = verticalStep(routeEdges, followState);
     ui.setTransition(vEdge ? transitionLabel(model, graph, vEdge) : null);
     const remain = remainingEdges(routeEdges, followState);
@@ -298,6 +319,14 @@ async function boot(): Promise<void> {
       const { pos, done } = tweenAt(markerTween, performance.now());
       marker.position.copy(pos);
       if (done) markerTween = null;
+    }
+    if (floorSwap) {
+      const { fromFactor, toFactor, done } = swapFactors(floorSwap, performance.now(), THEME.emphasis.dim);
+      const fromG = stationGroup.getObjectByName(floorSwap.fromFloor);
+      const toG = stationGroup.getObjectByName(floorSwap.toFloor);
+      if (fromG) applyFloorFade(fromG, done ? null : fromFactor);
+      if (toG) applyFloorFade(toG, done ? null : toFactor);
+      if (done) floorSwap = null;
     }
     tickRouteArrows(performance.now());
     if (mode === 'nav' && followState && marker && chaseAuto && !atEnd(followState)
