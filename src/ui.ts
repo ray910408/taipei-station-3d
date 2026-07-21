@@ -193,6 +193,7 @@ export function setupUI(opts: {
   $('#btn-recenter').addEventListener('click', () => opts.onRecenter());
   $('#btn-exit-nav').addEventListener('click', () => opts.onExitNav());
   $('#btn-finish').addEventListener('click', () => opts.onExitNav());
+  $('#btn-arrive-back').addEventListener('click', () => opts.onBack());
 
   function setMode(mode: Mode): void {
     document.body.dataset.mode = mode;
@@ -222,7 +223,11 @@ export function setupUI(opts: {
     transitionBanner.hidden = label === null;
     if (label !== null) transitionBanner.textContent = label;
   }
-  function showArrive(on: boolean): void { arriveCard.hidden = !on; }
+  function showArrive(on: boolean): void {
+    arriveCard.hidden = !on;
+    if (on) navBanner.hidden = true; // 抵達＝單一 CTA，收起 nav 按鈕列
+    else if (document.body.dataset.mode === 'nav') navBanner.hidden = false; // overview 收尾時不得誤開
+  }
 
   return { setMode, setPreview, setNavInfo, setTransition, showArrive };
 }
