@@ -51,5 +51,5 @@ npm run dev
 
 ## 資料信心
 
-幾何為公開站圖描繪（每元素標 source/confidence/status），非測量資料；高程全部估計。
+幾何為公開站圖描繪（每元素標 source/confidence/status），非測量資料；高度全部估計。
 已知疑點見 `docs/floor-notes/`。
