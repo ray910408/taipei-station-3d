@@ -27,6 +27,12 @@ export function groupLandmarks(landmarks: Landmark[], query: string): LandmarkGr
   return groups;
 }
 
+/** 下拉顯示用：去掉與組標頭重複的樓層前綴（如「B1 」）；資料 label 保全稱。 */
+export function displayLabel(label: string, floorLabel: string): string {
+  const code = floorLabel.split(' ')[0]; // 「B1 臺鐵穿堂層」→「B1」
+  return label.startsWith(`${code} `) ? label.slice(code.length + 1) : label;
+}
+
 /** 搜尋欄＋過濾清單：focus/input 顯示符合項，pointerdown 選取（先於 blur）。 */
 function attachSearch(
   input: HTMLInputElement, list: HTMLUListElement,
@@ -50,7 +56,7 @@ function attachSearch(
         const li = document.createElement('li');
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.textContent = lm.label; // 樓層資訊由組標頭承載，不再逐筆重複
+        btn.textContent = displayLabel(lm.label, g.floorLabel); // 樓層資訊由組標頭承載
         btn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // 防 input blur 先收清單
         btn.addEventListener('click', () => { list.hidden = true; onPick(lm); });
         li.append(btn);
