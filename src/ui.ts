@@ -34,6 +34,14 @@ function attachSearch(
 ): void {
   const render = (q: string): void => {
     const groups = groupLandmarks(landmarks, q);
+    if (groups.length === 0 && q !== '') { // 空 query 不顯示空狀態（清單本來就收合）
+      const li = document.createElement('li');
+      li.className = 'empty-note';
+      li.textContent = '找不到符合的地點';
+      list.replaceChildren(li);
+      list.hidden = false;
+      return;
+    }
     list.replaceChildren(...groups.flatMap((g) => {
       const head = document.createElement('li');
       head.className = 'group-label';
