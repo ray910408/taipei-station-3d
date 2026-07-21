@@ -162,6 +162,12 @@ export function findPath(
   return null;
 }
 
+/** 路線行經樓層（去重、保行進順序）；preview 用於保亮路線樓層、調暗其餘。 */
+export function routeFloors(graph: NavGraph, edges: GraphEdge[]): string[] {
+  const ids = [edges[0].from, ...edges.map((e) => e.to)];
+  return [...new Set(ids.map((id) => graph.nodes.get(id)!.floor))];
+}
+
 export function routeSteps(model: StationModel, graph: NavGraph, edges: GraphEdge[]): string[] {
   const steps: string[] = [];
   let walk = 0;

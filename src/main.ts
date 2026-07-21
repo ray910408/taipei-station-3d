@@ -6,7 +6,7 @@ import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } fr
 import { THEME, applyUITheme } from './theme';
 import {
   buildGraph, findPath, routeSteps, routeStats, formatStats,
-  listLandmarks, sameEndpointMessage,
+  listLandmarks, sameEndpointMessage, routeFloors,
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows } from './path';
@@ -236,7 +236,8 @@ async function boot(): Promise<void> {
       rig.goal = overviewGoal(); // H-3：結束導航/取消預覽一律回全覽框景（boot 同路徑）
     }
     if (m === 'preview') {
-      setFloorEmphasis(stationGroup, null); // 跨樓層路線需全樓層可見
+      // 路線樓層保亮、其餘調暗——上層樓板不再遮住跨樓層路線（M-8）
+      setFloorEmphasis(stationGroup, routeEdges ? routeFloors(graph, routeEdges) : null);
       rig.goal = frameGoal(routePoints(MODE_EXPLODE[m]), camera.aspect); // 以目標爆炸係數框路徑
     }
     if (m === 'nav') chaseAuto = true;
