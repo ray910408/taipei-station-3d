@@ -152,13 +152,21 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
       const sunk = a.kind === 'track' ? -1.1 : 0.01 + i * 0.01;
-      g.add(extrudeMesh(
-        a.polygon, [], 0.05, meta.elevation + sunk, mat(M.area[a.kind], M.areaOpacity), a.kind));
+      const systemColor = a.system.endsWith('-mall') ? model.station.systems[a.system]?.color : undefined;
+      const areaMesh = extrudeMesh(
+        a.polygon, [], 0.05, meta.elevation + sunk,
+        mat(systemColor ?? M.area[a.kind], M.areaOpacity), a.kind);
+      areaMesh.userData.system = a.system;
+      g.add(areaMesh);
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];
-      g.add(extrudeMesh(
-        u.polygon, [], u.height, meta.elevation, matPair(u2.color, u2.opacity), `unit-${u.kind}`));
+      const systemColor = u.system?.endsWith('-mall') ? model.station.systems[u.system]?.color : undefined;
+      const unitMesh = extrudeMesh(
+        u.polygon, [], u.height, meta.elevation,
+        matPair(systemColor ?? u2.color, u2.opacity), `unit-${u.kind}`);
+      unitMesh.userData.system = u.system;
+      g.add(unitMesh);
     }
     const edgeLine = buildUnitEdges(floor.units ?? [], meta.elevation);
     if (edgeLine) g.add(edgeLine);

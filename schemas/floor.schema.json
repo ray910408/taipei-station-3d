@@ -57,6 +57,7 @@
         "properties": {
           "id": { "$ref": "#/$defs/eid" },
           "kind": { "enum": ["column", "shop", "room", "machine", "stair-void"] },
+          "system": { "type": "string", "minLength": 1 },
           "polygon": { "$ref": "#/$defs/ring" },
           "height": { "type": "number", "exclusiveMinimum": 0 }
         }
