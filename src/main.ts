@@ -37,7 +37,8 @@ for (const [p, mod] of Object.entries(floorModules)) {
   floorDocsByFile[p.replace('../data/', '')] = (mod as { default: unknown }).default;
 }
 
-const EXPLODE_MS = 800;
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EXPLODE_MS = REDUCED_MOTION ? 0 : 800; // ms=0 → t 立即為 1，直接到位
 
 async function boot(): Promise<void> {
   applyUITheme();
@@ -130,7 +131,7 @@ async function boot(): Promise<void> {
   controls.screenSpacePanning = false; // 平移沿地平面（前後左右——地圖慣例）
   controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
   controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
-  const rig = new CameraRig(camera, controls);
+  const rig = new CameraRig(camera, controls, REDUCED_MOTION ? 1 : 0.08);
   // 開場：從初始視角滑入、框住整棟爆炸後的建築
   const framePts: THREE.Vector3[] = [];
   for (const meta of model.station.floors) {
@@ -315,6 +316,10 @@ async function boot(): Promise<void> {
       followState = advance(followState);
       chaseAuto = true;
       refreshNav();
+      if (REDUCED_MOTION) { // 免滑行：refreshNav 已把 marker 放到新節點；抵達直接後拉
+        if (atEnd(followState)) arriveGoal();
+        return;
+      }
       markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
       marker.position.copy(fromPos);
     },

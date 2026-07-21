@@ -13,8 +13,11 @@ const MIN_RADIUS = 12; // 兩點很近（如單一豎井）時仍拉出能看清
 /** 目標相機狀態；每幀 tick() damped lerp 逼近，到位自動釋放（回使用者控制）。 */
 export class CameraRig {
   goal: CameraGoal | null = null;
-  private k = 0.08;
-  constructor(private camera: THREE.PerspectiveCamera, private controls: OrbitControls) {}
+  constructor(
+    private camera: THREE.PerspectiveCamera,
+    private controls: OrbitControls,
+    private k = 0.08, // reduced-motion 時傳 1＝直接到位
+  ) {}
   tick(): void {
     if (!this.goal) return;
     this.camera.position.lerp(this.goal.pos, this.k);
