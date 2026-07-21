@@ -300,7 +300,7 @@ async function boot(): Promise<void> {
       setMode('preview');
     },
     onCancelRoute: () => setMode('overview'),
-    onRouteInvalid: () => { routeEdges = null; refreshRoute(); },
+    onRouteInvalid: () => { routeEdges = null; refreshRoute(); setFloorEmphasis(stationGroup, null); },
     onStartNav: () => {
       if (!routeEdges?.length) return;
       followState = startFollow(routeEdges);
