@@ -1,4 +1,4 @@
-import type { AreaKind, UnitKind, PoiKind } from './types';
+import type { AreaKind, UnitKind } from './types';
 
 /** Map Presentation System 唯一視覺真源：3D 材質、光影、UI CSS vars 全由此驅動。
  *  tracer(2D) 不在此列——其編輯配色留在 palette.ts。 */
@@ -51,12 +51,9 @@ export const THEME = {
   },
   emphasis: { dim: 0.15 },
   poi: {
-    tvm: { bg: '#1a73e8', glyph: '票' },
-    info: { bg: '#1a73e8', glyph: 'i' },
-    toilet: { bg: '#7627bb', glyph: '廁' },
-    exit: { bg: '#188038', glyph: '出' },
-    sign: { bg: '#5f6368', glyph: '◎' },
-  } satisfies Record<PoiKind, { bg: string; glyph: string }>,
+    tile: '#1f2023', fg: '#ffffff',
+    gate: '#1a73e8', gateBg: '#ffffff',
+  },
   poiSize: 2.4,
   labels: {
     floorTagMinExplode: 0.6, landmarkMaxDist: 320, floorTagStagger: 10,

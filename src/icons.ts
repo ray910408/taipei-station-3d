@@ -3,24 +3,94 @@ import { THEME } from './theme';
 import { toWorld } from './builder';
 import type { StationModel, PoiKind } from './types';
 
-/** canvas 畫「圓底＋白邊＋glyph」——零外部資產，pixelRatio 2 下 128px 夠銳利。 */
-function makeIconTexture(bg: string, glyph: string): THREE.CanvasTexture {
-  const S = 128;
+const S = 128;
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** 官方站內設施圖例語言：深色圓角方塊＋白 pictogram；出口＝白底藍圈藍「出」。零外部資產。 */
+function drawIcon(ctx: CanvasRenderingContext2D, kind: PoiKind): void {
+  const P = THEME.poi;
+  if (kind === 'exit') {
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 54, 0, Math.PI * 2);
+    ctx.fillStyle = P.gateBg;
+    ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = P.gate;
+    ctx.stroke();
+    ctx.fillStyle = P.gate;
+    ctx.font = '700 60px "Noto Sans TC", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('出', S / 2, S / 2 + 4);
+    return;
+  }
+  roundRectPath(ctx, 8, 8, 112, 112, 22);
+  ctx.fillStyle = P.tile;
+  ctx.fill();
+  ctx.fillStyle = P.fg;
+  if (kind === 'toilet') {
+    ctx.beginPath();
+    ctx.arc(46, 36, 11, 0, Math.PI * 2);
+    ctx.fill();
+    roundRectPath(ctx, 34, 50, 24, 34, 6);
+    ctx.fill();
+    ctx.fillRect(37, 84, 8, 26);
+    ctx.fillRect(51, 84, 8, 26);
+    ctx.beginPath();
+    ctx.arc(84, 36, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(77, 50);
+    ctx.lineTo(91, 50);
+    ctx.lineTo(102, 92);
+    ctx.lineTo(66, 92);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(77, 92, 7, 18);
+    ctx.fillRect(88, 92, 7, 18);
+  } else if (kind === 'tvm') {
+    roundRectPath(ctx, 34, 26, 60, 76, 8);
+    ctx.fill();
+    ctx.fillStyle = P.tile;
+    ctx.fillRect(42, 36, 44, 26);
+    ctx.fillRect(42, 72, 44, 8);
+    ctx.fillStyle = P.fg;
+    ctx.fillRect(30, 102, 68, 6);
+  } else if (kind === 'info') {
+    ctx.beginPath();
+    ctx.arc(64, 36, 10, 0, Math.PI * 2);
+    ctx.fill();
+    roundRectPath(ctx, 55, 52, 18, 46, 6);
+    ctx.fill();
+    ctx.fillRect(50, 96, 28, 8);
+  } else {
+    ctx.save();
+    ctx.translate(64, 64);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillRect(-5, -14, 10, 44);
+    ctx.beginPath();
+    ctx.moveTo(0, -34);
+    ctx.lineTo(-16, -8);
+    ctx.lineTo(16, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function makeIconTexture(kind: PoiKind): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = S;
-  const ctx = c.getContext('2d')!;
-  ctx.beginPath();
-  ctx.arc(S / 2, S / 2, S / 2 - 6, 0, Math.PI * 2);
-  ctx.fillStyle = bg;
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#ffffff';
-  ctx.stroke();
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '700 64px "Noto Sans TC", system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(glyph, S / 2, S / 2 + 4);
+  drawIcon(c.getContext('2d')!, kind);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -31,8 +101,7 @@ const matCache = new Map<PoiKind, THREE.SpriteMaterial>();
 function poiMaterial(kind: PoiKind): THREE.SpriteMaterial {
   let m = matCache.get(kind);
   if (!m) {
-    const t = THEME.poi[kind];
-    m = new THREE.SpriteMaterial({ map: makeIconTexture(t.bg, t.glyph), toneMapped: false });
+    m = new THREE.SpriteMaterial({ map: makeIconTexture(kind), toneMapped: false });
     matCache.set(kind, m);
   }
   return m;
