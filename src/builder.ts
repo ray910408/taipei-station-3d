@@ -29,8 +29,8 @@ function extrudeMesh(
 
 function mat(color: string, opacity: number): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color, roughness: 1, metalness: 0,
-    transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+    color, roughness: THEME.materials.roughness, metalness: 0,
+    transparent: opacity < 1, opacity, depthWrite: opacity >= 1, side: THREE.DoubleSide,
   });
 }
 

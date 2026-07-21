@@ -4,7 +4,7 @@ import type { AreaKind, UnitKind } from './types';
  *  tracer(2D) 不在此列——其編輯配色留在 palette.ts。 */
 export const THEME = {
   scene: { background: '#eceae5', ground: '#dcd9d2', groundY: -30, groundSize: 1200 },
-  render: { maxPixelRatio: 2, toneMappingExposure: 1.05 },
+  render: { maxPixelRatio: 2, toneMappingExposure: 1.05, envIntensity: 0.35 },
   lights: {
     hemi: { sky: '#ffffff', ground: '#d8d4cd', intensity: 0.9 },
     sun: {
@@ -23,6 +23,7 @@ export const THEME = {
     crossfadeMs: 900,
   },
   materials: {
+    roughness: 0.85,
     slab: { color: '#ffffff', opacity: 1 },
     shell: { color: '#dadce0', opacity: 0.06 },
     wall: { color: '#dadce0', opacity: 1 },

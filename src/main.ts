@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
 import { THEME, applyUITheme } from './theme';
@@ -120,6 +121,11 @@ async function boot(): Promise<void> {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.shadowMap.autoUpdate = false; // 場景靜止時省 shadow pass；變更點才 needsUpdate
   renderer.shadowMap.needsUpdate = true;
+  // 環境光：RoomEnvironment PMREM——表面對光有方向性響應，去蠟質均勻感（去塑膠 T2）
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = THEME.render.envIntensity;
+  pmrem.dispose();
   document.querySelector('#app')!.append(renderer.domElement);
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', '台北車站站體 3D 地圖');
