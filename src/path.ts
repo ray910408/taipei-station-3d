@@ -34,15 +34,6 @@ export function tickRouteArrows(nowMs: number): void {
   if (arrowTex) arrowTex.offset.x = -(((nowMs / 1000) * THEME.route.arrowSpeed) % 1);
 }
 
-/** nav 單樓層制：只顯示當前樓層的 run 與 pin、隱藏跨層 link；null＝全顯（overview/preview）。 */
-export function setRouteFloor(route: THREE.Object3D, floor: string | null): void {
-  for (const child of route.children) {
-    child.visible = child.userData.link === true
-      ? floor === null
-      : floor === null || child.userData.floor === floor;
-  }
-}
-
 export function buildRouteObject(
   graph: NavGraph,
   edges: GraphEdge[],

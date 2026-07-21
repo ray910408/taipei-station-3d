@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { assembleModel } from '../src/loader';
 import { buildGraph, findPath } from '../src/nav';
 import { buildStationGroup, toWorld } from '../src/builder';
-import { buildRouteObject, setRouteFloor } from '../src/path';
+import { buildRouteObject } from '../src/path';
 import { THEME } from '../src/theme';
 import stationDoc from './fixtures/mini/data/station.json';
 import hall from './fixtures/mini/data/floors/hall-b1.json';
@@ -155,15 +155,5 @@ describe('buildRouteObject（per-floor run＋link＋pin）', () => {
     expect(pins.length).toBe(2);
     expect(pins[0].userData.floor).toBe('plat-b2');
     expect(pins[1].userData.floor).toBe('hall-b1');
-  });
-
-  it('setRouteFloor：nav 只留當前層 run 與 pin、link 隱藏；null 全顯', () => {
-    setRouteFloor(route, 'hall-b1');
-    for (const c of route.children) {
-      const expected = c.userData.link ? false : c.userData.floor === 'hall-b1';
-      expect(c.visible, String(c.userData.floor ?? 'link')).toBe(expected);
-    }
-    setRouteFloor(route, null);
-    for (const c of route.children) expect(c.visible).toBe(true);
   });
 });

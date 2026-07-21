@@ -9,8 +9,8 @@ import {
   listLandmarks, sameEndpointMessage,
 } from './nav';
 import type { GraphEdge } from './nav';
-import { buildRouteObject, setRouteFloor, tickRouteArrows } from './path';
-import { applyFloorVisibility, makeTween, tweenAt, type Tween } from './navview';
+import { buildRouteObject, tickRouteArrows } from './path';
+import { makeTween, tweenAt, type Tween } from './navview';
 import { attachPoiIcons } from './icons';
 import { createLabelLayer } from './labels';
 import { setupUI } from './ui';
@@ -111,6 +111,9 @@ async function boot(): Promise<void> {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(60, -18, 0);
   controls.enableDamping = true;
+  controls.screenSpacePanning = false; // 平移沿地平面（前後左右——地圖慣例）
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
   const rig = new CameraRig(camera, controls);
   // 開場：從初始視角滑入、框住整棟爆炸後的建築
   const framePts: THREE.Vector3[] = [];
@@ -147,8 +150,6 @@ async function boot(): Promise<void> {
     if (routeEdges?.length) {
       routeObj = buildRouteObject(graph, routeEdges, offsetAt(explodeFactor));
       scene.add(routeObj);
-      if (mode === 'nav' && followState)
-        setRouteFloor(routeObj, graph.nodes.get(currentNodeId(followState))!.floor);
     }
   }
 
@@ -160,7 +161,6 @@ async function boot(): Promise<void> {
     disposeDeep(connObj);
     connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
     stationGroup.add(connObj);
-    connObj.visible = mode !== 'nav'; // 每幀重建物重申單樓層制的 connectors 規則（navview 同義）
     refreshRoute();
     if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
@@ -181,8 +181,6 @@ async function boot(): Promise<void> {
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
     followState = null;
     markerTween = null;
-    applyFloorVisibility(stationGroup, 'overview', null);
-    if (routeObj) setRouteFloor(routeObj, null);
     ui.setTransition(null);
     ui.showArrive(false);
   }
@@ -196,7 +194,6 @@ async function boot(): Promise<void> {
   function setMode(m: Mode): void {
     mode = m;
     controls.maxPolarAngle = m === 'nav' ? THREE.MathUtils.degToRad(78) : Math.PI; // nav 防翻到樓下
-    if (m !== 'nav') applyFloorVisibility(stationGroup, m, null);
     ui.setMode(m);
     setExplode(MODE_EXPLODE[m]);
     if (m === 'overview') {
@@ -214,8 +211,7 @@ async function boot(): Promise<void> {
     if (!followState || !routeEdges || !marker) return;
     marker.position.copy(nodeWorld(currentNodeId(followState)));
     const cur = graph.nodes.get(currentNodeId(followState))!;
-    applyFloorVisibility(stationGroup, 'nav', cur.floor);
-    if (routeObj) setRouteFloor(routeObj, cur.floor);
+    setFloorEmphasis(stationGroup, cur.floor); // 半透明看見上下樓層（風格關卡回饋 1）
     const vEdge = verticalStep(routeEdges, followState);
     ui.setTransition(vEdge ? transitionLabel(model, graph, vEdge) : null);
     const remain = remainingEdges(routeEdges, followState);
