@@ -261,7 +261,7 @@ async function boot(): Promise<void> {
     const vEdge = verticalStep(routeEdges, followState);
     ui.setTransition(vEdge ? transitionLabel(model, graph, vEdge) : null);
     const remain = remainingEdges(routeEdges, followState);
-    const progress = `節點 ${followState.index + 1}/${followState.nodeIds.length}`;
+    const progress = `進度 ${followState.index + 1}/${followState.nodeIds.length}`;
     if (atEnd(followState)) {
       ui.setNavInfo('已抵達目的地', '', progress);
       ui.showArrive(true);
