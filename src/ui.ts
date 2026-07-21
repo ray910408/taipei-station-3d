@@ -116,6 +116,19 @@ export function setupUI(opts: {
     $('#btn-settings').setAttribute('aria-expanded', String(!settingsMenu.hidden));
   });
 
+  // Esc 漸退：設定選單 → 開啟中的結果清單 → preview 返回 overview（nav 不接——誤按代價高）
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape') return;
+    if (!settingsMenu.hidden) {
+      settingsMenu.hidden = true;
+      $('#btn-settings').setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const open = document.querySelector<HTMLElement>('.results:not([hidden])');
+    if (open) { open.hidden = true; return; }
+    if (document.body.dataset.mode === 'preview') opts.onCancelRoute();
+  });
+
   // 樓層按鈕：點=聚焦、再點=取消（盤問 Q7；overview 限定，setMode 時隱藏並重置）
   let focusedFloor: string | null = null;
   const resetFloorFocus = (): void => {
