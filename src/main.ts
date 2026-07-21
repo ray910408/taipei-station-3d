@@ -203,7 +203,6 @@ async function boot(): Promise<void> {
 
   function setMode(m: Mode): void {
     mode = m;
-    controls.maxPolarAngle = m === 'nav' ? THREE.MathUtils.degToRad(78) : Math.PI; // nav 防翻到樓下
     ui.setMode(m);
     setExplode(MODE_EXPLODE[m]);
     if (m === 'overview') {
