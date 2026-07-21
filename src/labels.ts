@@ -14,6 +14,7 @@ export function labelVisible(
 ): boolean {
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
+  if (mode === 'preview') return false; // landmark：preview 讓位給路線（Phase 4 舊債 2）
   return cameraDist < THEME.labels.landmarkMaxDist;
 }
 
@@ -66,7 +67,9 @@ export function createLabelLayer(
       padding: '3px 10px', borderRadius: '999px',
       borderLeft: `4px solid ${sysColor}`, boxShadow: '0 1px 3px #00000033',
     }));
-    tag.position.copy(toWorld([west, midZ], meta.elevation + 2));
+    const idx = model.station.floors.indexOf(meta);
+    const stagger = (idx % 2 === 0 ? -1 : 1) * THEME.labels.floorTagStagger; // 相鄰樓層南北交錯
+    tag.position.copy(toWorld([west, midZ + stagger], meta.elevation + 2));
     floorGroup.add(tag);
     entries.push({ obj: tag, kind: 'floor-tag' });
 

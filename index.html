@@ -83,6 +83,10 @@
       #transition-banner { top: 12px; }
       button { min-height: 44px; }
     }
+    @media (max-height: 420px) {
+      /* 極小視窗：preview/nav 的 bottom sheet 會壓到設定鈕——非 overview 隱藏設定角 */
+      body[data-mode="preview"] #settings, body[data-mode="nav"] #settings { display: none; }
+    }
   </style>
 </head>
 <body data-mode="overview">

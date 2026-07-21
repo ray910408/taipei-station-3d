@@ -18,4 +18,8 @@ describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距
     expect(labelVisible('landmark', 'overview', 0, THEME.labels.landmarkMaxDist - 1)).toBe(true);
     expect(labelVisible('landmark', 'preview', 1, THEME.labels.landmarkMaxDist + 1)).toBe(false);
   });
+
+  it('landmark preview 一律隱藏（讓位給路線——Phase 4 舊債 2）', () => {
+    expect(labelVisible('landmark', 'preview', 1, 10)).toBe(false);
+  });
 });
