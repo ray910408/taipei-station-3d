@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { N8AOPass } from 'n8ao';
 import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
 import { THEME, applyUITheme } from './theme';
@@ -130,6 +133,22 @@ async function boot(): Promise<void> {
 
   // 地磚微紋理：runtime 附掛（json/glb 兩軌通用；去塑膠 T4）
   attachFloorTextures(stationGroup, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
+  // AO 管線：?ao=off 走原始路徑（降級開關，比照 ?geom=glb 慣例）
+  const aoOff = new URLSearchParams(location.search).get('ao') === 'off';
+  let composer: EffectComposer | null = null;
+  if (!aoOff) {
+    composer = new EffectComposer(renderer);
+    const n8ao = new N8AOPass(scene, camera, innerWidth, innerHeight);
+    const A = THEME.ao;
+    n8ao.configuration.aoRadius = A.radius;
+    n8ao.configuration.distanceFalloff = A.distanceFalloff;
+    n8ao.configuration.intensity = A.intensity;
+    n8ao.configuration.color = new THREE.Color(A.color);
+    n8ao.configuration.halfRes = A.halfRes;
+    n8ao.configuration.gammaCorrection = false; // 輸出色彩由 OutputPass 統一
+    composer.addPass(n8ao);
+    composer.addPass(new OutputPass());
+  }
   document.querySelector('#app')!.append(renderer.domElement);
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', '台北車站站體 3D 地圖');
@@ -356,6 +375,7 @@ async function boot(): Promise<void> {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    composer?.setSize(innerWidth, innerHeight);
     labelLayer.resize(innerWidth, innerHeight);
   });
 
@@ -396,7 +416,8 @@ async function boot(): Promise<void> {
     rig.tick();
     controls.update();
     labelLayer.update(camera, mode, explodeFactor);
-    renderer.render(scene, camera);
+    if (composer) composer.render();
+    else renderer.render(scene, camera);
     labelLayer.render(scene, camera);
     fpsTick?.();
   });

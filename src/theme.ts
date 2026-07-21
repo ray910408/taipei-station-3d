@@ -5,6 +5,8 @@ import type { AreaKind, UnitKind } from './types';
 export const THEME = {
   scene: { background: '#eceae5', ground: '#dcd9d2', groundY: -30, groundSize: 1200 },
   render: { maxPixelRatio: 2, toneMappingExposure: 1.05, envIntensity: 0.35 },
+  // n8ao SSAO（去塑膠 T5）：接觸陰影——牆腳/樓板交角/豎井周圍。?ao=off 可關
+  ao: { radius: 4, distanceFalloff: 1, intensity: 2.5, color: '#30343c', halfRes: true },
   lights: {
     hemi: { sky: '#ffffff', ground: '#d8d4cd', intensity: 0.9 },
     sun: {
