@@ -75,7 +75,7 @@ function drawIcon(ctx: CanvasRenderingContext2D, kind: PoiKind): void {
   } else {
     ctx.save();
     ctx.translate(64, 64);
-    ctx.rotate(-Math.PI / 4);
+    ctx.rotate(Math.PI / 4);
     ctx.fillRect(-5, -14, 10, 44);
     ctx.beginPath();
     ctx.moveTo(0, -34);
