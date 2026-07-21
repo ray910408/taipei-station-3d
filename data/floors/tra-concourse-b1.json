@@ -175,6 +175,44 @@
       "note": "東剪票口出站閘門列（推定於進站列南側並設）"
     }
   ],
+  "pois": [
+    {
+      "id": "p-tc-tvm-1",
+      "kind": "tvm",
+      "system": "tra",
+      "position": [93.5, 10.5],
+      "name": {
+        "zh": "售票機"
+      },
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "note": "示範集：東剪票口（n-tc-002）外側"
+    },
+    {
+      "id": "p-tc-info-1",
+      "kind": "info",
+      "system": "tra",
+      "position": [93.5, 15],
+      "name": {
+        "zh": "服務台"
+      },
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "note": "示範集：東剪票口旁"
+    },
+    {
+      "id": "p-tc-sign-1",
+      "kind": "sign",
+      "system": "tra",
+      "position": [92, 22.5],
+      "name": {
+        "zh": "無障礙寬閘門指標"
+      },
+      "source": "tra-b1-map",
+      "confidence": 2,
+      "note": "示範集：錨定 n-tc-005 寬閘門外"
+    }
+  ],
   "nav": {
     "nodes": [
       {

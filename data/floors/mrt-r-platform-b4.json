@@ -125,6 +125,44 @@
       "note": "梯群開口（依圖示範圍）"
     }
   ],
+  "pois": [
+    {
+      "id": "p-rp-sign-1",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [121, -7.5],
+      "name": {
+        "zh": "中段電梯指標"
+      },
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "示範集：錨定 n-rp-006 中段電梯口"
+    },
+    {
+      "id": "p-rp-sign-2",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [128.5, 21.8],
+      "name": {
+        "zh": "北梯群指標"
+      },
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "示範集：錨定 n-rp-004 北梯群口"
+    },
+    {
+      "id": "p-rp-sign-3",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [93.5, -80.5],
+      "name": {
+        "zh": "南端電梯指標"
+      },
+      "source": "trtc-info-b4",
+      "confidence": 2,
+      "note": "示範集：錨定 n-rp-002 南端電梯口"
+    }
+  ],
   "nav": {
     "nodes": [
       {

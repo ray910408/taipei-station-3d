@@ -74,6 +74,44 @@
       "note": "台鐵第四月台（北端；往捷運梯群在東段）"
     }
   ],
+  "pois": [
+    {
+      "id": "p-tp-sign-1",
+      "kind": "sign",
+      "system": "tra",
+      "position": [77.8, 27.5],
+      "name": {
+        "zh": "第4月台候車資訊"
+      },
+      "source": "tra-b2-map",
+      "confidence": 2,
+      "note": "示範集：錨定 n-tp-002 候車區"
+    },
+    {
+      "id": "p-tp-sign-2",
+      "kind": "sign",
+      "system": "tra",
+      "position": [76.7, 6],
+      "name": {
+        "zh": "第3月台候車資訊"
+      },
+      "source": "tra-b2-map",
+      "confidence": 2,
+      "note": "示範集：錨定 n-tp-004 候車區"
+    },
+    {
+      "id": "p-tp-sign-3",
+      "kind": "sign",
+      "system": "tra",
+      "position": [92.3, 29.5],
+      "name": {
+        "zh": "轉乘梯口指標"
+      },
+      "source": "tra-b2-map",
+      "confidence": 2,
+      "note": "示範集：錨定 n-tp-001 轉乘梯口"
+    }
+  ],
   "nav": {
     "nodes": [
       {

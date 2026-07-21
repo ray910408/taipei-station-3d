@@ -271,6 +271,44 @@
       "note": "南閘門群寬閘門（推定）"
     }
   ],
+  "pois": [
+    {
+      "id": "p-rc-info-1",
+      "kind": "info",
+      "system": "trtc",
+      "position": [114, 27.5],
+      "name": {
+        "zh": "詢問處"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "示範集：錨定 n-rc-004（詢問處1外）非付費側 1-2m"
+    },
+    {
+      "id": "p-rc-tvm-1",
+      "kind": "tvm",
+      "system": "trtc",
+      "position": [110.5, 23.5],
+      "name": {
+        "zh": "售票機"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "示範集：詢問處1外（n-rc-004）西南約 3.7m、閘門陣列外非付費側售票機群"
+    },
+    {
+      "id": "p-rc-sign-1",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [102.7, 14.5],
+      "name": {
+        "zh": "臺鐵轉乘指標"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "示範集：錨定 n-rc-005 臺鐵轉乘閘門外"
+    }
+  ],
   "nav": {
     "nodes": [
       {
