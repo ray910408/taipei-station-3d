@@ -188,6 +188,22 @@ export function buildConnectorsGroup(
   return connGroup;
 }
 
+/** 付費區表現：半透明染 overlay（貼在付費地面略上）＋虛線邊界框。 */
+export function buildPaidOverlay(ring: Vec2[], elevation: number): THREE.Object3D[] {
+  const P = THEME.materials.paidOverlay;
+  const y = elevation + 0.1; // 付費 area 在 ~elevation+0.05；overlay 疊其上
+  const overlay = extrudeMesh(ring, [], 0.02, y,
+    new THREE.MeshBasicMaterial({ color: P.color, transparent: true, opacity: P.opacity, depthWrite: false }),
+    'paid-overlay');
+  const pts = [...ring, ring[0]].map(([x, z]) => toWorld([x, z], y + 0.04));
+  const dash = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineDashedMaterial({ color: P.dash, dashSize: 1.2, gapSize: 0.8, transparent: true }));
+  dash.computeLineDistances();
+  dash.userData.kind = 'paid-dash';
+  return [overlay, dash];
+}
+
 export function buildStationGroup(model: StationModel): THREE.Group {
   const M = THEME.materials;
   const root = new THREE.Group();
@@ -228,6 +244,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         ? mixHex(sys, '#ffffff', THEME.materials.platformWhiten) : M.area[a.kind];
       g.add(extrudeMesh(
         a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
+      if (a.kind === 'paid') for (const o of buildPaidOverlay(a.polygon, meta.elevation)) g.add(o);
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];

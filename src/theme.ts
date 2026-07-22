@@ -45,6 +45,7 @@ export const THEME = {
       'stair-void': { color: '#dadce0', opacity: 0.4 },
     } satisfies Record<UnitKind, { color: string; opacity: number }>,
     gate: { accessible: '#37a559', standard: '#7a828f' },
+    paidOverlay: { color: '#e6b45a', opacity: 0.18, dash: '#e6b45a' },
     connector: {
       stair: { color: '#8b93a3', opacity: 0.95 },
       escalator: { color: '#f2972e', opacity: 0.96 },
