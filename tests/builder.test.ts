@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { assembleModel } from '../src/loader';
 import { buildGraph, findPath } from '../src/nav';
-import { buildStationGroup, toWorld } from '../src/builder';
+import { buildStationGroup, toWorld, connectorRunDir } from '../src/builder';
 import { buildRouteObject } from '../src/path';
 import { THEME } from '../src/theme';
 import stationDoc from './fixtures/mini/data/station.json';
@@ -76,9 +76,9 @@ describe('buildStationGroup', () => {
     expect(kinds).toContain('unpaid');
   });
 
-  it('connectors group 含 2 個量體（電扶梯斜坡 + 電梯豎井）', () => {
+  it('connectors group 含 3 個量體（電扶梯斜坡 + 方向箭頭 + 電梯豎井）', () => {
     const conns = group.children.find((c) => c.name === 'connectors') as THREE.Group;
-    expect(conns.children.length).toBe(2);
+    expect(conns.children.length).toBe(3);
   });
 
   const fullGroup = buildStationGroup(fullModel);
@@ -93,12 +93,18 @@ describe('buildStationGroup', () => {
     }
   });
 
-  it('共用錨點梯群錯開後中心不變', () => {
+  it('共用錨點梯群錯開後中心＝合成斜向位移後的中點（Task5：三者皆非電梯，較高端 n-rc-001 一致位移，横向錯開抵銷）', () => {
     const center = sharedIds
       .map((id) => connectorPosition(fullGroup, id))
       .reduce((sum, position) => sum.add(position), new THREE.Vector3())
       .multiplyScalar(1 / sharedIds.length);
-    const expected = nodePosition('n-rp-001').add(nodePosition('n-rc-001')).multiplyScalar(0.5);
+    // 三者共用同一對錨點，較高端（concourse 的 n-rc-001）皆位移同一 escalatorRun 向量；
+    // 橫向錯開（SPACING 扇形）在三者間平均抵銷，故中心＝位移後中點，而非原始節點中點。
+    const rc = fullModel.floors.get('mrt-r-concourse-b3');
+    const dir = connectorRunDir(rc?.nav?.nodes ?? [], rc?.nav?.edges ?? [], 'n-rc-001');
+    const run = THEME.body.escalatorRun;
+    const shift = dir ? new THREE.Vector3(dir[0] * run, 0, -dir[1] * run) : new THREE.Vector3(run, 0, 0);
+    const expected = nodePosition('n-rp-001').add(nodePosition('n-rc-001')).multiplyScalar(0.5).addScaledVector(shift, 0.5);
     for (const axis of ['x', 'y', 'z'] as const) {
       expect(Math.abs(center[axis] - expected[axis])).toBeLessThan(1e-6);
     }
@@ -120,11 +126,15 @@ describe('buildStationGroup', () => {
     expect(side.color.g).toBeCloseTo(cap.color.g * THEME.body.sideDarken, 2);
   });
 
-  it('每樓層 units（含實體 unit 者）恰一個合併 edges LineSegments', () => {
+  it('每樓層恰有 buildFloorEdges 一個＋（含實體 unit 者）額外一個合併 edges LineSegments', () => {
     for (const meta of fullModel.station.floors) {
       const g2 = fullGroup.children.find((c) => c.name === meta.id) as THREE.Group;
       const hasSolidUnit = (fullModel.floors.get(meta.id)?.units ?? [])
         .some((u) => u.kind !== 'stair-void');
+      // buildFloorEdges（slab 外框，恆存在）+ buildUnitEdges（僅實體 unit 存在時）
+      expect(
+        g2.children.filter((c) => c.userData.kind === 'floor-edges').length, meta.id,
+      ).toBe(1);
       expect(
         g2.children.filter((c) => c.userData.kind === 'edges').length, meta.id,
       ).toBe(hasSolidUnit ? 1 : 0);

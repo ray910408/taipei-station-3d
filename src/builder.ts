@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { StationModel, Vec2 } from './types';
+import type { StationModel, Vec2, NavNode, NavEdge } from './types';
 import { THEME, mixHex } from './theme';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
@@ -62,6 +62,47 @@ function buildUnitEdges(units: { kind: string; polygon: Vec2[]; height: number }
   return line;
 }
 
+/** slab 外框＋各 area 邊界描邊，合併為一條亮色 LineSegments（每層 +1 draw call）。
+ *  用 2D ring→EdgesGeometry(平面)：只取封閉外框線，不描填充面。 */
+function ringEdges(ring: Vec2[], elevation: number): THREE.BufferGeometry {
+  const geo = new THREE.ExtrudeGeometry(ringToShape(ring), { depth: 0.001, bevelEnabled: false });
+  geo.rotateX(-Math.PI / 2);
+  const e = new THREE.EdgesGeometry(geo, 1); // 1°：薄片保留箱體全稜線（上下輪廓＋豎邊，每矩形 12 邊）
+  e.translate(0, elevation + 0.02, 0);
+  geo.dispose();
+  return e;
+}
+
+export function buildFloorEdges(
+  slab: { outline: Vec2[]; holes?: Vec2[][] }, areas: { polygon: Vec2[] }[], elevation: number,
+): THREE.LineSegments | null {
+  const parts = [ringEdges(slab.outline, elevation), ...areas.map((a) => ringEdges(a.polygon, elevation))];
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts);
+  for (const p of parts) p.dispose();
+  const line = new THREE.LineSegments(merged, new THREE.LineBasicMaterial({
+    color: THEME.body.edge, transparent: true, opacity: THEME.body.edgeOpacity,
+  }));
+  line.userData.kind = 'floor-edges';
+  return line;
+}
+
+/** 節點相鄰 walk 邊平均單位方向（local xy）；無鄰邊回 null。手扶梯合成斜向用。 */
+export function connectorRunDir(nodes: NavNode[], edges: NavEdge[], nodeId: string): Vec2 | null {
+  const pos = new Map(nodes.map((n) => [n.id, n.xy]));
+  const here = pos.get(nodeId);
+  if (!here) return null;
+  let dx = 0, dy = 0;
+  for (const e of edges) {
+    const other = e.from === nodeId ? pos.get(e.to) : e.to === nodeId ? pos.get(e.from) : undefined;
+    if (!other) continue;
+    dx += other[0] - here[0];
+    dy += other[1] - here[1];
+  }
+  const len = Math.hypot(dx, dy);
+  return len < 1e-6 ? null : [dx / len, dy / len];
+}
+
 // connectors：斜坡（stair/escalator）與豎井（elevator）。
 // offsetY 供爆炸圖重建：各樓層錨點 y 加位移，豎井/斜坡自然拉伸。
 export function buildConnectorsGroup(
@@ -90,13 +131,27 @@ export function buildConnectorsGroup(
     const members = groups.get(key)!;
     const offset = (members.indexOf(c) - (members.length - 1) / 2) * SPACING;
     for (let i = 0; i < c.levels.length - 1; i++) {
-      const a = nodePos.get(c.levels[i].node);
-      const b = nodePos.get(c.levels[i + 1].node);
-      if (!a || !b) continue;
-      const c2 = c.kind === 'elevator' ? M.connector.elevator : M.connector.stair;
+      const a0 = nodePos.get(c.levels[i].node);
+      const b0 = nodePos.get(c.levels[i + 1].node);
+      if (!a0 || !b0) continue;
+      // a0/b0 是 nodePos map 內共用的 Vector3 參照（同錨點梯群共用）；clone 後才可安全位移，否則污染 map
+      const a = a0.clone();
+      const b = b0.clone();
+      // 手扶梯/樓梯合成斜向：把較高端沿其樓層相鄰走道方向平移，避免上下端重合退化成垂直棒
+      // ponytail: 合成斜向近似, 真實方位需手描 connectors
+      if (c.kind !== 'elevator') {
+        const hi = a.y >= b.y ? a : b;
+        const hiLevel = a.y >= b.y ? c.levels[i] : c.levels[i + 1];
+        const hf = model.floors.get(hiLevel.floor);
+        const dir = connectorRunDir(hf?.nav?.nodes ?? [], hf?.nav?.edges ?? [], hiLevel.node);
+        const run = THEME.body.escalatorRun;
+        if (dir) hi.add(new THREE.Vector3(dir[0] * run, 0, -dir[1] * run));
+        else hi.x += run; // 回退：沿 +x（樓層長軸近似）
+      }
+      const c2 = M.connector[c.kind]; // stair / escalator / elevator 各自材質
       let mesh: THREE.Mesh;
       if (c.kind === 'elevator') {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(c2.color, c2.opacity));
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, Math.abs(b.y - a.y), 16), mat(c2.color, c2.opacity));
         mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
       } else {
         const len = a.distanceTo(b);
@@ -111,11 +166,42 @@ export function buildConnectorsGroup(
       else lateral.normalize();
       mesh.position.addScaledVector(lateral, offset);
       mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
+      if (c.kind === 'escalator') {
+        const up = b.y >= a.y ? b : a; // 行進終點：direction up→朝高端
+        const lo = b.y >= a.y ? a : b;
+        const to = c.direction === 'down' ? lo : up;
+        const from = c.direction === 'down' ? up : lo;
+        const arrow = new THREE.Mesh(
+          new THREE.ConeGeometry(0.5, 1.2, 12),
+          new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6, metalness: 0 }));
+        arrow.position.copy(from.clone().lerp(to, 0.5));
+        arrow.position.addScaledVector(lateral, offset);
+        arrow.lookAt(to);
+        arrow.rotateX(Math.PI / 2); // Cone 尖端 +y → 對齊行進方向
+        arrow.userData.kind = 'connector-arrow';
+        connGroup.add(arrow);
+      }
       connGroup.add(mesh);
     }
   }
   applyShadowFlags(connGroup);
   return connGroup;
+}
+
+/** 付費區表現：半透明染 overlay（貼在付費地面略上）＋虛線邊界框。 */
+export function buildPaidOverlay(ring: Vec2[], elevation: number): THREE.Object3D[] {
+  const P = THEME.materials.paidOverlay;
+  const y = elevation + 0.1; // 付費 area 在 ~elevation+0.05；overlay 疊其上
+  const overlay = extrudeMesh(ring, [], 0.02, y,
+    new THREE.MeshBasicMaterial({ color: P.color, transparent: true, opacity: P.opacity, depthWrite: false }),
+    'paid-overlay');
+  const pts = [...ring, ring[0]].map(([x, z]) => toWorld([x, z], y + 0.04));
+  const dash = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineDashedMaterial({ color: P.dash, dashSize: 1.2, gapSize: 0.8, transparent: true }));
+  dash.computeLineDistances();
+  dash.userData.kind = 'paid-dash';
+  return [overlay, dash];
 }
 
 export function buildStationGroup(model: StationModel): THREE.Group {
@@ -134,16 +220,16 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
       matPair(M.slab.color, M.slab.opacity), 'slab'));
 
-    // 外殼：沿 slab 輪廓的半透明立面
+    // 程序化周界牆帶：沿 slab 外框逐段生實心矮牆（massHeight）——非可走周界「fake wall」，nav 中隱藏
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
     for (let i = 0; i < shellPts.length - 1; i++) {
       const a = toWorld(shellPts[i], meta.elevation);
       const b = toWorld(shellPts[i + 1], meta.elevation);
       const len = a.distanceTo(b);
       const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(len, meta.height, 0.05), mat(M.shell.color, M.shell.opacity));
+        new THREE.BoxGeometry(len, THEME.body.massHeight, 0.4), mat(M.shell.color, M.shell.opacity));
       wall.position.copy(a.clone().add(b).multiplyScalar(0.5));
-      wall.position.y = meta.elevation + meta.height / 2;
+      wall.position.y = meta.elevation + THEME.body.massHeight / 2;
       wall.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
       wall.userData.kind = 'shell';
       g.add(wall);
@@ -158,6 +244,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         ? mixHex(sys, '#ffffff', THEME.materials.platformWhiten) : M.area[a.kind];
       g.add(extrudeMesh(
         a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
+      if (a.kind === 'paid') for (const o of buildPaidOverlay(a.polygon, meta.elevation)) g.add(o);
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];
@@ -166,6 +253,8 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     }
     const edgeLine = buildUnitEdges(floor.units ?? [], meta.elevation);
     if (edgeLine) g.add(edgeLine);
+    const floorEdge = buildFloorEdges(floor.slab, floor.areas ?? [], meta.elevation);
+    if (floorEdge) g.add(floorEdge);
     for (const w of floor.walls ?? []) {
       for (let i = 0; i < w.polyline.length - 1; i++) {
         const a = toWorld(w.polyline[i], meta.elevation);
@@ -215,7 +304,7 @@ export function applyShadowFlags(root: THREE.Object3D): void {
       : typeof mesh.parent?.userData.kind === 'string' ? mesh.parent.userData.kind : null;
     if (kind === null) return;
     if (kind === 'slab') { mesh.castShadow = true; mesh.receiveShadow = true; }
-    else if (kind === 'wall' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
+    else if (kind === 'wall' || kind === 'shell' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
       mesh.castShadow = true;
     }
   });

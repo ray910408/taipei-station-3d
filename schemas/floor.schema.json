@@ -111,6 +111,7 @@
             "properties": {
               "id": { "type": "string", "pattern": "^n-[a-z]{2}-[a-z0-9-]+$" },
               "xy": { "$ref": "#/$defs/vec2" },
+              "tier": { "enum": [0, 1] },
               "area": { "type": "string" },
               "name": { "type": "object", "required": ["zh"], "additionalProperties": false,
                 "properties": { "zh": { "type": "string", "minLength": 1 }, "en": { "type": "string" } } }

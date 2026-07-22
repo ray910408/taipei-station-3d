@@ -22,4 +22,15 @@ describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距
   it('landmark preview 一律隱藏（讓位給路線——Phase 4 舊債 2）', () => {
     expect(labelVisible('landmark', 'preview', 1, 10)).toBe(false);
   });
+
+  it('tier 0 landmark 在 overview 常駐（不受距離限制）', () => {
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist + 999, 0)).toBe(true);
+  });
+  it('未標 tier 的 landmark 仍看距離（L1）', () => {
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist + 1)).toBe(false);
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist - 1)).toBe(true);
+  });
+  it('tier 0 landmark 在 preview 仍隱藏（讓位給路線）', () => {
+    expect(labelVisible('landmark', 'preview', 1, 10, 0)).toBe(false);
+  });
 });

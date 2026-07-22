@@ -8,17 +8,31 @@ import type { Mode } from './mode';
 export type LabelKind = 'floor-tag' | 'landmark';
 
 /** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依鏡頭距離進退，preview/nav 隱藏；
+ *  tier:0 大地標在 overview 常駐（不受距離限制）；
  *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
-  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number,
+  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1,
 ): boolean {
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
   if (mode === 'preview') return false; // landmark：preview 讓位給路線（Phase 4 舊債 2）
-  return cameraDist < THEME.labels.landmarkMaxDist;
+  if (tier === 0) return true; // L0 大地標常駐
+  return cameraDist < THEME.labels.landmarkMaxDist; // L1 依距離
 }
 
-interface Entry { obj: CSS2DObject; kind: LabelKind }
+interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1; leader?: THREE.Object3D }
+
+/** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
+export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
+  const best = new Map<string, number>(); // cellKey → winning item index
+  items.forEach((it, i) => {
+    const key = `${Math.floor(it.x / cell)},${Math.floor(it.y / cell)}`;
+    const cur = best.get(key);
+    if (cur === undefined || items[cur].priority < it.priority) best.set(key, i);
+  });
+  const win = new Set(best.values());
+  return items.map((_, i) => win.has(i));
+}
 
 export interface LabelLayer {
   update(camera: THREE.Camera, mode: Mode, explodeFactor: number): void;
@@ -83,19 +97,45 @@ export function createLabelLayer(
       }));
       lm.position.copy(toWorld(n.xy, meta.elevation + 3));
       floorGroup.add(lm);
-      entries.push({ obj: lm, kind: 'landmark' });
+
+      // 引線＋錨點：釘住 label 對應的樓層節點，避免自由飄浮感
+      const anchorXY = n.xy;
+      const foot = toWorld(anchorXY, meta.elevation + 0.1);
+      const head = toWorld(anchorXY, meta.elevation + 3);
+      const leader = new THREE.Group();
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([foot, head]),
+        new THREE.LineBasicMaterial({ color: THEME.body.edge, transparent: true, opacity: 0.75 }));
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 8, 6),
+        new THREE.MeshBasicMaterial({ color: THEME.body.edge, toneMapped: false }));
+      dot.position.copy(foot);
+      leader.add(line, dot);
+      floorGroup.add(leader);
+
+      entries.push({ obj: lm, kind: 'landmark', tier: n.tier, leader });
     }
   }
 
   const tmp = new THREE.Vector3();
+  const proj = new THREE.Vector3(); // 重用投影暫存，避免每 frame×label clone（手機 GC 抖動）
+  let vw = container.clientWidth, vh = container.clientHeight;
+  const priorityOf = (e: Entry): number => (e.kind === 'floor-tag' ? 3 : e.tier === 0 ? 2 : 1);
   return {
     update(camera, mode, explodeFactor) {
+      const cand: { e: Entry; x: number; y: number; priority: number }[] = [];
       for (const e of entries) {
-        const dist = e.obj.getWorldPosition(tmp).distanceTo(camera.position);
-        e.obj.visible = labelVisible(e.kind, mode, explodeFactor, dist);
+        const world = e.obj.getWorldPosition(tmp);
+        const dist = world.distanceTo(camera.position);
+        if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }
+        const p = proj.copy(world).project(camera); // NDC（重用暫存，不每候選 clone）
+        cand.push({ e, x: (p.x * 0.5 + 0.5) * vw, y: (-p.y * 0.5 + 0.5) * vh, priority: priorityOf(e) });
       }
+      const keep = declutter(cand, THEME.labels.declutterCell);
+      for (const e of entries) if (e.leader) e.leader.visible = e.obj.visible;
+      cand.forEach((c, i) => { c.e.obj.visible = keep[i]; if (c.e.leader) c.e.leader.visible = keep[i]; });
     },
     render(scene, camera) { css2d.render(scene, camera); },
-    resize(w, h) { css2d.setSize(w, h); },
+    resize(w, h) { css2d.setSize(w, h); vw = w; vh = h; },
   };
 }
