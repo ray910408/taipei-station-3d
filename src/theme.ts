@@ -17,7 +17,7 @@ export const THEME = {
     },
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
-  body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7 },
+  body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7, massHeight: 0.9 },
   // 程序化地磚（Phase 6 去塑膠）：白底單磚 × 材質底色相乘；強度刻意壓低——要「有材質的白」不要照片地板
   textures: { tileMeters: 2, noiseAlpha: 0.05, groutAlpha: 0.1 },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
@@ -30,7 +30,7 @@ export const THEME = {
     roughness: 0.85,
     platformWhiten: 0.4,
     slab: { color: '#ffffff', opacity: 1 },
-    shell: { color: '#3a4150', opacity: 0.05 },
+    shell: { color: '#c8ccd4', opacity: 1 },
     wall: { color: '#c8ccd4', opacity: 1 },
     area: {
       platform: '#e9e2cf', paid: '#efe6e6', unpaid: '#e4ebf6',

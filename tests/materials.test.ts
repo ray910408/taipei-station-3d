@@ -33,8 +33,10 @@ describe('材質響應（去塑膠 T2）', () => {
   });
 
   it('半透明材質 depthWrite=false、不透明維持 true', () => {
-    const shell = findByKind('shell');
-    const m = shell.material as THREE.MeshStandardMaterial;
+    // shell 自 Task 3（程序化周界牆帶）起改為 opaque massHeight 牆帶，不再半透明——
+    // 改用仍為半透明的 elevator connector 驗證同一 mat() 分支。
+    const elevator = findByKind('connector-elevator');
+    const m = elevator.material as THREE.MeshStandardMaterial;
     expect(m.transparent).toBe(true);
     expect(m.depthWrite).toBe(false);
     const slab = findByKind('slab');

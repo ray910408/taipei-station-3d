@@ -49,7 +49,7 @@ describe('調暗樓層 depthWrite（終審 Important 防護）', () => {
     const shell = matOf(group, 'tra-concourse-b1', 'shell');
     const edges = edgeMat(group, 'tra-concourse-b1');
     expect(slab.depthWrite).toBe(true);
-    expect(shell.depthWrite).toBe(false);
+    expect(shell.depthWrite).toBe(true); // Task 3 起 shell 為 opaque massHeight 牆帶
     expect(edges.depthWrite).toBe(true); // LineBasicMaterial 原生預設
 
     setFloorEmphasis(group, 'tra-platform-b2'); // b1 被調暗
@@ -60,7 +60,7 @@ describe('調暗樓層 depthWrite（終審 Important 防護）', () => {
     setFloorEmphasis(group, null);
     expect(matOf(group, 'tra-concourse-b1', 'slab').depthWrite).toBe(true);
     expect(edgeMat(group, 'tra-concourse-b1').depthWrite).toBe(true); // 快照還原、不漂移
-    expect(matOf(group, 'tra-concourse-b1', 'shell').depthWrite).toBe(false);
+    expect(matOf(group, 'tra-concourse-b1', 'shell').depthWrite).toBe(true); // 還原至新 opaque 基準
   });
 
   it('fade 疊在 emphasis 上：快照分層、還原鏈一致', () => {

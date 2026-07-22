@@ -159,16 +159,16 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
       matPair(M.slab.color, M.slab.opacity), 'slab'));
 
-    // 外殼：沿 slab 輪廓的半透明立面
+    // 程序化周界牆帶：沿 slab 外框逐段生實心矮牆（massHeight）——非可走周界「fake wall」，nav 中隱藏
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
     for (let i = 0; i < shellPts.length - 1; i++) {
       const a = toWorld(shellPts[i], meta.elevation);
       const b = toWorld(shellPts[i + 1], meta.elevation);
       const len = a.distanceTo(b);
       const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(len, meta.height, 0.05), mat(M.shell.color, M.shell.opacity));
+        new THREE.BoxGeometry(len, THEME.body.massHeight, 0.4), mat(M.shell.color, M.shell.opacity));
       wall.position.copy(a.clone().add(b).multiplyScalar(0.5));
-      wall.position.y = meta.elevation + meta.height / 2;
+      wall.position.y = meta.elevation + THEME.body.massHeight / 2;
       wall.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
       wall.userData.kind = 'shell';
       g.add(wall);
@@ -242,7 +242,7 @@ export function applyShadowFlags(root: THREE.Object3D): void {
       : typeof mesh.parent?.userData.kind === 'string' ? mesh.parent.userData.kind : null;
     if (kind === null) return;
     if (kind === 'slab') { mesh.castShadow = true; mesh.receiveShadow = true; }
-    else if (kind === 'wall' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
+    else if (kind === 'wall' || kind === 'shell' || kind.startsWith('unit-') || kind.startsWith('connector-')) {
       mesh.castShadow = true;
     }
   });
