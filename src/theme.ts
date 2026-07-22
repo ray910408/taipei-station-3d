@@ -66,7 +66,7 @@ export const THEME = {
   },
   poiSize: 2.4,
   labels: {
-    floorTagMinExplode: 0.6, landmarkMaxDist: 320, floorTagStagger: 10,
+    floorTagMinExplode: 0.6, landmarkMaxDist: 320, floorTagStagger: 10, declutterCell: 72,
     floorTag: { bg: '#1b1e26e6', fg: '#e7ebf2' },
     landmark: { bg: '#22262fcc', fg: '#c7cedb' },
   },

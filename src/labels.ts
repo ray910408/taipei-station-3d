@@ -22,6 +22,18 @@ export function labelVisible(
 
 interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1 }
 
+/** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
+export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
+  const best = new Map<string, number>(); // cellKey → winning item index
+  items.forEach((it, i) => {
+    const key = `${Math.floor(it.x / cell)},${Math.floor(it.y / cell)}`;
+    const cur = best.get(key);
+    if (cur === undefined || items[cur].priority < it.priority) best.set(key, i);
+  });
+  const win = new Set(best.values());
+  return items.map((_, i) => win.has(i));
+}
+
 export interface LabelLayer {
   update(camera: THREE.Camera, mode: Mode, explodeFactor: number): void;
   render(scene: THREE.Scene, camera: THREE.Camera): void;
@@ -90,14 +102,22 @@ export function createLabelLayer(
   }
 
   const tmp = new THREE.Vector3();
+  let vw = container.clientWidth, vh = container.clientHeight;
+  const priorityOf = (e: Entry): number => (e.kind === 'floor-tag' ? 3 : e.tier === 0 ? 2 : 1);
   return {
     update(camera, mode, explodeFactor) {
+      const cand: { e: Entry; x: number; y: number; priority: number }[] = [];
       for (const e of entries) {
-        const dist = e.obj.getWorldPosition(tmp).distanceTo(camera.position);
-        e.obj.visible = labelVisible(e.kind, mode, explodeFactor, dist, e.tier);
+        const world = e.obj.getWorldPosition(tmp);
+        const dist = world.distanceTo(camera.position);
+        if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }
+        const p = world.clone().project(camera); // NDC
+        cand.push({ e, x: (p.x * 0.5 + 0.5) * vw, y: (-p.y * 0.5 + 0.5) * vh, priority: priorityOf(e) });
       }
+      const keep = declutter(cand, THEME.labels.declutterCell);
+      cand.forEach((c, i) => { c.e.obj.visible = keep[i]; });
     },
     render(scene, camera) { css2d.render(scene, camera); },
-    resize(w, h) { css2d.setSize(w, h); },
+    resize(w, h) { css2d.setSize(w, h); vw = w; vh = h; },
   };
 }
