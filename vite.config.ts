@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
 import { fileURLToPath } from 'node:url';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { applySave } from './tools/save-handler.mjs';
 
 // 描圖工具 dev-only 存檔端點：POST /__tracer/save {files:[{file,doc}]} → 全站驗證通過才寫檔
@@ -30,9 +31,10 @@ function tracerSavePlugin(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [tracerSavePlugin()],
+  // https 僅限 dev:lan（--mode lan）：日常 npm run dev 保持 http，免吃自簽憑證警告
+  plugins: mode === 'lan' ? [tracerSavePlugin(), basicSsl()] : [tracerSavePlugin()],
   server: { port: Number(process.env.PORT) || 5173 },
   build: {
     rollupOptions: {
@@ -43,4 +45,4 @@ export default defineConfig({
     },
   },
   test: { environment: 'node' },
-});
+}));
