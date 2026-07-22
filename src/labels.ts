@@ -20,7 +20,7 @@ export function labelVisible(
   return cameraDist < THEME.labels.landmarkMaxDist; // L1 依距離
 }
 
-interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1 }
+interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1; leader?: THREE.Object3D }
 
 /** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
 export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
@@ -97,7 +97,23 @@ export function createLabelLayer(
       }));
       lm.position.copy(toWorld(n.xy, meta.elevation + 3));
       floorGroup.add(lm);
-      entries.push({ obj: lm, kind: 'landmark', tier: n.tier });
+
+      // 引線＋錨點：釘住 label 對應的樓層節點，避免自由飄浮感
+      const anchorXY = n.xy;
+      const foot = toWorld(anchorXY, meta.elevation + 0.1);
+      const head = toWorld(anchorXY, meta.elevation + 3);
+      const leader = new THREE.Group();
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([foot, head]),
+        new THREE.LineBasicMaterial({ color: THEME.body.edge, transparent: true, opacity: 0.75 }));
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 8, 6),
+        new THREE.MeshBasicMaterial({ color: THEME.body.edge, toneMapped: false }));
+      dot.position.copy(foot);
+      leader.add(line, dot);
+      floorGroup.add(leader);
+
+      entries.push({ obj: lm, kind: 'landmark', tier: n.tier, leader });
     }
   }
 
@@ -115,7 +131,8 @@ export function createLabelLayer(
         cand.push({ e, x: (p.x * 0.5 + 0.5) * vw, y: (-p.y * 0.5 + 0.5) * vh, priority: priorityOf(e) });
       }
       const keep = declutter(cand, THEME.labels.declutterCell);
-      cand.forEach((c, i) => { c.e.obj.visible = keep[i]; });
+      for (const e of entries) if (e.leader) e.leader.visible = e.obj.visible;
+      cand.forEach((c, i) => { c.e.obj.visible = keep[i]; if (c.e.leader) c.e.leader.visible = keep[i]; });
     },
     render(scene, camera) { css2d.render(scene, camera); },
     resize(w, h) { css2d.setSize(w, h); vw = w; vh = h; },
