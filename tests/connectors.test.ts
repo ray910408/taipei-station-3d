@@ -29,8 +29,8 @@ describe('buildConnectorsGroup 三型分明', () => {
     expect(m.geometry.type).toBe('CylinderGeometry');
   });
   it('手扶梯與樓梯用不同材質色', () => {
-    const esc = buildConnectorsGroup(fixture('escalator')).children[0] as THREE.Mesh;
-    const stair = buildConnectorsGroup(fixture('stair')).children[0] as THREE.Mesh;
+    const esc = buildConnectorsGroup(fixture('escalator')).children.find((o) => (o as THREE.Mesh).userData.kind === 'connector-escalator') as THREE.Mesh;
+    const stair = buildConnectorsGroup(fixture('stair')).children.find((o) => (o as THREE.Mesh).userData.kind === 'connector-stair') as THREE.Mesh;
     const c = (m: THREE.Mesh) => (m.material as THREE.MeshStandardMaterial).color.getHexString();
     expect(c(esc)).not.toBe(c(stair));
   });
