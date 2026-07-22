@@ -47,6 +47,7 @@ export const THEME = {
     gate: { accessible: '#37a559', standard: '#7a828f' },
     connector: {
       stair: { color: '#8b93a3', opacity: 0.95 },
+      escalator: { color: '#f2972e', opacity: 0.96 },
       elevator: { color: '#3f86f4', opacity: 0.62 },
     },
   },

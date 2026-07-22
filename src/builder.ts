@@ -118,10 +118,10 @@ export function buildConnectorsGroup(
       const a = nodePos.get(c.levels[i].node);
       const b = nodePos.get(c.levels[i + 1].node);
       if (!a || !b) continue;
-      const c2 = c.kind === 'elevator' ? M.connector.elevator : M.connector.stair;
+      const c2 = M.connector[c.kind]; // stair / escalator / elevator 各自材質
       let mesh: THREE.Mesh;
       if (c.kind === 'elevator') {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(2, b.y - a.y, 2), mat(c2.color, c2.opacity));
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, b.y - a.y, 16), mat(c2.color, c2.opacity));
         mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
       } else {
         const len = a.distanceTo(b);
