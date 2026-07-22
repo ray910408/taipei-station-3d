@@ -6,21 +6,21 @@
   <title>台北車站室內 3D 導航</title>
   <style>
     :root { --bg: #1b1e26f2; --line: #2f343d; --fg: #e7ebf2; --muted: #9aa4b4; --primary: #4f86f4; }
-    html, body { margin: 0; height: 100%; background: #f1f0ec; color: var(--fg);
+    html, body { margin: 0; height: 100%; background: #14161c; color: var(--fg);
       font-family: "Noto Sans TC", system-ui, sans-serif; }
     #app { position: fixed; inset: 0; }
     [hidden] { display: none !important; }
     .card { position: fixed; z-index: 10; background: var(--bg); border: 1px solid var(--line);
       border-radius: 14px; padding: 12px; font-size: 14px; backdrop-filter: blur(8px);
       box-shadow: 0 1px 2px #0000001f, 0 4px 16px #00000014; }
-    button { padding: 6px 12px; min-height: 36px; background: #fff; color: var(--fg);
+    button { padding: 6px 12px; min-height: 36px; background: #262b34; color: var(--fg);
       border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 14px; }
-    button:hover { background: #f8f9fa; }
+    button:hover { background: #2f353f; }
     button.primary { background: var(--primary); border-color: transparent; color: #fff; }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
     #btn-swap, #btn-settings { min-width: 44px; min-height: 44px; }
     .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; }
-    input[type="search"] { flex: 1; padding: 8px 10px; background: #fff; color: var(--fg);
+    input[type="search"] { flex: 1; padding: 8px 10px; background: #20242c; color: var(--fg);
       border: 1px solid var(--line); border-radius: 8px; font-size: 16px; }
     input[type="search"]:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow-y: auto; }
@@ -30,7 +30,7 @@
     .results button { display: block; width: 100%; text-align: left; padding: 8px 10px;
       min-height: 0; background: none; border: 0; border-radius: 6px; color: var(--fg);
       font-size: 14px; cursor: pointer; }
-    .results button:hover, .results button:focus { background: #f1f3f4; }
+    .results button:hover, .results button:focus { background: #262b34; }
     .results .empty-note { padding: 8px 10px; color: var(--muted); }
 
     #searchbar { top: 12px; left: 12px; width: 300px; z-index: 11; }
