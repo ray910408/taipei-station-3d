@@ -9,6 +9,7 @@ export interface UIHandles {
   setTransition(label: string | null): void;
   showArrive(on: boolean): void;
   showPickCard(lm: Landmark | null): void;
+  setPdrHint(on: boolean): void;
 }
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
@@ -286,6 +287,9 @@ export function setupUI(opts: {
     if (on) navBanner.hidden = true; // 抵達＝單一 CTA，收起 nav 按鈕列
     else if (document.body.dataset.mode === 'nav') navBanner.hidden = false; // overview 收尾時不得誤開
   }
+  function setPdrHint(on: boolean): void {
+    $('#pdr-hint').hidden = !on;
+  }
 
-  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard };
+  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint };
 }

@@ -20,6 +20,7 @@ import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
+import { PDR_DEFAULTS, walkStep, type PdrParams, type WalkState } from './pdr';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -187,6 +188,16 @@ async function boot(): Promise<void> {
   let floorSwap: FloorSwap | null = null;
   let lastNavFloor: string | null = null;
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
+  // PDR（Phase 4）：sim 假步與沿邊推進狀態；感測器接線在 T6
+  const pdrQuery = new URLSearchParams(location.search);
+  const pdrSim = pdrQuery.get('pdr') === 'sim';
+  const pdrParams: PdrParams = {
+    ...PDR_DEFAULTS,
+    peakThreshold: Number(pdrQuery.get('pdrPeak')) || PDR_DEFAULTS.peakThreshold,
+    stepLength: Number(pdrQuery.get('pdrStep')) || PDR_DEFAULTS.stepLength,
+    minStepMs: Number(pdrQuery.get('pdrMinMs')) || PDR_DEFAULTS.minStepMs,
+  };
+  let pdrWalk: WalkState = { edgeDist: 0 };
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -242,6 +253,8 @@ async function boot(): Promise<void> {
     lastNavFloor = null;
     ui.setTransition(null);
     ui.showArrive(false);
+    pdrWalk = { edgeDist: 0 };
+    ui.setPdrHint(false);
   }
 
   function clearRoute(): void {
@@ -316,6 +329,40 @@ async function boot(): Promise<void> {
     ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(routeStats(remain))}`, progress);
   }
 
+  /** 單次節點推進的完整體感（tween＋相機＋抵達）：手動按鈕與 PDR 步進的共同入口。 */
+  function advanceOnce(): void {
+    if (!followState || !marker) return;
+    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; } // 連按收斂到節點，不切角
+    const fromPos = marker.position.clone();
+    followState = advance(followState);
+    chaseAuto = true;
+    refreshNav();
+    if (REDUCED_MOTION) { // 免滑行：refreshNav 已把 marker 放到新節點；抵達直接後拉
+      if (atEnd(followState)) arriveGoal();
+      return;
+    }
+    markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
+    marker.position.copy(fromPos);
+  }
+
+  function pdrActive(): boolean {
+    return pdrSim; // T6 擴充：|| stopMotion !== null
+  }
+
+  function updatePdrHint(): void {
+    ui.setPdrHint(pdrActive() && mode === 'nav' && followState !== null
+      && routeEdges !== null && verticalStep(routeEdges, followState) !== null);
+  }
+
+  /** 一個偵測到的步伐 → 沿邊累距 → 跨節點觸發 advanceOnce（可能多次）。 */
+  function onStep(): void {
+    if (mode !== 'nav' || !followState || !routeEdges || atEnd(followState)) return;
+    const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
+    pdrWalk = r.w;
+    for (let i = 0; i < r.advances; i++) advanceOnce();
+    updatePdrHint();
+  }
+
   const ui = setupUI({
     model, landmarks,
     onRoute: (start, end, accessibleOnly) => {
@@ -341,23 +388,22 @@ async function boot(): Promise<void> {
       scene.add(marker);
       setMode('nav');
       refreshNav();
+      pdrWalk = { edgeDist: 0 };
+      updatePdrHint();
     },
     onAdvance: () => {
-      if (!followState || !marker) return;
-      if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; } // 連按收斂到節點，不切角
-      const fromPos = marker.position.clone();
-      followState = advance(followState);
-      chaseAuto = true;
-      refreshNav();
-      if (REDUCED_MOTION) { // 免滑行：refreshNav 已把 marker 放到新節點；抵達直接後拉
-        if (atEnd(followState)) arriveGoal();
-        return;
-      }
-      markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
-      marker.position.copy(fromPos);
+      pdrWalk = { edgeDist: 0 }; // 手動確認＝重新對齊節點，殘距作廢
+      advanceOnce();
+      updatePdrHint();
     },
     onBack: () => {
-      if (followState) { markerTween = null; followState = back(followState); refreshNav(); }
+      if (followState) {
+        markerTween = null;
+        followState = back(followState);
+        pdrWalk = { edgeDist: 0 };
+        refreshNav();
+        updatePdrHint();
+      }
     },
     onRecenter: () => {
       chaseAuto = true;
@@ -415,6 +461,9 @@ async function boot(): Promise<void> {
     scene.add(pickPin);
     ui.showPickCard(toLandmark(model, node));
   });
+
+  // ?pdr=sim：按 s 鍵＝一步假步伐——走 onStep → walkStep → advanceOnce 同一條管線
+  if (pdrSim) addEventListener('keydown', (ev) => { if (ev.key === 's') onStep(); });
 
   setMode('overview'); // boot：實高 → 爆炸圖展開動畫
 
