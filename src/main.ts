@@ -20,7 +20,8 @@ import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
-import { PDR_DEFAULTS, walkStep, type PdrParams, type WalkState } from './pdr';
+import { PDR_DEFAULTS, initStepState, stepSample, walkStep, type PdrParams, type StepState, type WalkState } from './pdr';
+import { motionSupported, requestMotionPermission, startMotion } from './pdr-sensor';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -198,6 +199,8 @@ async function boot(): Promise<void> {
     minStepMs: Number(pdrQuery.get('pdrMinMs')) || PDR_DEFAULTS.minStepMs,
   };
   let pdrWalk: WalkState = { edgeDist: 0 };
+  let stopMotion: (() => void) | null = null;
+  let stepState: StepState = initStepState();
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -253,6 +256,9 @@ async function boot(): Promise<void> {
     lastNavFloor = null;
     ui.setTransition(null);
     ui.showArrive(false);
+    stopMotion?.();
+    stopMotion = null;
+    ui.setPdrToggle(false);
     pdrWalk = { edgeDist: 0 };
     ui.setPdrHint(false);
   }
@@ -346,7 +352,7 @@ async function boot(): Promise<void> {
   }
 
   function pdrActive(): boolean {
-    return pdrSim; // T6 擴充：|| stopMotion !== null
+    return pdrSim || stopMotion !== null;
   }
 
   function updatePdrHint(): void {
@@ -412,6 +418,22 @@ async function boot(): Promise<void> {
     onExitNav: () => setMode('overview'),
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
     onPickDismiss: () => clearPick(),
+    pdrAvailable: !pdrSim && motionSupported(), // sim 模式用假步、真感測 toggle 停用
+    onPdrToggle: async (on) => {
+      stopMotion?.();
+      stopMotion = null;
+      if (!on) { updatePdrHint(); return false; }
+      if (!(await requestMotionPermission())) return false; // 拒絕/不支援 → toggle 回滾
+      stepState = initStepState();
+      pdrWalk = { edgeDist: 0 };
+      stopMotion = startMotion((t, mag) => {
+        const r = stepSample(stepState, t, mag, pdrParams);
+        stepState = r.state;
+        if (r.step) onStep();
+      });
+      updatePdrHint();
+      return true;
+    },
   });
 
   // 3D 選點（Phase 4）：tap（位移 < 閾值、單指）→ raycast slab → snap 最近節點 → pin＋確認小卡

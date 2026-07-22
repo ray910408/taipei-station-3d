@@ -10,6 +10,7 @@ export interface UIHandles {
   showArrive(on: boolean): void;
   showPickCard(lm: Landmark | null): void;
   setPdrHint(on: boolean): void;
+  setPdrToggle(on: boolean): void;
 }
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
@@ -87,6 +88,8 @@ export function setupUI(opts: {
   onExitNav(): void;
   onFloorFocus(id: string | null): void;
   onPickDismiss(): void;
+  pdrAvailable: boolean;
+  onPdrToggle(on: boolean): Promise<boolean>;
 }): UIHandles {
   const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
   const searchbar = $('#searchbar');
@@ -234,6 +237,16 @@ export function setupUI(opts: {
   });
   $('#btn-pick-cancel').addEventListener('click', () => opts.onPickDismiss());
 
+  // 步感應 toggle：預設關；開啟在手勢內請求權限，拒絕/不支援時回滾
+  const pdrToggle = $<HTMLInputElement>('#pdr-toggle');
+  pdrToggle.disabled = !opts.pdrAvailable;
+  pdrToggle.addEventListener('change', () => {
+    void opts.onPdrToggle(pdrToggle.checked).then((on) => { pdrToggle.checked = on; });
+  });
+  function setPdrToggle(on: boolean): void {
+    pdrToggle.checked = on;
+  }
+
   const resetEndpoints = (): void => {
     startId = null;
     endId = null;
@@ -291,5 +304,5 @@ export function setupUI(opts: {
     $('#pdr-hint').hidden = !on;
   }
 
-  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint };
+  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint, setPdrToggle };
 }
