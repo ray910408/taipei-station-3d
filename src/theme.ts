@@ -3,10 +3,10 @@ import type { AreaKind, UnitKind } from './types';
 /** Map Presentation System 唯一視覺真源：3D 材質、光影、UI CSS vars 全由此驅動。
  *  tracer(2D) 不在此列——其編輯配色留在 palette.ts。 */
 export const THEME = {
-  scene: { background: '#eceae5', ground: '#dcd9d2', groundY: -30, groundSize: 1200 },
+  scene: { background: '#14161c', ground: '#1b1e26', groundY: -30, groundSize: 1200 },
   render: { maxPixelRatio: 2, toneMappingExposure: 1.05, envIntensity: 0.35 },
   // n8ao SSAO（去塑膠 T5）：接觸陰影——牆腳/樓板交角/豎井周圍。?ao=off 可關
-  ao: { radius: 4, distanceFalloff: 1, intensity: 2.5, color: '#30343c', halfRes: true },
+  ao: { radius: 4, distanceFalloff: 1, intensity: 2.6, color: '#05070b', halfRes: true },
   lights: {
     hemi: { sky: '#ffffff', ground: '#d8d4cd', intensity: 0.9 },
     sun: {
@@ -17,7 +17,7 @@ export const THEME = {
     },
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
-  body: { sideDarken: 0.8, edge: '#80868b', edgeOpacity: 0.55 },
+  body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7 },
   // 程序化地磚（Phase 6 去塑膠）：白底單磚 × 材質底色相乘；強度刻意壓低——要「有材質的白」不要照片地板
   textures: { tileMeters: 2, noiseAlpha: 0.05, groutAlpha: 0.1 },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
@@ -28,13 +28,13 @@ export const THEME = {
   },
   materials: {
     roughness: 0.85,
-    platformWhiten: 0.55,
+    platformWhiten: 0.4,
     slab: { color: '#ffffff', opacity: 1 },
-    shell: { color: '#dadce0', opacity: 0.06 },
-    wall: { color: '#dadce0', opacity: 1 },
+    shell: { color: '#3a4150', opacity: 0.05 },
+    wall: { color: '#c8ccd4', opacity: 1 },
     area: {
-      platform: '#f3e8c9', paid: '#f9efee', unpaid: '#eef3fb',
-      corridor: '#eff5f0', track: '#3c4043', restricted: '#eeeff1',
+      platform: '#e9e2cf', paid: '#efe6e6', unpaid: '#e4ebf6',
+      corridor: '#e6efe8', track: '#0f1218', restricted: '#e7e9ee',
     } satisfies Record<AreaKind, string>,
     areaOpacity: 1,
     unit: {
@@ -44,10 +44,10 @@ export const THEME = {
       machine: { color: '#d2e3fc', opacity: 1 },
       'stair-void': { color: '#dadce0', opacity: 0.4 },
     } satisfies Record<UnitKind, { color: string; opacity: number }>,
-    gate: { accessible: '#188038', standard: '#80868b' },
+    gate: { accessible: '#37a559', standard: '#7a828f' },
     connector: {
-      stair: { color: '#e8a33d', opacity: 0.95 },
-      elevator: { color: '#1a73e8', opacity: 0.55 },
+      stair: { color: '#8b93a3', opacity: 0.95 },
+      elevator: { color: '#3f86f4', opacity: 0.62 },
     },
   },
   route: {
@@ -57,7 +57,7 @@ export const THEME = {
   },
   emphasis: { dim: 0.15 },
   // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 藍）
-  selection: { tapThresholdPx: 6, pin: '#9334e6' },
+  selection: { tapThresholdPx: 6, pin: '#a855f7' },
   poi: {
     tile: '#1f2023', fg: '#ffffff',
     gate: '#1a73e8', gateBg: '#ffffff',
@@ -65,12 +65,12 @@ export const THEME = {
   poiSize: 2.4,
   labels: {
     floorTagMinExplode: 0.6, landmarkMaxDist: 320, floorTagStagger: 10,
-    floorTag: { bg: '#ffffffe6', fg: '#202124' },
-    landmark: { bg: '#ffffffcc', fg: '#3c4043' },
+    floorTag: { bg: '#1b1e26e6', fg: '#e7ebf2' },
+    landmark: { bg: '#22262fcc', fg: '#c7cedb' },
   },
   ui: {
-    '--bg': '#fffffff2', '--line': '#dadce0', '--fg': '#202124',
-    '--muted': '#5f6368', '--primary': '#1a73e8',
+    '--bg': '#1b1e26f2', '--line': '#2f343d', '--fg': '#e7ebf2',
+    '--muted': '#9aa4b4', '--primary': '#4f86f4',
   },
 };
 // 注意：不用 `as const`——與 satisfies 併用會撞 TS const-assertion 限制；
