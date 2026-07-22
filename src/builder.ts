@@ -62,6 +62,31 @@ function buildUnitEdges(units: { kind: string; polygon: Vec2[]; height: number }
   return line;
 }
 
+/** slab 外框＋各 area 邊界描邊，合併為一條亮色 LineSegments（每層 +1 draw call）。
+ *  用 2D ring→EdgesGeometry(平面)：只取封閉外框線，不描填充面。 */
+function ringEdges(ring: Vec2[], elevation: number): THREE.BufferGeometry {
+  const geo = new THREE.ExtrudeGeometry(ringToShape(ring), { depth: 0.001, bevelEnabled: false });
+  geo.rotateX(-Math.PI / 2);
+  const e = new THREE.EdgesGeometry(geo, 1); // 1°：薄片只剩上下輪廓線
+  e.translate(0, elevation + 0.02, 0);
+  geo.dispose();
+  return e;
+}
+
+export function buildFloorEdges(
+  slab: { outline: Vec2[]; holes?: Vec2[][] }, areas: { polygon: Vec2[] }[], elevation: number,
+): THREE.LineSegments | null {
+  const parts = [ringEdges(slab.outline, elevation), ...areas.map((a) => ringEdges(a.polygon, elevation))];
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts);
+  for (const p of parts) p.dispose();
+  const line = new THREE.LineSegments(merged, new THREE.LineBasicMaterial({
+    color: THEME.body.edge, transparent: true, opacity: THEME.body.edgeOpacity,
+  }));
+  line.userData.kind = 'edges';
+  return line;
+}
+
 // connectors：斜坡（stair/escalator）與豎井（elevator）。
 // offsetY 供爆炸圖重建：各樓層錨點 y 加位移，豎井/斜坡自然拉伸。
 export function buildConnectorsGroup(
@@ -166,6 +191,8 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     }
     const edgeLine = buildUnitEdges(floor.units ?? [], meta.elevation);
     if (edgeLine) g.add(edgeLine);
+    const floorEdge = buildFloorEdges(floor.slab, floor.areas ?? [], meta.elevation);
+    if (floorEdge) g.add(floorEdge);
     for (const w of floor.walls ?? []) {
       for (let i = 0; i < w.polyline.length - 1; i++) {
         const a = toWorld(w.polyline[i], meta.elevation);

@@ -120,14 +120,15 @@ describe('buildStationGroup', () => {
     expect(side.color.g).toBeCloseTo(cap.color.g * THEME.body.sideDarken, 2);
   });
 
-  it('每樓層 units（含實體 unit 者）恰一個合併 edges LineSegments', () => {
+  it('每樓層恰有 buildFloorEdges 一個＋（含實體 unit 者）額外一個合併 edges LineSegments', () => {
     for (const meta of fullModel.station.floors) {
       const g2 = fullGroup.children.find((c) => c.name === meta.id) as THREE.Group;
       const hasSolidUnit = (fullModel.floors.get(meta.id)?.units ?? [])
         .some((u) => u.kind !== 'stair-void');
+      // buildFloorEdges（slab 外框，恆存在）+ buildUnitEdges（僅實體 unit 存在時）
       expect(
         g2.children.filter((c) => c.userData.kind === 'edges').length, meta.id,
-      ).toBe(hasSolidUnit ? 1 : 0);
+      ).toBe(hasSolidUnit ? 2 : 1);
     }
   });
 
