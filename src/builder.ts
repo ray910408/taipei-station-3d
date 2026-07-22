@@ -83,7 +83,7 @@ export function buildFloorEdges(
   const line = new THREE.LineSegments(merged, new THREE.LineBasicMaterial({
     color: THEME.body.edge, transparent: true, opacity: THEME.body.edgeOpacity,
   }));
-  line.userData.kind = 'edges';
+  line.userData.kind = 'floor-edges';
   return line;
 }
 

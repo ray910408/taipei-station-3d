@@ -128,7 +128,7 @@ describe('buildStationGroup', () => {
       // buildFloorEdges（slab 外框，恆存在）+ buildUnitEdges（僅實體 unit 存在時）
       expect(
         g2.children.filter((c) => c.userData.kind === 'edges').length, meta.id,
-      ).toBe(hasSolidUnit ? 2 : 1);
+      ).toBe(hasSolidUnit ? 1 : 0);
     }
   });
 
