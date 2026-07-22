@@ -166,6 +166,21 @@ export function buildConnectorsGroup(
       else lateral.normalize();
       mesh.position.addScaledVector(lateral, offset);
       mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
+      if (c.kind === 'escalator') {
+        const up = b.y >= a.y ? b : a; // 行進終點：direction up→朝高端
+        const lo = b.y >= a.y ? a : b;
+        const to = c.direction === 'down' ? lo : up;
+        const from = c.direction === 'down' ? up : lo;
+        const arrow = new THREE.Mesh(
+          new THREE.ConeGeometry(0.5, 1.2, 12),
+          new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6, metalness: 0 }));
+        arrow.position.copy(from.clone().lerp(to, 0.5));
+        arrow.position.addScaledVector(lateral, offset);
+        arrow.lookAt(to);
+        arrow.rotateX(Math.PI / 2); // Cone 尖端 +y → 對齊行進方向
+        arrow.userData.kind = 'connector-arrow';
+        connGroup.add(arrow);
+      }
       connGroup.add(mesh);
     }
   }

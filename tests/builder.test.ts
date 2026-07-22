@@ -76,9 +76,9 @@ describe('buildStationGroup', () => {
     expect(kinds).toContain('unpaid');
   });
 
-  it('connectors group 含 2 個量體（電扶梯斜坡 + 電梯豎井）', () => {
+  it('connectors group 含 3 個量體（電扶梯斜坡 + 方向箭頭 + 電梯豎井）', () => {
     const conns = group.children.find((c) => c.name === 'connectors') as THREE.Group;
-    expect(conns.children.length).toBe(2);
+    expect(conns.children.length).toBe(3);
   });
 
   const fullGroup = buildStationGroup(fullModel);
