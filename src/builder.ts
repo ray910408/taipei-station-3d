@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { StationModel, Vec2 } from './types';
+import type { StationModel, Vec2, NavNode, NavEdge } from './types';
 import { THEME, mixHex } from './theme';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
@@ -87,6 +87,22 @@ export function buildFloorEdges(
   return line;
 }
 
+/** 節點相鄰 walk 邊平均單位方向（local xy）；無鄰邊回 null。手扶梯合成斜向用。 */
+export function connectorRunDir(nodes: NavNode[], edges: NavEdge[], nodeId: string): Vec2 | null {
+  const pos = new Map(nodes.map((n) => [n.id, n.xy]));
+  const here = pos.get(nodeId);
+  if (!here) return null;
+  let dx = 0, dy = 0;
+  for (const e of edges) {
+    const other = e.from === nodeId ? pos.get(e.to) : e.to === nodeId ? pos.get(e.from) : undefined;
+    if (!other) continue;
+    dx += other[0] - here[0];
+    dy += other[1] - here[1];
+  }
+  const len = Math.hypot(dx, dy);
+  return len < 1e-6 ? null : [dx / len, dy / len];
+}
+
 // connectors：斜坡（stair/escalator）與豎井（elevator）。
 // offsetY 供爆炸圖重建：各樓層錨點 y 加位移，豎井/斜坡自然拉伸。
 export function buildConnectorsGroup(
@@ -115,9 +131,23 @@ export function buildConnectorsGroup(
     const members = groups.get(key)!;
     const offset = (members.indexOf(c) - (members.length - 1) / 2) * SPACING;
     for (let i = 0; i < c.levels.length - 1; i++) {
-      const a = nodePos.get(c.levels[i].node);
-      const b = nodePos.get(c.levels[i + 1].node);
-      if (!a || !b) continue;
+      const a0 = nodePos.get(c.levels[i].node);
+      const b0 = nodePos.get(c.levels[i + 1].node);
+      if (!a0 || !b0) continue;
+      // a0/b0 是 nodePos map 內共用的 Vector3 參照（同錨點梯群共用）；clone 後才可安全位移，否則污染 map
+      const a = a0.clone();
+      const b = b0.clone();
+      // 手扶梯/樓梯合成斜向：把較高端沿其樓層相鄰走道方向平移，避免上下端重合退化成垂直棒
+      // ponytail: 合成斜向近似, 真實方位需手描 connectors
+      if (c.kind !== 'elevator') {
+        const hi = a.y >= b.y ? a : b;
+        const hiLevel = a.y >= b.y ? c.levels[i] : c.levels[i + 1];
+        const hf = model.floors.get(hiLevel.floor);
+        const dir = connectorRunDir(hf?.nav?.nodes ?? [], hf?.nav?.edges ?? [], hiLevel.node);
+        const run = THEME.body.escalatorRun;
+        if (dir) hi.add(new THREE.Vector3(dir[0] * run, 0, -dir[1] * run));
+        else hi.x += run; // 回退：沿 +x（樓層長軸近似）
+      }
       const c2 = M.connector[c.kind]; // stair / escalator / elevator 各自材質
       let mesh: THREE.Mesh;
       if (c.kind === 'elevator') {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { assembleModel } from '../src/loader';
 import { buildGraph, findPath } from '../src/nav';
-import { buildStationGroup, toWorld } from '../src/builder';
+import { buildStationGroup, toWorld, connectorRunDir } from '../src/builder';
 import { buildRouteObject } from '../src/path';
 import { THEME } from '../src/theme';
 import stationDoc from './fixtures/mini/data/station.json';
@@ -93,12 +93,18 @@ describe('buildStationGroup', () => {
     }
   });
 
-  it('共用錨點梯群錯開後中心不變', () => {
+  it('共用錨點梯群錯開後中心＝合成斜向位移後的中點（Task5：三者皆非電梯，較高端 n-rc-001 一致位移，横向錯開抵銷）', () => {
     const center = sharedIds
       .map((id) => connectorPosition(fullGroup, id))
       .reduce((sum, position) => sum.add(position), new THREE.Vector3())
       .multiplyScalar(1 / sharedIds.length);
-    const expected = nodePosition('n-rp-001').add(nodePosition('n-rc-001')).multiplyScalar(0.5);
+    // 三者共用同一對錨點，較高端（concourse 的 n-rc-001）皆位移同一 escalatorRun 向量；
+    // 橫向錯開（SPACING 扇形）在三者間平均抵銷，故中心＝位移後中點，而非原始節點中點。
+    const rc = fullModel.floors.get('mrt-r-concourse-b3');
+    const dir = connectorRunDir(rc?.nav?.nodes ?? [], rc?.nav?.edges ?? [], 'n-rc-001');
+    const run = THEME.body.escalatorRun;
+    const shift = dir ? new THREE.Vector3(dir[0] * run, 0, -dir[1] * run) : new THREE.Vector3(run, 0, 0);
+    const expected = nodePosition('n-rp-001').add(nodePosition('n-rc-001')).multiplyScalar(0.5).addScaledVector(shift, 0.5);
     for (const axis of ['x', 'y', 'z'] as const) {
       expect(Math.abs(center[axis] - expected[axis])).toBeLessThan(1e-6);
     }
