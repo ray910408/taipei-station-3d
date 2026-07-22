@@ -26,6 +26,7 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
+      contents: read # job 級 permissions 會清空未列權限，checkout 需要它（終審 F2）
       pages: write
       id-token: write
     environment:

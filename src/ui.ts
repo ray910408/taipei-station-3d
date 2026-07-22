@@ -132,7 +132,7 @@ export function setupUI(opts: {
     }
   });
 
-  // Esc 漸退：設定選單 → 開啟中的結果清單 → preview 返回 overview（nav 不接——誤按代價高）
+  // Esc 漸退：設定選單 → 開啟中的結果清單 → 選點卡 → preview 返回 overview（nav 不接——誤按代價高）
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (!settingsMenu.hidden) {
@@ -142,6 +142,7 @@ export function setupUI(opts: {
     }
     const open = document.querySelector<HTMLElement>('.results:not([hidden])');
     if (open) { open.hidden = true; return; }
+    if (!pickCard.hidden) { opts.onPickDismiss(); return; } // 先關選點卡，不動整條路線（終審 F6）
     if (document.body.dataset.mode === 'preview') opts.onCancelRoute();
   });
 
@@ -241,8 +242,12 @@ export function setupUI(opts: {
   // 步感應 toggle：預設關；開啟在手勢內請求權限，拒絕/不支援時回滾
   const pdrToggle = $<HTMLInputElement>('#pdr-toggle');
   pdrToggle.disabled = !opts.pdrAvailable;
+  let pdrReq = 0; // 晚到的舊請求結果不覆寫最新 toggle 狀態（終審 F1）
   pdrToggle.addEventListener('change', () => {
-    void opts.onPdrToggle(pdrToggle.checked).then((on) => { pdrToggle.checked = on; });
+    const req = ++pdrReq;
+    void opts.onPdrToggle(pdrToggle.checked).then((on) => {
+      if (req === pdrReq) pdrToggle.checked = on;
+    });
   });
   function setPdrToggle(on: boolean): void {
     pdrToggle.checked = on;

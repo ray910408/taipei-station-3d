@@ -202,6 +202,7 @@ async function boot(): Promise<void> {
   let pdrWalk: WalkState = { edgeDist: 0 };
   let stopMotion: (() => void) | null = null;
   let stepState: StepState = initStepState();
+  let pdrGen = 0; // permission await 的世代票：晚到的授權不得啟動舊請求（終審 F1）
   const speaker = createSpeaker();
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
@@ -258,11 +259,13 @@ async function boot(): Promise<void> {
     lastNavFloor = null;
     ui.setTransition(null);
     ui.showArrive(false);
+    pdrGen++; // 等待中的 permission 結果作廢（終審 F1）
     stopMotion?.();
     stopMotion = null;
     ui.setPdrToggle(false);
     pdrWalk = { edgeDist: 0 };
     ui.setPdrHint(false);
+    speaker.stop(); // 殘句不跨出導航（終審 F4）
   }
 
   function clearRoute(): void {
@@ -424,10 +427,12 @@ async function boot(): Promise<void> {
     onPickDismiss: () => clearPick(),
     pdrAvailable: !pdrSim && motionSupported(), // sim 模式用假步、真感測 toggle 停用
     onPdrToggle: async (on) => {
+      const gen = ++pdrGen;
       stopMotion?.();
       stopMotion = null;
       if (!on) { updatePdrHint(); return false; }
       if (!(await requestMotionPermission())) return false; // 拒絕/不支援 → toggle 回滾
+      if (gen !== pdrGen) return false; // 等待期間已退出導航或重切開關——晚到授權不啟動
       stepState = initStepState();
       pdrWalk = { edgeDist: 0 };
       stopMotion = startMotion((t, mag) => {
@@ -462,6 +467,7 @@ async function boot(): Promise<void> {
   }
   let tapStart: { x: number; y: number; id: number } | null = null;
   let tapVoid = false;
+  let tapMaxDist = 0; // 途中最大位移——拖遠繞回原點不算 tap（終審人工項）
   // 使用者拖曳＝接管鏡頭（任何模式）；nav 中另暫停自動跟隨
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     rig.cancel();
@@ -469,13 +475,20 @@ async function boot(): Promise<void> {
     if (tapStart !== null) { tapVoid = true; return; } // 第二指（DOLLY_ROTATE）→ 本次點擊作廢
     tapStart = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
     tapVoid = false;
+    tapMaxDist = 0;
+  });
+  renderer.domElement.addEventListener('pointermove', (ev) => {
+    if (tapStart && ev.pointerId === tapStart.id)
+      tapMaxDist = Math.max(tapMaxDist, Math.hypot(ev.clientX - tapStart.x, ev.clientY - tapStart.y));
   });
   renderer.domElement.addEventListener('pointercancel', () => { tapVoid = true; tapStart = null; });
   renderer.domElement.addEventListener('pointerup', (ev) => {
     const start = tapStart;
     tapStart = null;
     if (tapVoid || !start || ev.pointerId !== start.id || mode === 'nav') return;
-    if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > THEME.selection.tapThresholdPx) return;
+    if (ev.button !== 0) return; // 僅左鍵/觸控選點——右鍵旋轉原地放開不觸發（終審 F7）
+    const dist = Math.max(tapMaxDist, Math.hypot(ev.clientX - start.x, ev.clientY - start.y));
+    if (dist > THEME.selection.tapThresholdPx) return;
     const rect = renderer.domElement.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2(
       ((ev.clientX - rect.left) / rect.width) * 2 - 1,

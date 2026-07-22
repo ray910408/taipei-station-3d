@@ -8,7 +8,7 @@ export function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice 
     ?? voices.find((v) => norm(v.lang).startsWith('zh')) ?? null;
 }
 
-export interface Speaker { setEnabled(on: boolean): void; speak(text: string): void }
+export interface Speaker { setEnabled(on: boolean): void; speak(text: string): void; stop(): void }
 
 export function createSpeaker(): Speaker {
   const synth = typeof speechSynthesis !== 'undefined' ? speechSynthesis : null;
@@ -18,7 +18,11 @@ export function createSpeaker(): Speaker {
   refresh(); // getVoices 可能先回空陣列 → voiceschanged 補選
   synth?.addEventListener('voiceschanged', refresh);
   return {
-    setEnabled(v: boolean): void { on = v; },
+    setEnabled(v: boolean): void {
+      on = v;
+      if (!v) synth?.cancel(); // 關閉即噤聲——殘句不跨越開關（終審 F4）
+    },
+    stop(): void { synth?.cancel(); }, // 結束導航等情境：立停殘句、不動 on 狀態
     speak(text: string): void {
       if (!on || !synth) return;
       synth.cancel(); // 每次先清佇列——防 iOS 佇列凍結

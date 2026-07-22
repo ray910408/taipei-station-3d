@@ -15,7 +15,9 @@ const model = assembleModel(
 );
 const graph = buildGraph(model);
 
-describe('PDR 沿邊推進端到端（月台→大廳）', () => {
+// 純函式孿生：驗 walkStep×findPath×follow 的沿邊語意；main.ts 的
+// onStep→advanceOnce 接線（tween/相機/語音）不在此測——待真機/sim 親驗（終審 F5 誠實命名）
+describe('PDR 沿邊推進語意（月台→大廳，純函式孿生）', () => {
   it('connector 前暫停、手動過梯後步進恢復、最終抵達', () => {
     const edges = findPath(graph, 'n-pl-001', 'n-ha-002')!;
     expect(edges[0].kind).toBe('escalator'); // 首段即電扶梯——一開始就該暫停
