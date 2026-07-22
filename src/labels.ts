@@ -8,17 +8,19 @@ import type { Mode } from './mode';
 export type LabelKind = 'floor-tag' | 'landmark';
 
 /** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依鏡頭距離進退，preview/nav 隱藏；
+ *  tier:0 大地標在 overview 常駐（不受距離限制）；
  *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
-  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number,
+  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1,
 ): boolean {
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
   if (mode === 'preview') return false; // landmark：preview 讓位給路線（Phase 4 舊債 2）
-  return cameraDist < THEME.labels.landmarkMaxDist;
+  if (tier === 0) return true; // L0 大地標常駐
+  return cameraDist < THEME.labels.landmarkMaxDist; // L1 依距離
 }
 
-interface Entry { obj: CSS2DObject; kind: LabelKind }
+interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1 }
 
 export interface LabelLayer {
   update(camera: THREE.Camera, mode: Mode, explodeFactor: number): void;
@@ -83,7 +85,7 @@ export function createLabelLayer(
       }));
       lm.position.copy(toWorld(n.xy, meta.elevation + 3));
       floorGroup.add(lm);
-      entries.push({ obj: lm, kind: 'landmark' });
+      entries.push({ obj: lm, kind: 'landmark', tier: n.tier });
     }
   }
 
@@ -92,7 +94,7 @@ export function createLabelLayer(
     update(camera, mode, explodeFactor) {
       for (const e of entries) {
         const dist = e.obj.getWorldPosition(tmp).distanceTo(camera.position);
-        e.obj.visible = labelVisible(e.kind, mode, explodeFactor, dist);
+        e.obj.visible = labelVisible(e.kind, mode, explodeFactor, dist, e.tier);
       }
     },
     render(scene, camera) { css2d.render(scene, camera); },
