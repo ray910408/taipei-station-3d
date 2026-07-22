@@ -22,6 +22,7 @@ import { attachFpsOverlay } from './fps';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
 import { PDR_DEFAULTS, initStepState, stepSample, walkStep, type PdrParams, type StepState, type WalkState } from './pdr';
 import { motionSupported, requestMotionPermission, startMotion } from './pdr-sensor';
+import { createSpeaker } from './speech';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -201,6 +202,7 @@ async function boot(): Promise<void> {
   let pdrWalk: WalkState = { edgeDist: 0 };
   let stopMotion: (() => void) | null = null;
   let stepState: StepState = initStepState();
+  const speaker = createSpeaker();
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -305,8 +307,8 @@ async function boot(): Promise<void> {
     rig.goal = frameGoal(pts, camera.aspect);
   }
 
-  function refreshNav(): void {
-    if (!followState || !routeEdges || !marker) return;
+  function refreshNav(): { next: string; arrived: boolean } {
+    if (!followState || !routeEdges || !marker) return { next: '', arrived: false };
     marker.position.copy(nodeWorld(currentNodeId(followState)));
     const cur = graph.nodes.get(currentNodeId(followState))!;
     setFloorEmphasis(stationGroup, cur.floor); // 半透明看見上下樓層（風格關卡回饋 1）
@@ -328,11 +330,12 @@ async function boot(): Promise<void> {
     if (atEnd(followState)) {
       ui.setNavInfo('已抵達目的地', '', progress);
       ui.showArrive(true);
-      return;
+      return { next: '已抵達目的地', arrived: true };
     }
     ui.showArrive(false);
     const next = routeSteps(model, graph, remain)[0] ?? '前往下一節點';
     ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(routeStats(remain))}`, progress);
+    return { next: `下一步：${next}`, arrived: false };
   }
 
   /** 單次節點推進的完整體感（tween＋相機＋抵達）：手動按鈕與 PDR 步進的共同入口。 */
@@ -342,7 +345,8 @@ async function boot(): Promise<void> {
     const fromPos = marker.position.clone();
     followState = advance(followState);
     chaseAuto = true;
-    refreshNav();
+    const info = refreshNav();
+    speaker.speak(info.arrived ? '已抵達目的地' : info.next); // enabled 才真的出聲
     if (REDUCED_MOTION) { // 免滑行：refreshNav 已把 marker 放到新節點；抵達直接後拉
       if (atEnd(followState)) arriveGoal();
       return;
@@ -433,6 +437,10 @@ async function boot(): Promise<void> {
       });
       updatePdrHint();
       return true;
+    },
+    onVoiceToggle: (on) => {
+      speaker.setEnabled(on);
+      if (on) speaker.speak('語音導航已開啟'); // 手勢內首播＝iOS unlock
     },
   });
 

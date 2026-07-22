@@ -90,6 +90,7 @@ export function setupUI(opts: {
   onPickDismiss(): void;
   pdrAvailable: boolean;
   onPdrToggle(on: boolean): Promise<boolean>;
+  onVoiceToggle(on: boolean): void;
 }): UIHandles {
   const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
   const searchbar = $('#searchbar');
@@ -246,6 +247,10 @@ export function setupUI(opts: {
   function setPdrToggle(on: boolean): void {
     pdrToggle.checked = on;
   }
+
+  $<HTMLInputElement>('#voice-toggle').addEventListener('change', (ev) => {
+    opts.onVoiceToggle((ev.target as HTMLInputElement).checked);
+  });
 
   const resetEndpoints = (): void => {
     startId = null;
