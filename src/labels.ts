@@ -118,6 +118,7 @@ export function createLabelLayer(
   }
 
   const tmp = new THREE.Vector3();
+  const proj = new THREE.Vector3(); // 重用投影暫存，避免每 frame×label clone（手機 GC 抖動）
   let vw = container.clientWidth, vh = container.clientHeight;
   const priorityOf = (e: Entry): number => (e.kind === 'floor-tag' ? 3 : e.tier === 0 ? 2 : 1);
   return {
@@ -127,7 +128,7 @@ export function createLabelLayer(
         const world = e.obj.getWorldPosition(tmp);
         const dist = world.distanceTo(camera.position);
         if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }
-        const p = world.clone().project(camera); // NDC
+        const p = proj.copy(world).project(camera); // NDC（重用暫存，不每候選 clone）
         cand.push({ e, x: (p.x * 0.5 + 0.5) * vw, y: (-p.y * 0.5 + 0.5) * vh, priority: priorityOf(e) });
       }
       const keep = declutter(cand, THEME.labels.declutterCell);

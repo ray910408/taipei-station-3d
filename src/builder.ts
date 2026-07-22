@@ -67,7 +67,7 @@ function buildUnitEdges(units: { kind: string; polygon: Vec2[]; height: number }
 function ringEdges(ring: Vec2[], elevation: number): THREE.BufferGeometry {
   const geo = new THREE.ExtrudeGeometry(ringToShape(ring), { depth: 0.001, bevelEnabled: false });
   geo.rotateX(-Math.PI / 2);
-  const e = new THREE.EdgesGeometry(geo, 1); // 1°：薄片只剩上下輪廓線
+  const e = new THREE.EdgesGeometry(geo, 1); // 1°：薄片保留箱體全稜線（上下輪廓＋豎邊，每矩形 12 邊）
   e.translate(0, elevation + 0.02, 0);
   geo.dispose();
   return e;
@@ -151,7 +151,7 @@ export function buildConnectorsGroup(
       const c2 = M.connector[c.kind]; // stair / escalator / elevator 各自材質
       let mesh: THREE.Mesh;
       if (c.kind === 'elevator') {
-        mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, b.y - a.y, 16), mat(c2.color, c2.opacity));
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, Math.abs(b.y - a.y), 16), mat(c2.color, c2.opacity));
         mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
       } else {
         const len = a.distanceTo(b);

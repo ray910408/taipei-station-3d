@@ -133,6 +133,9 @@ describe('buildStationGroup', () => {
         .some((u) => u.kind !== 'stair-void');
       // buildFloorEdges（slab 外框，恆存在）+ buildUnitEdges（僅實體 unit 存在時）
       expect(
+        g2.children.filter((c) => c.userData.kind === 'floor-edges').length, meta.id,
+      ).toBe(1);
+      expect(
         g2.children.filter((c) => c.userData.kind === 'edges').length, meta.id,
       ).toBe(hasSolidUnit ? 1 : 0);
     }
