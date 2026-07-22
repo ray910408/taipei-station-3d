@@ -56,6 +56,9 @@
     #arrive-card { top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center;
       font-size: 18px; font-weight: 700; }
     #arrive-card button { margin-top: 10px; }
+    #pick-card { bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%;
+      transform: translateX(-50%); text-align: center; z-index: 12; }
+    #pick-label { font-weight: 700; margin-bottom: 4px; }
 
     #settings { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 10; }
     #settings-menu { position: absolute; bottom: 48px; left: 0; background: var(--bg);
@@ -137,6 +140,15 @@
     <div class="row" style="justify-content: center">
       <button id="btn-finish" class="primary">結束</button>
       <button id="btn-arrive-back">上一步</button>
+    </div>
+  </div>
+
+  <div id="pick-card" class="card" hidden>
+    <div id="pick-label"></div>
+    <div class="row" style="justify-content: center">
+      <button id="btn-pick-start">設為起點</button>
+      <button id="btn-pick-end" class="primary">設為終點</button>
+      <button id="btn-pick-cancel" aria-label="取消選點">✕</button>
     </div>
   </div>
 

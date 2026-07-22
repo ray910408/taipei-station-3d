@@ -8,6 +8,7 @@ export interface UIHandles {
   setNavInfo(next: string, remain: string, progress: string): void;
   setTransition(label: string | null): void;
   showArrive(on: boolean): void;
+  showPickCard(lm: Landmark | null): void;
 }
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
@@ -84,6 +85,7 @@ export function setupUI(opts: {
   onRecenter(): void;
   onExitNav(): void;
   onFloorFocus(id: string | null): void;
+  onPickDismiss(): void;
 }): UIHandles {
   const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
   const searchbar = $('#searchbar');
@@ -159,10 +161,10 @@ export function setupUI(opts: {
   }
 
   // 兩段式搜尋（盤問 Q6）：先終點、後起點，齊了自動算路線
+  const labelById = new Map(opts.landmarks.map((l) => [l.id, l.label]));
   let startId: string | null = null;
   let endId: string | null = null;
-  const labelOf = (id: string | null): string =>
-    opts.landmarks.find((l) => l.id === id)?.label ?? '';
+  const labelOf = (id: string | null): string => (id && labelById.get(id)) || '';
   const tryRoute = (): void => {
     if (startId && endId) opts.onRoute(startId, endId, accToggle.checked);
   };
@@ -173,7 +175,7 @@ export function setupUI(opts: {
     btnStartNav.disabled = true;
     opts.onRouteInvalid();
   };
-  attachSearch(endInput, $<HTMLUListElement>('#end-results'), opts.landmarks, (lm) => {
+  const applyEnd = (lm: Landmark): void => {
     endId = lm.id;
     endInput.value = lm.label;
     routeDest.textContent = `終點：${lm.label}（${lm.floorLabel}）`;
@@ -181,7 +183,8 @@ export function setupUI(opts: {
     routeCard.hidden = false;
     if (!startId) startInput.focus();
     else tryRoute();
-  }, () => {
+  };
+  attachSearch(endInput, $<HTMLUListElement>('#end-results'), opts.landmarks, applyEnd, () => {
     endId = null;
     routeDest.textContent = '';
     invalidateRoute();
@@ -202,6 +205,33 @@ export function setupUI(opts: {
     routeDest.textContent = endId ? `終點：${labelOf(endId)}` : '';
     tryRoute();
   });
+
+  // 3D 選點確認小卡：設起點＝預填等終點；設終點＝走 applyEnd 既有流程
+  const pickCard = $('#pick-card');
+  const pickLabel = $('#pick-label');
+  let pickedLm: Landmark | null = null;
+  function showPickCard(lm: Landmark | null): void {
+    pickedLm = lm;
+    pickCard.hidden = lm === null;
+    if (lm) pickLabel.textContent = `${lm.label}（${lm.floorLabel}）`;
+  }
+  $('#btn-pick-start').addEventListener('click', () => {
+    if (pickedLm) {
+      labelById.set(pickedLm.id, pickedLm.label);
+      startId = pickedLm.id;
+      startInput.value = pickedLm.label;
+      if (endId) tryRoute();
+    }
+    opts.onPickDismiss();
+  });
+  $('#btn-pick-end').addEventListener('click', () => {
+    if (pickedLm) {
+      labelById.set(pickedLm.id, pickedLm.label);
+      applyEnd(pickedLm);
+    }
+    opts.onPickDismiss();
+  });
+  $('#btn-pick-cancel').addEventListener('click', () => opts.onPickDismiss());
 
   const resetEndpoints = (): void => {
     startId = null;
@@ -257,5 +287,5 @@ export function setupUI(opts: {
     else if (document.body.dataset.mode === 'nav') navBanner.hidden = false; // overview 收尾時不得誤開
   }
 
-  return { setMode, setPreview, setNavInfo, setTransition, showArrive };
+  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard };
 }

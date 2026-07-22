@@ -56,6 +56,8 @@ export const THEME = {
     pinStart: '#188038', pinEnd: '#d93025', marker: '#1a73e8',
   },
   emphasis: { dim: 0.15 },
+  // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 藍）
+  selection: { tapThresholdPx: 6, pin: '#9334e6' },
   poi: {
     tile: '#1f2023', fg: '#ffffff',
     gate: '#1a73e8', gateBg: '#ffffff',

@@ -13,12 +13,13 @@ import {
   listLandmarks, sameEndpointMessage, routeFloors,
 } from './nav';
 import type { GraphEdge } from './nav';
-import { buildRouteObject, tickRouteArrows } from './path';
+import { buildRouteObject, tickRouteArrows, makePin } from './path';
 import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, type Tween, type FloorSwap } from './navview';
 import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
+import { resolveFloor, snapToNode, toLandmark } from './selection';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
@@ -185,6 +186,7 @@ async function boot(): Promise<void> {
   let markerTween: Tween | null = null;
   let floorSwap: FloorSwap | null = null;
   let lastNavFloor: string | null = null;
+  let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -211,6 +213,7 @@ async function boot(): Promise<void> {
     stationGroup.add(connObj);
     refreshRoute();
     if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
+    if (pickNodeId) placePickPin();
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
   }
 
@@ -249,6 +252,7 @@ async function boot(): Promise<void> {
 
   function setMode(m: Mode): void {
     mode = m;
+    clearPick(); // 模式切換一律收 pin 與小卡
     setShellVisible(stationGroup, m !== 'nav'); // 效能：nav 隱外殼（dim 後不可見卻整面渲染）
     const wantShadow = m !== 'nav'; // 效能：低視角 nav 影子存在感極低、PCFSoft 採樣昂貴
     if (renderer.shadowMap.enabled !== wantShadow) {
@@ -361,12 +365,55 @@ async function boot(): Promise<void> {
     },
     onExitNav: () => setMode('overview'),
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
+    onPickDismiss: () => clearPick(),
   });
 
+  // 3D 選點（Phase 4）：tap（位移 < 閾值、單指）→ raycast slab → snap 最近節點 → pin＋確認小卡
+  const slabs: THREE.Mesh[] = [];
+  stationGroup.traverse((o) => {
+    if ((o as THREE.Mesh).userData?.kind === 'slab') slabs.push(o as THREE.Mesh);
+  });
+  const raycaster = new THREE.Raycaster();
+  const pickPin = makePin(THEME.selection.pin);
+  function placePickPin(): void {
+    pickPin.position.copy(nodeWorld(pickNodeId!));
+    pickPin.position.y += 1.2; // 與 route pin 同高（浮在樓面上方）
+  }
+  function clearPick(): void {
+    scene.remove(pickPin);
+    pickNodeId = null;
+    ui.showPickCard(null);
+  }
+  let tapStart: { x: number; y: number; id: number } | null = null;
+  let tapVoid = false;
   // 使用者拖曳＝接管鏡頭（任何模式）；nav 中另暫停自動跟隨
-  renderer.domElement.addEventListener('pointerdown', () => {
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
     rig.cancel();
     if (mode === 'nav') chaseAuto = false;
+    if (tapStart !== null) { tapVoid = true; return; } // 第二指（DOLLY_ROTATE）→ 本次點擊作廢
+    tapStart = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
+    tapVoid = false;
+  });
+  renderer.domElement.addEventListener('pointercancel', () => { tapVoid = true; tapStart = null; });
+  renderer.domElement.addEventListener('pointerup', (ev) => {
+    const start = tapStart;
+    tapStart = null;
+    if (tapVoid || !start || ev.pointerId !== start.id || mode === 'nav') return;
+    if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > THEME.selection.tapThresholdPx) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    raycaster.setFromCamera(new THREE.Vector2(
+      ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+      -((ev.clientY - rect.top) / rect.height) * 2 + 1,
+    ), camera);
+    const hit = raycaster.intersectObjects(slabs, false)[0];
+    const floorId = hit ? resolveFloor(hit.object) : null;
+    // xy 免逆算爆炸位移：explode 只動 group.position.y，world x/z 不受影響
+    const node = floorId ? snapToNode(graph, floorId, [hit.point.x, -hit.point.z]) : null;
+    if (!node) { clearPick(); return; }
+    pickNodeId = node.id;
+    placePickPin();
+    scene.add(pickPin);
+    ui.showPickCard(toLandmark(model, node));
   });
 
   setMode('overview'); // boot：實高 → 爆炸圖展開動畫

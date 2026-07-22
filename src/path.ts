@@ -34,6 +34,19 @@ export function tickRouteArrows(nowMs: number): void {
   if (arrowTex) arrowTex.offset.x = -(((nowMs / 1000) * THEME.route.arrowSpeed) % 1);
 }
 
+/** 水滴 pin：球頭＋倒錐尾（Google 風）。route 起訖與 3D 選點共用。 */
+export function makePin(color: string): THREE.Group {
+  const g = new THREE.Group();
+  const m = new THREE.MeshBasicMaterial({ color, toneMapped: false });
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.62, 1.8, 20), m);
+  tail.rotation.x = Math.PI;
+  tail.position.y = 0.9;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.95, 20, 16), m);
+  head.position.y = 2.2;
+  g.add(tail, head);
+  return g;
+}
+
 export function buildRouteObject(
   graph: NavGraph,
   edges: GraphEdge[],
@@ -86,14 +99,7 @@ export function buildRouteObject(
 
   // 水滴 pin：球頭＋倒錐尾（Google 風）；帶樓層標記供 nav 開關
   const pin = (p: THREE.Vector3, color: string, floor: string): THREE.Group => {
-    const g = new THREE.Group();
-    const m = new THREE.MeshBasicMaterial({ color, toneMapped: false });
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.62, 1.8, 20), m);
-    tail.rotation.x = Math.PI;
-    tail.position.y = 0.9;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.95, 20, 16), m);
-    head.position.y = 2.2;
-    g.add(tail, head);
+    const g = makePin(color);
     g.position.copy(p);
     g.userData.floor = floor;
     return g;
