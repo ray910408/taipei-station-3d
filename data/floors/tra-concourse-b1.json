@@ -211,6 +211,30 @@
       "source": "tra-b1-map",
       "confidence": 2,
       "note": "示範集：錨定 n-tc-005 寬閘門外"
+    },
+    {
+      "id": "p-tc-toilet-1",
+      "kind": "toilet",
+      "system": "tra",
+      "position": [97, 32],
+      "name": {
+        "zh": "廁所"
+      },
+      "source": "tra-b1-map",
+      "confidence": 1,
+      "note": "公開資料推定：東側非付費區廁所（Phase 7 BUG-004，未經底圖描迹）"
+    },
+    {
+      "id": "p-tc-exit-1",
+      "kind": "exit",
+      "system": "tra",
+      "position": [130, 49],
+      "name": {
+        "zh": "出口"
+      },
+      "source": "tra-b1-map",
+      "confidence": 1,
+      "note": "公開資料推定：東翼通廊往中山地下街出入口方向（Phase 7 BUG-004）"
     }
   ],
   "nav": {
@@ -271,6 +295,22 @@
         "name": {
           "zh": "B1 付費島 第3月台梯口"
         }
+      },
+      {
+        "id": "n-tc-009",
+        "xy": [97, 30],
+        "area": "a-tc-unpaid-e",
+        "name": {
+          "zh": "B1 廁所（東側非付費區）"
+        }
+      },
+      {
+        "id": "n-tc-010",
+        "xy": [130, 47],
+        "area": "a-tc-corridor",
+        "name": {
+          "zh": "B1 出口（往中山地下街）"
+        }
       }
     ],
     "edges": [
@@ -328,6 +368,16 @@
       {
         "from": "n-tc-003",
         "to": "n-tc-008",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-005",
+        "to": "n-tc-009",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-004",
+        "to": "n-tc-010",
         "kind": "walk"
       }
     ]

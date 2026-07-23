@@ -307,6 +307,30 @@
       "source": "trtc-info-b3",
       "confidence": 2,
       "note": "示範集：錨定 n-rc-005 臺鐵轉乘閘門外"
+    },
+    {
+      "id": "p-rc-toilet-1",
+      "kind": "toilet",
+      "system": "trtc",
+      "position": [108, 33],
+      "name": {
+        "zh": "廁所"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 1,
+      "note": "北捷官方無障礙設施資料：非付費區(B3)近詢問處（Phase 7 BUG-004）"
+    },
+    {
+      "id": "p-rc-exit-1",
+      "kind": "exit",
+      "system": "trtc",
+      "position": [87.9, -91],
+      "name": {
+        "zh": "出口"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 1,
+      "note": "公開資料推定：南側出口帶往忠孝西路/板南線（Phase 7 BUG-004）"
     }
   ],
   "nav": {
@@ -421,7 +445,10 @@
       {
         "id": "n-rc-016",
         "xy": [87.9, -89],
-        "area": "a-rc-unpaid-s"
+        "area": "a-rc-unpaid-s",
+        "name": {
+          "zh": "B3 出口（往忠孝西路/板南線）"
+        }
       },
       {
         "id": "n-rc-017",
@@ -437,6 +464,14 @@
         "area": "a-rc-tra-paid",
         "name": {
           "zh": "B3 臺鐵轉乘區 第3月台梯口"
+        }
+      },
+      {
+        "id": "n-rc-019",
+        "xy": [109, 31],
+        "area": "a-rc-unpaid-n",
+        "name": {
+          "zh": "B3 廁所（大廳非付費區）"
         }
       }
     ],
@@ -575,6 +610,11 @@
       {
         "from": "n-rc-017",
         "to": "n-rc-018",
+        "kind": "walk"
+      },
+      {
+        "from": "n-rc-004",
+        "to": "n-rc-019",
         "kind": "walk"
       }
     ]
