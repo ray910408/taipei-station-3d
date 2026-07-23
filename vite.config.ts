@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
+import { configDefaults } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { applySave } from './tools/save-handler.mjs';
@@ -44,5 +45,9 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  test: { environment: 'node' },
+  test: {
+    environment: 'node',
+    // 排除 .claude/**：git worktree 的 tests/ 會被 vitest 掃進來灌水測試數（含本 session worktree）
+    exclude: [...configDefaults.exclude, '**/.claude/**'],
+  },
 }));

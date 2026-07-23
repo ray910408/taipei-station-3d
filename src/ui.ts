@@ -15,11 +15,30 @@ export interface UIHandles {
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
 
+/** 臺⇄台 折疊：比對前兩側正規化（BUG-002）。 */
+const fold = (s: string): string => s.replaceAll('臺', '台');
+
+// 常用別名（BUG-003）：query 整詞命中 key 時擴展比對詞。ponytail: 起手表，缺了再補
+const ALIASES: Record<string, string[]> = {
+  捷運: ['淡水信義線', '板南線'],
+  手扶梯: ['電扶梯'],
+  紅線: ['淡水信義線'],
+  藍線: ['板南線'],
+  板南: ['板南線'],
+  洗手間: ['廁所'],
+  化妝室: ['廁所'],
+  toilet: ['廁所'],
+};
+
 /** 依 query 過濾後、按樓層（floorLabel，保原始順序）分組——下拉全列不截斷（B4 修復）。 */
 export function groupLandmarks(landmarks: Landmark[], query: string): LandmarkGroup[] {
-  const q = query.trim();
+  const q = fold(query.trim());
+  const terms = [q, ...(ALIASES[q] ?? []).map(fold)];
   const matched = q
-    ? landmarks.filter((l) => (l.label + l.floorLabel).includes(q))
+    ? landmarks.filter((l) => {
+        const hay = fold(l.label + l.floorLabel);
+        return terms.some((t) => hay.includes(t));
+      })
     : landmarks;
   const groups: LandmarkGroup[] = [];
   for (const lm of matched) {
@@ -70,6 +89,11 @@ function attachSearch(
   };
   input.addEventListener('focus', () => render(input.value.trim()));
   input.addEventListener('input', () => { onEdit?.(); render(input.value.trim()); });
+  input.addEventListener('keydown', (ev) => {
+    if (ev.isComposing || ev.keyCode === 229) return; // IME 組字確認不觸發選取（M-1）
+    if (ev.key !== 'Enter' || list.hidden) return;
+    list.querySelector<HTMLButtonElement>('li button')?.click(); // 第一筆（BUG-005）
+  });
   input.addEventListener('blur', () => setTimeout(() => {
     if (!list.contains(document.activeElement)) list.hidden = true;
   }, 120));
@@ -91,6 +115,8 @@ export function setupUI(opts: {
   pdrAvailable: boolean;
   onPdrToggle(on: boolean): Promise<boolean>;
   onVoiceToggle(on: boolean): void;
+  stepLength: number;
+  onStepLength(len: number): void;
 }): UIHandles {
   const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
   const searchbar = $('#searchbar');
@@ -252,6 +278,17 @@ export function setupUI(opts: {
   function setPdrToggle(on: boolean): void {
     pdrToggle.checked = on;
   }
+
+  // 步長校正 slider：即時顯示數值、變更立即回寫（Phase 7）
+  const stepSlider = $<HTMLInputElement>('#step-slider');
+  const stepValue = $('#step-value');
+  stepSlider.value = String(opts.stepLength);
+  stepValue.textContent = opts.stepLength.toFixed(2);
+  stepSlider.addEventListener('input', () => {
+    const len = Number(stepSlider.value);
+    stepValue.textContent = len.toFixed(2);
+    opts.onStepLength(len);
+  });
 
   $<HTMLInputElement>('#voice-toggle').addEventListener('change', (ev) => {
     opts.onVoiceToggle((ev.target as HTMLInputElement).checked);

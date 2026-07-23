@@ -52,7 +52,20 @@
 
     #transition-banner { display: inline-block; margin: 8px auto 0; background: var(--primary);
       color: #fff; font-size: 16px; font-weight: 700; padding: 8px 16px; border-radius: 999px; }
-    #pdr-hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    #pdr-hint { background: #b06000; color: #fff; font-size: 15px; font-weight: 700;
+      padding: 8px 12px; border-radius: 8px; margin-top: 6px; }
+    body.high-contrast #pdr-hint { background: #ffd60a; color: #000; }
+    /* PDR 暫停時引導視線至「我到了」（ISSUE-002）——hint 顯示才 pulse */
+    #nav-banner:has(#pdr-hint:not([hidden])) #btn-advance {
+      animation: pdr-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pdr-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 #1a73e880; }
+      50% { box-shadow: 0 0 0 10px #1a73e800; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #nav-banner:has(#pdr-hint:not([hidden])) #btn-advance { animation: none; }
+    }
 
     #arrive-card { top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center;
       font-size: 18px; font-weight: 700; }
@@ -65,6 +78,8 @@
     #settings-menu { position: absolute; bottom: 48px; left: 0; background: var(--bg);
       border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 190px; }
     #settings-menu button { display: block; width: 100%; margin: 4px 0; }
+    #step-row { display: block; font-size: 13px; margin: 8px 0 2px; }
+    #step-slider { width: 100%; margin-top: 4px; }
     #geom-mode { color: var(--muted); font-size: 12px; margin-top: 6px; }
     #geom-mode a { color: var(--primary); }
     #a11y-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
@@ -91,9 +106,12 @@
       .results button { min-height: 44px; }
       #route-card, #nav-banner { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
     }
-    @media (max-height: 420px) {
-      /* 極小視窗：preview/nav 的 bottom sheet 會壓到設定鈕——非 overview 隱藏設定角 */
-      body[data-mode="preview"] #settings, body[data-mode="nav"] #settings { display: none; }
+    /* preview/nav：bottom sheet 會壓到左下設定鈕（BUG-001）——移右上；此時 searchbar/樓層鈕皆隱藏 */
+    body[data-mode="preview"] #settings, body[data-mode="nav"] #settings {
+      left: auto; bottom: auto; right: 12px; top: 12px;
+    }
+    body[data-mode="preview"] #settings-menu, body[data-mode="nav"] #settings-menu {
+      bottom: auto; top: 48px; left: auto; right: 0;
     }
   </style>
 </head>
@@ -161,6 +179,9 @@
     <div id="settings-menu" hidden>
       <button id="btn-bigtext" aria-pressed="false">大字</button>
       <button id="btn-contrast" aria-pressed="false">高對比</button>
+      <label id="step-row">步長 <span id="step-value"></span> 公尺
+        <input id="step-slider" type="range" min="0.4" max="1" step="0.05" aria-label="步長（公尺）" />
+      </label>
       <div id="geom-mode"></div>
       <div id="a11y-note">大字／高對比僅作用於介面卡片，暫不影響 3D 地圖</div>
     </div>

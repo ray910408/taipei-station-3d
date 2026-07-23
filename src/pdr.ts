@@ -64,3 +64,8 @@ export function walkStep(
   if (isConnector(edges[idx])) return { w: { edgeDist: 0 }, advances, paused: true };
   return { w: { edgeDist: dist }, advances, paused: false };
 }
+
+/** 一次步伐跨越的節點 id 序列（依序）：fromIndex 為步伐前的 index。 */
+export function crossedNodeIds(nodeIds: string[], fromIndex: number, advances: number): string[] {
+  return nodeIds.slice(fromIndex + 1, fromIndex + 1 + advances);
+}

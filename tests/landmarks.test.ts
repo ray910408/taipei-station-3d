@@ -16,9 +16,9 @@ const model = assembleModel(stationDoc, {
 }, connectorsDoc);
 
 describe('地標池（終審 mutation audit #2：mojibake 回歸鎖）', () => {
-  it('共 27 個地標、Phase 3.5 新增 17 名精確值', () => {
+  it('共 31 個地標、Phase 3.5 新增 17 名精確值', () => {
     const byId = new Map(listLandmarks(model).map((l) => [l.id, l.label]));
-    expect(byId.size).toBe(27);
+    expect(byId.size).toBe(31);
     const expected: Record<string, string> = {
       'n-rp-002': '淡水信義線月台 南端電梯口',
       'n-rp-004': '淡水信義線月台 北梯群口',

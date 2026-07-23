@@ -216,14 +216,6 @@ export function validateDocs(docs) {
     if (c.kind !== 'elevator' && c.accessible) warnings.push(`[sem] ${c.id} ${c.kind} 通常 accessible:false`);
   }
 
-  // demo 節點存在性
-  if (station.demo) {
-    for (const key of ['start', 'end']) {
-      if (!nodeFloor.has(station.demo[key]))
-        errors.push(`[ref] station.demo.${key} "${station.demo[key]}" 不存在`);
-    }
-  }
-
   return { errors, warnings };
 }
 

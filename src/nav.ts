@@ -242,6 +242,13 @@ export function routeStats(edges: GraphEdge[]): RouteStats {
   return { meters, seconds };
 }
 
+/** 首邊已走 edgeDist 公尺時的剩餘統計——PDR 每步倒扣（夾限於首邊長，不為負）。 */
+export function partialRemaining(edges: GraphEdge[], edgeDist: number): RouteStats {
+  const s = routeStats(edges);
+  const d = Math.min(Math.max(edgeDist, 0), edges[0]?.length ?? 0);
+  return { meters: s.meters - d, seconds: s.seconds - d / WALK_SPEED };
+}
+
 export function formatStats(s: RouteStats): string {
   return `約 ${Math.max(1, Math.round(s.meters))} 公尺・約 ${Math.max(1, Math.ceil(s.seconds / 60))} 分鐘`;
 }

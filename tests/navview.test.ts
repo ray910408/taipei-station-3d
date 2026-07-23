@@ -1,7 +1,38 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible } from '../src/navview';
+import {
+  makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
+} from '../src/navview';
 import { THEME } from '../src/theme';
+
+const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+const R = (x: number, y: number, z: number) => ({ pos: v(x, y, z), residual: true });
+const N = (x: number, y: number, z: number) => ({ pos: v(x, y, z), residual: false });
+
+describe('planStepPath 每步路徑規劃（終審 I-1，typed waypoint）', () => {
+  it('同邊、無既有路徑 → 只有殘距點', () => {
+    expect(planStepPath([], [], R(1, 0, 0))).toEqual([R(1, 0, 0)]);
+  });
+  it('同邊、殘距尾端 → 替換最後目標，保留前段（stale queue 修復）', () => {
+    expect(planStepPath([N(1, 0, 0), R(1, 0, 0.5)], [], R(1, 0, 1.2)))
+      .toEqual([N(1, 0, 0), R(1, 0, 1.2)]);
+  });
+  it('同邊、節點尾端 → 附加不替換（round 3 轉角反例）', () => {
+    expect(planStepPath([R(0.8, 0, 0), N(1, 0, 0)], [], R(1, 0, 0.7)))
+      .toEqual([R(0.8, 0, 0), N(1, 0, 0), R(1, 0, 0.7)]);
+  });
+  it('手動推進後的單節點尾端 → 附加不替換（round 4 失配交錯，型別隨資料走後直接成立）', () => {
+    expect(planStepPath([N(1, 0, 0)], [], R(1, 0, 0.7)))
+      .toEqual([N(1, 0, 0), R(1, 0, 0.7)]);
+  });
+  it('跨節點 → 舊目標全保留＋新節點（型別=節點）＋殘距點', () => {
+    expect(planStepPath([R(0.8, 0, 0)], [v(1, 0, 0), v(1, 0, 2)], R(1, 0.5, 2)))
+      .toEqual([R(0.8, 0, 0), N(1, 0, 0), N(1, 0, 2), R(1, 0.5, 2)]);
+  });
+  it('final 與最後節點重合 → 去重', () => {
+    expect(planStepPath([], [v(1, 0, 0)], N(1, 0, 0))).toEqual([N(1, 0, 0)]);
+  });
+});
 
 describe('marker tween（等速滑行）', () => {
   it('時長 = 距離/速度，夾在 [segMinMs, segMaxMs]', () => {

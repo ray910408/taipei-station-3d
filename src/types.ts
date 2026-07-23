@@ -51,7 +51,6 @@ export interface StationDoc {
   frame: { units: 'm'; origin_note: string; axis_note: string; bearing_deg?: number; bearing_status?: string };
   systems: Record<string, { name: LocalizedName; color: string }>;
   floors: FloorMeta[];
-  demo?: { start: string; end: string };
 }
 
 export interface ConnectorLevel { floor: string; node: string }
