@@ -93,9 +93,12 @@
       .results button { min-height: 44px; }
       #route-card, #nav-banner { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
     }
-    @media (max-height: 420px) {
-      /* 極小視窗：preview/nav 的 bottom sheet 會壓到設定鈕——非 overview 隱藏設定角 */
-      body[data-mode="preview"] #settings, body[data-mode="nav"] #settings { display: none; }
+    /* preview/nav：bottom sheet 會壓到左下設定鈕（BUG-001）——移右上；此時 searchbar/樓層鈕皆隱藏 */
+    body[data-mode="preview"] #settings, body[data-mode="nav"] #settings {
+      left: auto; bottom: auto; right: 12px; top: 12px;
+    }
+    body[data-mode="preview"] #settings-menu, body[data-mode="nav"] #settings-menu {
+      bottom: auto; top: 48px; left: auto; right: 0;
     }
   </style>
 </head>
