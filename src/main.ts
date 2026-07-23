@@ -194,6 +194,7 @@ async function boot(): Promise<void> {
   let chaseAuto = true;
   let markerTween: Tween | null = null;
   let markerQueue: THREE.Vector3[] = []; // 多段路徑：作用中 tween 完成後依序接走
+  let pathTailResidual = false; // planStepPath 尾端型別：上輪 final 為殘距點(true)或節點(false)
   let floorSwap: FloorSwap | null = null;
   let lastNavFloor: string | null = null;
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
@@ -401,10 +402,11 @@ async function boot(): Promise<void> {
     // paused 但 advances>0＝跨完 walk 邊踩到 connector——該步仍需沿節點重建路徑（I-1 round 2b）
     if ((!r.paused || r.advances > 0) && fromPos && marker && !REDUCED_MOTION) {
       const crossed = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
-      const pts = planStepPath(pendingOld, crossed, markerWorldPos());
+      const pts = planStepPath(pendingOld, crossed, markerWorldPos(), pathTailResidual);
       markerTween = makeTween(fromPos, pts[0], performance.now());
       markerQueue = pts.slice(1);
       marker.position.copy(fromPos);
+      pathTailResidual = pdrWalk.edgeDist > 0;
     }
     updatePdrHint();
   }

@@ -5,14 +5,16 @@ import { THEME } from './theme';
 export interface Tween { from: THREE.Vector3; to: THREE.Vector3; t0: number; ms: number }
 
 /** PDR 每步視覺路徑規劃：回傳新的目標序列（不含起點）。
- *  pending＝尚未走到的既有目標（作用中 tween 終點＋佇列）；crossed＝本步跨越節點座標（可空）；
- *  final＝本步結束的殘距點。同邊步伐（crossed 空）替換最後一個 pending 目標——舊殘距點被更遠的
- *  取代（同邊單調），避免 stale queue 與佇列無限增長；跨節點步伐保留全部 pending（舊轉角不切）。 */
+ *  pending＝尚未走到的既有目標；crossed＝本步跨越節點座標（可空）；final＝本步結束點；
+ *  tailResidual＝pending 尾端是否為殘距點（上輪 final 時 edgeDist>0）。同邊步伐僅在殘距尾端時
+ *  替換（同邊單調、防佇列增長）；節點尾端必保留（轉角不可刪——round 3 反例）。 */
 export function planStepPath(
-  pending: THREE.Vector3[], crossed: THREE.Vector3[], final: THREE.Vector3,
+  pending: THREE.Vector3[], crossed: THREE.Vector3[], final: THREE.Vector3, tailResidual: boolean,
 ): THREE.Vector3[] {
-  if (crossed.length === 0)
-    return pending.length > 0 ? [...pending.slice(0, -1), final] : [final];
+  if (crossed.length === 0) {
+    if (pending.length === 0) return [final];
+    return tailResidual ? [...pending.slice(0, -1), final] : [...pending, final];
+  }
   const pts = [...pending, ...crossed];
   if (pts[pts.length - 1].distanceTo(final) > 1e-6) pts.push(final);
   return pts;
