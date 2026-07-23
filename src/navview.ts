@@ -4,19 +4,23 @@ import { THEME } from './theme';
 /** marker 等速滑行（盤問 Q5）：時長 = 距離/速度，夾在 [segMinMs, segMaxMs]。 */
 export interface Tween { from: THREE.Vector3; to: THREE.Vector3; t0: number; ms: number }
 
-/** PDR 每步視覺路徑規劃：回傳新的目標序列（不含起點）。
- *  pending＝尚未走到的既有目標；crossed＝本步跨越節點座標（可空）；final＝本步結束點；
- *  tailResidual＝pending 尾端是否為殘距點（上輪 final 時 edgeDist>0）。同邊步伐僅在殘距尾端時
- *  替換（同邊單調、防佇列增長）；節點尾端必保留（轉角不可刪——round 3 反例）。 */
+/** 路徑目標點：殘距點（residual=true）可被同邊更遠目標替換；節點必須保留。 */
+export interface PathTarget { pos: THREE.Vector3; residual: boolean }
+
+/** PDR 每步視覺路徑規劃：回傳新的目標序列（不含起點）。pending＝尚未走到的既有目標（含作用中
+ *  tween 目標）；crossed＝本步跨越節點；final＝本步結束點。同邊步伐僅替換殘距尾端（同邊單調、
+ *  防佇列增長）；節點尾端必保留（轉角不可刪）。型別隨資料走——無平行旗標可失配。 */
 export function planStepPath(
-  pending: THREE.Vector3[], crossed: THREE.Vector3[], final: THREE.Vector3, tailResidual: boolean,
-): THREE.Vector3[] {
+  pending: PathTarget[], crossed: THREE.Vector3[], final: PathTarget,
+): PathTarget[] {
   if (crossed.length === 0) {
     if (pending.length === 0) return [final];
-    return tailResidual ? [...pending.slice(0, -1), final] : [...pending, final];
+    return pending[pending.length - 1].residual
+      ? [...pending.slice(0, -1), final]
+      : [...pending, final];
   }
-  const pts = [...pending, ...crossed];
-  if (pts[pts.length - 1].distanceTo(final) > 1e-6) pts.push(final);
+  const pts = [...pending, ...crossed.map((pos) => ({ pos, residual: false }))];
+  if (pts[pts.length - 1].pos.distanceTo(final.pos) > 1e-6) pts.push(final);
   return pts;
 }
 

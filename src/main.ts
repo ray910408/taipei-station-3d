@@ -16,7 +16,7 @@ import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows, makePin } from './path';
 import {
   makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
-  type Tween, type FloorSwap,
+  type Tween, type FloorSwap, type PathTarget,
 } from './navview';
 import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
@@ -193,8 +193,9 @@ async function boot(): Promise<void> {
   let routeObj: THREE.Object3D | null = null;
   let chaseAuto = true;
   let markerTween: Tween | null = null;
-  let markerQueue: THREE.Vector3[] = []; // 多段路徑：作用中 tween 完成後依序接走
-  let pathTailResidual = false; // planStepPath 尾端型別：上輪 final 為殘距點(true)或節點(false)
+  // 尚未抵達的路徑目標（[0]=作用中 tween 目標）；不變量：markerTween!==null ⟺ markerPath 非空，
+  // 且 markerTween.to 恆等於 markerPath[0].pos。
+  let markerPath: PathTarget[] = [];
   let floorSwap: FloorSwap | null = null;
   let lastNavFloor: string | null = null;
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
@@ -266,7 +267,7 @@ async function boot(): Promise<void> {
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
     followState = null;
     markerTween = null;
-    markerQueue = [];
+    markerPath = [];
     if (floorSwap) {
       for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
         const g = stationGroup.getObjectByName(id);
@@ -362,7 +363,7 @@ async function boot(): Promise<void> {
   /** 單次節點推進的完整體感（tween＋相機＋抵達）：手動按鈕與 PDR 步進的共同入口。 */
   function advanceOnce(): void {
     if (!followState || !marker) return;
-    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; markerQueue = []; }
+    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; markerPath = []; }
     const fromPos = marker.position.clone();
     followState = advance(followState);
     chaseAuto = true;
@@ -372,6 +373,7 @@ async function boot(): Promise<void> {
       if (atEnd(followState)) arriveGoal();
       return;
     }
+    markerPath = [{ pos: marker.position.clone(), residual: false }]; // 手動推進目標=節點
     markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
     marker.position.copy(fromPos);
   }
@@ -391,7 +393,7 @@ async function boot(): Promise<void> {
     if (mode !== 'nav' || !followState || !routeEdges || atEnd(followState)) return;
     const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
     const fromPos = marker ? marker.position.clone() : null;
-    const pendingOld = markerTween ? [markerTween.to.clone(), ...markerQueue] : [...markerQueue];
+    const pendingOld = markerPath.map((t) => ({ pos: t.pos.clone(), residual: t.residual }));
     const fromIndex = followState.index;
     pdrWalk = r.w;
     if (r.advances > 0) {
@@ -402,11 +404,10 @@ async function boot(): Promise<void> {
     // paused 但 advances>0＝跨完 walk 邊踩到 connector——該步仍需沿節點重建路徑（I-1 round 2b）
     if ((!r.paused || r.advances > 0) && fromPos && marker && !REDUCED_MOTION) {
       const crossed = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
-      const pts = planStepPath(pendingOld, crossed, markerWorldPos(), pathTailResidual);
-      markerTween = makeTween(fromPos, pts[0], performance.now());
-      markerQueue = pts.slice(1);
+      const pts = planStepPath(pendingOld, crossed, { pos: markerWorldPos(), residual: pdrWalk.edgeDist > 0 });
+      markerPath = pts;
+      markerTween = makeTween(fromPos, pts[0].pos, performance.now());
       marker.position.copy(fromPos);
-      pathTailResidual = pdrWalk.edgeDist > 0;
     }
     updatePdrHint();
   }
@@ -447,7 +448,7 @@ async function boot(): Promise<void> {
     onBack: () => {
       if (followState) {
         markerTween = null;
-        markerQueue = [];
+        markerPath = [];
         followState = back(followState);
         pdrWalk = { edgeDist: 0 };
         refreshNav();
@@ -477,7 +478,7 @@ async function boot(): Promise<void> {
       stepState = initStepState();
       pdrWalk = { edgeDist: 0 };
       markerTween = null;
-      markerQueue = [];
+      markerPath = [];
       if (mode === 'nav' && followState) refreshNav(); // 重新對齊節點＝立即同步 marker 與剩餘（I-2）
       stopMotion = startMotion((t, mag) => {
         const r = stepSample(stepState, t, mag, pdrParams);
@@ -573,9 +574,9 @@ async function boot(): Promise<void> {
       const { pos, done } = tweenAt(markerTween, performance.now());
       marker.position.copy(pos);
       if (done) {
-        if (markerQueue.length > 0) {
-          markerTween = makeTween(marker.position.clone(), markerQueue[0], performance.now());
-          markerQueue = markerQueue.slice(1);
+        markerPath = markerPath.slice(1); // [0] 已抵達
+        if (markerPath.length > 0) {
+          markerTween = makeTween(marker.position.clone(), markerPath[0].pos, performance.now());
         } else {
           markerTween = null;
           if (mode === 'nav' && followState && atEnd(followState)) arriveGoal(); // P-6：滑行到站才後拉
