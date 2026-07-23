@@ -9,3 +9,4 @@ dist/
 public/models/
 .gstack/
 docs/superpowers
+.serena/
