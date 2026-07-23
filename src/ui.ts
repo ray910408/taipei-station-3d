@@ -55,6 +55,10 @@ export function displayLabel(label: string, floorLabel: string): string {
   return label.startsWith(`${code} `) ? label.slice(code.length + 1) : label;
 }
 
+/** 終點列文案：label＋樓層——applyEnd 與交換起訖共用單一來源（QA0723-5）。 */
+export const destText = (lm: Landmark | null): string =>
+  lm ? `終點：${lm.label}（${lm.floorLabel}）` : '';
+
 /** 搜尋欄＋過濾清單：focus/input 顯示符合項，pointerdown 選取（先於 blur）。 */
 function attachSearch(
   input: HTMLInputElement, list: HTMLUListElement,
@@ -193,10 +197,11 @@ export function setupUI(opts: {
   }
 
   // 兩段式搜尋（盤問 Q6）：先終點、後起點，齊了自動算路線
-  const labelById = new Map(opts.landmarks.map((l) => [l.id, l.label]));
+  const lmById = new Map(opts.landmarks.map((l) => [l.id, l]));
   let startId: string | null = null;
   let endId: string | null = null;
-  const labelOf = (id: string | null): string => (id && labelById.get(id)) || '';
+  const lmOf = (id: string | null): Landmark | null => (id && lmById.get(id)) || null;
+  const labelOf = (id: string | null): string => lmOf(id)?.label ?? '';
   const tryRoute = (): void => {
     if (startId && endId) opts.onRoute(startId, endId, accToggle.checked);
   };
@@ -210,7 +215,7 @@ export function setupUI(opts: {
   const applyEnd = (lm: Landmark): void => {
     endId = lm.id;
     endInput.value = lm.label;
-    routeDest.textContent = `終點：${lm.label}（${lm.floorLabel}）`;
+    routeDest.textContent = destText(lm);
     searchbar.hidden = true;
     routeCard.hidden = false;
     if (!startId) startInput.focus();
@@ -234,7 +239,7 @@ export function setupUI(opts: {
     [startId, endId] = [endId, startId];
     startInput.value = labelOf(startId);
     endInput.value = labelOf(endId);
-    routeDest.textContent = endId ? `終點：${labelOf(endId)}` : '';
+    routeDest.textContent = destText(lmOf(endId)); // 與 applyEnd 同源——樓層資訊不掉（QA0723-5）
     tryRoute();
   });
 
@@ -249,7 +254,7 @@ export function setupUI(opts: {
   }
   $('#btn-pick-start').addEventListener('click', () => {
     if (pickedLm) {
-      labelById.set(pickedLm.id, pickedLm.label);
+      lmById.set(pickedLm.id, pickedLm);
       startId = pickedLm.id;
       startInput.value = pickedLm.label;
       if (endId) tryRoute();
@@ -258,7 +263,7 @@ export function setupUI(opts: {
   });
   $('#btn-pick-end').addEventListener('click', () => {
     if (pickedLm) {
-      labelById.set(pickedLm.id, pickedLm.label);
+      lmById.set(pickedLm.id, pickedLm);
       applyEnd(pickedLm);
     }
     opts.onPickDismiss();
