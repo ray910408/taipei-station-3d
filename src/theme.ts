@@ -55,10 +55,10 @@ export const THEME = {
   route: {
     color: '#1a73e8', radius: 0.9, linkRadius: 0.45,
     arrowInterval: 5, arrowSpeed: 0.5,
-    pinStart: '#188038', pinEnd: '#d93025', marker: '#1a73e8',
+    pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853',
   },
   emphasis: { dim: 0.15 },
-  // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 藍）
+  // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 綠）
   selection: { tapThresholdPx: 6, pin: '#a855f7' },
   poi: {
     tile: '#1f2023', fg: '#ffffff',
