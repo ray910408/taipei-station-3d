@@ -45,6 +45,18 @@ export function chaseAim(opts: {
   return opts.nextPos;
 }
 
+/** 垂直堆疊後第一個與 marker 有水平位移（>ε）的節點位置；全堆疊或空陣列回 null。
+ *  垂直設施上下節點近乎同 xz——出梯後第一個水平位移節點＝搭乘後的行進方向。 */
+export function aimPastVertical(
+  markerPos: THREE.Vector3, restPos: THREE.Vector3[],
+): THREE.Vector3 | null {
+  for (const p of restPos) {
+    const dx = p.x - markerPos.x, dz = p.z - markerPos.z;
+    if (dx * dx + dz * dz > 1e-4) return p;
+  }
+  return null;
+}
+
 /** 換層柔和過渡（風格關卡裁決版）：疊在 setFloorEmphasis 之後——
  *  from 層視覺 1→dim（factor 1/dim→1）、to 層視覺 dim→1（factor dim→1），線性。 */
 export interface FloorSwap { fromFloor: string; toFloor: string; t0: number }

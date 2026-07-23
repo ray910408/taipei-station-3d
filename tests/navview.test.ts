@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
-  makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
+  makeTween, tweenAt, chaseAim, aimPastVertical, swapFactors, applyFloorFade, setShellVisible,
+  planStepPath,
 } from '../src/navview';
 import { THEME } from '../src/theme';
 
@@ -102,6 +103,25 @@ describe('chaseAim（終審 I-1）', () => {
     expect(chaseAim({ tween: null, atEnd: true, vertical: false, nextPos: C })).toBeNull();
     expect(chaseAim({ tween: null, atEnd: false, vertical: true, nextPos: C })).toBeNull();
     expect(chaseAim({ tween: null, atEnd: false, vertical: false, nextPos: C })).toBe(C);
+  });
+});
+
+describe('aimPastVertical（垂直段瞄出梯方向；QA0723-1/4）', () => {
+  const M = v(0, 0, 0);
+  it('第一個節點就有水平位移 → 回傳它', () => {
+    const p = v(3, 0, 4);
+    expect(aimPastVertical(M, [p, v(5, 0, 5)])).toBe(p);
+  });
+  it('第一個垂直堆疊（同 xz、異 y）、第二個有位移 → 回傳第二個', () => {
+    const p = v(0, 8, 0.5);
+    expect(aimPastVertical(M, [v(0, 4, 0), p])).toBe(p);
+  });
+  it('全部垂直堆疊 → null；空陣列 → null', () => {
+    expect(aimPastVertical(M, [v(0, 4, 0), v(0, 8, 0)])).toBeNull();
+    expect(aimPastVertical(M, [])).toBeNull();
+  });
+  it('位移恰在 ε 邊界內（dx=0.005，dx²=2.5e-5≤1e-4）視為堆疊 → null', () => {
+    expect(aimPastVertical(M, [v(0.005, 2, 0)])).toBeNull();
   });
 });
 

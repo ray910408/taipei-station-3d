@@ -15,8 +15,8 @@ import {
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows, makePin } from './path';
 import {
-  makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
-  type Tween, type FloorSwap, type PathTarget,
+  makeTween, tweenAt, chaseAim, aimPastVertical, swapFactors, applyFloorFade, setShellVisible,
+  planStepPath, type Tween, type FloorSwap, type PathTarget,
 } from './navview';
 import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
@@ -594,12 +594,23 @@ async function boot(): Promise<void> {
     tickRouteArrows(performance.now());
     if (mode === 'nav' && followState && marker && chaseAuto && routeEdges) {
       const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
-      const aim = chaseAim({
+      let aim = chaseAim({
         tween: markerTween,
         atEnd: atEnd(followState),
         vertical: verticalStep(routeEdges, followState) !== null,
         nextPos: nodeWorld(nextId),
       });
+      if (!atEnd(followState)) {
+        // 垂直段前（aim=null）與搭乘 tween 中（aim 與 marker 垂直堆疊）都改瞄出梯方向：
+        // 入場即有 goal（修 QA0723-1/2）、搭乘中不再跳北（修 QA0723-4）。
+        // 每幀重算——入場當下爆炸圖仍在收合動畫，goal 需跟著 nodeWorld 收斂。
+        const dx0 = aim ? aim.x - marker.position.x : 0;
+        const dz0 = aim ? aim.z - marker.position.z : 0;
+        if (aim === null || dx0 * dx0 + dz0 * dz0 <= 1e-4) {
+          const rest = followState.nodeIds.slice(followState.index + 1).map((id) => nodeWorld(id));
+          aim = aimPastVertical(marker.position, rest) ?? nodeWorld(nextId); // 末線防呆：整段零位移仍給 goal
+        }
+      }
       if (aim) rig.goal = chaseGoal(marker.position, aim);
     }
     rig.tick();
