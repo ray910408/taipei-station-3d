@@ -9,7 +9,7 @@ import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
 import { THEME, applyUITheme } from './theme';
 import {
-  buildGraph, findPath, routeSteps, routeStats, formatStats,
+  buildGraph, findPath, routeSteps, routeStats, partialRemaining, formatStats,
   listLandmarks, sameEndpointMessage, routeFloors,
 } from './nav';
 import type { GraphEdge } from './nav';
@@ -221,6 +221,14 @@ async function boot(): Promise<void> {
   }
 
   let connObj: THREE.Object3D = stationGroup.getObjectByName('connectors')!;
+  /** marker 世界座標：邊上有 PDR 殘距時沿邊插值，否則所在節點（connector 邊 edgeDist 恆 0）。 */
+  function markerWorldPos(): THREE.Vector3 {
+    const pos = nodeWorld(currentNodeId(followState!));
+    const edge = routeEdges?.[followState!.index];
+    if (!edge || pdrWalk.edgeDist <= 0) return pos;
+    return pos.lerp(nodeWorld(edge.to), Math.min(pdrWalk.edgeDist / edge.length, 1));
+  }
+
   function refreshScene(): void {
     applyExplode(stationGroup, model, explodeFactor);
     // connectors 豎井/斜坡需隨層距拉伸——重建（幾何小、便宜；舊物件釋放 GPU 資源）
@@ -229,7 +237,7 @@ async function boot(): Promise<void> {
     connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
     stationGroup.add(connObj);
     refreshRoute();
-    if (marker && followState) marker.position.copy(nodeWorld(currentNodeId(followState)));
+    if (marker && followState) marker.position.copy(markerWorldPos());
     if (pickNodeId) placePickPin();
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
   }
@@ -312,7 +320,7 @@ async function boot(): Promise<void> {
 
   function refreshNav(): { next: string; arrived: boolean } {
     if (!followState || !routeEdges || !marker) return { next: '', arrived: false };
-    marker.position.copy(nodeWorld(currentNodeId(followState)));
+    marker.position.copy(markerWorldPos());
     const cur = graph.nodes.get(currentNodeId(followState))!;
     setFloorEmphasis(stationGroup, cur.floor); // 半透明看見上下樓層（風格關卡回饋 1）
     if (lastNavFloor !== null && lastNavFloor !== cur.floor) {
@@ -337,7 +345,7 @@ async function boot(): Promise<void> {
     }
     ui.showArrive(false);
     const next = routeSteps(model, graph, remain)[0] ?? '前往下一節點';
-    ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(routeStats(remain))}`, progress);
+    ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(partialRemaining(remain, pdrWalk.edgeDist))}`, progress);
     return { next: `下一步：${next}`, arrived: false };
   }
 
@@ -367,12 +375,22 @@ async function boot(): Promise<void> {
       && routeEdges !== null && verticalStep(routeEdges, followState) !== null);
   }
 
-  /** 一個偵測到的步伐 → 沿邊累距 → 跨節點觸發 advanceOnce（可能多次）。 */
+  /** 一個偵測到的步伐 → 沿邊累距 → 每步微滑行＋倒數；跨節點觸發 advanceOnce（可能多次）。 */
   function onStep(): void {
     if (mode !== 'nav' || !followState || !routeEdges || atEnd(followState)) return;
     const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
     pdrWalk = r.w;
-    for (let i = 0; i < r.advances; i++) advanceOnce();
+    if (r.advances > 0) {
+      for (let i = 0; i < r.advances; i++) advanceOnce();
+    } else if (!r.paused && marker) {
+      // 節點間每步回饋（ISSUE-001）：與 advanceOnce 同款「先落點、再從舊位補間」
+      const fromPos = marker.position.clone();
+      refreshNav();
+      if (!REDUCED_MOTION) {
+        markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
+        marker.position.copy(fromPos);
+      }
+    }
     updatePdrHint();
   }
 
