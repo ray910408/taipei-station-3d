@@ -74,7 +74,8 @@
       transform: translateX(-50%); text-align: center; z-index: 12; }
     #pick-label { font-weight: 700; margin-bottom: 4px; }
 
-    #settings { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 10; }
+    /* z:11——設定選單（preview/nav 開在右上）需蓋過 compass（z:10），防視覺重疊與點擊誤觸 */
+    #settings { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 11; }
     #settings-menu { position: absolute; bottom: 48px; left: 0; background: var(--bg);
       border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 190px; }
     #settings-menu button { display: block; width: 100%; margin: 4px 0; }
@@ -83,6 +84,15 @@
     #geom-mode { color: var(--muted); font-size: 12px; margin-top: 6px; }
     #geom-mode a { color: var(--primary); }
     #a11y-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    /* 常駐指南針：右上圓鈕（preview/nav 設定鈕在 top:12px 下方；overview 右上空） */
+    #compass { position: fixed; right: 12px; top: 64px; width: 40px; height: 40px; padding: 0;
+      min-height: 0; min-width: 0; border-radius: 50%; z-index: 10; display: flex;
+      align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--line); }
+    #compass-needle { width: 34px; height: 34px; transform-origin: 50% 50%; }
+    #compass-needle .n { fill: #e5484d; } /* 北端紅 */
+    #compass-needle .s { fill: var(--muted); }
+    #compass-needle text { text-anchor: middle; font-size: 8px; font-weight: 700; fill: var(--fg); }
 
     #overlay { position: fixed; inset: 0; background: #000c; color: #ff8080; padding: 24px;
       white-space: pre-wrap; font-family: monospace; display: none; z-index: 99; overflow: auto; }
@@ -105,6 +115,7 @@
       button { min-height: 44px; }
       .results button { min-height: 44px; }
       #route-card, #nav-banner { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+      #compass { top: 96px; } /* 窄版 searchbar 滿寬（卡底 ≈76-82px）——compass 降到其下 */
     }
     /* preview/nav：bottom sheet 會壓到左下設定鈕（BUG-001）——移右上；此時 searchbar/樓層鈕皆隱藏 */
     body[data-mode="preview"] #settings, body[data-mode="nav"] #settings {

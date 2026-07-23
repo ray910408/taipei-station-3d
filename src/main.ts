@@ -22,6 +22,7 @@ import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
+import { attachCompass } from './compass';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
 import {
   PDR_DEFAULTS, initStepState, stepSample, walkStep, crossedNodeIds,
@@ -214,6 +215,12 @@ async function boot(): Promise<void> {
   let stepState: StepState = initStepState();
   let pdrGen = 0; // permission await 的世代票：晚到的授權不得啟動舊請求（終審 F1）
   const speaker = createSpeaker();
+
+  // 常駐指南針（所有模式可見）；點擊＝使用者接管相機，nav 中暫停自動跟隨（「回正」可恢復）
+  const compass = attachCompass(camera, controls, () => {
+    rig.cancel();
+    if (mode === 'nav') chaseAuto = false;
+  });
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
   const nodeWorldAt = (id: string, factor: number): THREE.Vector3 => {
@@ -615,6 +622,7 @@ async function boot(): Promise<void> {
     }
     rig.tick();
     controls.update();
+    compass?.tick(); // controls.update 後：target/相機皆為當幀最終值
     labelLayer.update(camera, mode, explodeFactor);
     if (composer) composer.render();
     else renderer.render(scene, camera);
