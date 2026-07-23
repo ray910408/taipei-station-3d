@@ -52,7 +52,20 @@
 
     #transition-banner { display: inline-block; margin: 8px auto 0; background: var(--primary);
       color: #fff; font-size: 16px; font-weight: 700; padding: 8px 16px; border-radius: 999px; }
-    #pdr-hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    #pdr-hint { background: #b06000; color: #fff; font-size: 15px; font-weight: 700;
+      padding: 8px 12px; border-radius: 8px; margin-top: 6px; }
+    body.high-contrast #pdr-hint { background: #ffd60a; color: #000; }
+    /* PDR 暫停時引導視線至「我到了」（ISSUE-002）——hint 顯示才 pulse */
+    #nav-banner:has(#pdr-hint:not([hidden])) #btn-advance {
+      animation: pdr-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pdr-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 #1a73e880; }
+      50% { box-shadow: 0 0 0 10px #1a73e800; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #nav-banner:has(#pdr-hint:not([hidden])) #btn-advance { animation: none; }
+    }
 
     #arrive-card { top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center;
       font-size: 18px; font-weight: 700; }
