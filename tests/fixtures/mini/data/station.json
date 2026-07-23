@@ -11,6 +11,5 @@
     { "id": "plat-b2", "short": "pl", "file": "floors/plat-b2.json",
       "name": { "zh": "測試月台" }, "labels": { "complex": "B2" },
       "elevation": -9, "height": 3, "estimated": true }
-  ],
-  "demo": { "start": "n-pl-001", "end": "n-ha-002" }
+  ]
 }

@@ -73,7 +73,7 @@
       "source": "trtc-info-b3",
       "confidence": 3,
       "status": "traced",
-      "note": "北非付費轉乘廊：北閘門陣列西北側，接台鐵轉乘閘門/台鐵售票處/詢問處1；市民大道廊道未入模"
+      "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
       "id": "a-rc-tra-paid",
@@ -88,7 +88,7 @@
       "source": "trtc-info-b3",
       "confidence": 3,
       "status": "traced",
-      "note": "台鐵轉乘付費區（圖示台鐵TR區，西側；高鐵區未建模）"
+      "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
       "id": "a-rc-unpaid-s",
@@ -196,7 +196,7 @@
       "source": "trtc-info-b3",
       "confidence": 3,
       "status": "traced",
-      "note": "台鐵轉乘閘門（進台鐵付費區）"
+      "note": "臺鐵轉乘閘門（進臺鐵付費區）"
     },
     {
       "id": "g-rc-tra-acc",
@@ -214,7 +214,7 @@
       ],
       "source": "trtc-info-b3",
       "confidence": 2,
-      "note": "台鐵轉乘寬閘門（群南端；tra-b3-map 驗票員崗位於閘門列南端佐證，幾何仍為推定）"
+      "note": "臺鐵轉乘寬閘門（群南端；tra-b3-map 驗票員崗位於閘門列南端佐證，幾何仍為推定）"
     },
     {
       "id": "g-rc-s-1",
@@ -355,7 +355,7 @@
         "tier": 0,
         "area": "a-rc-tra-paid",
         "name": {
-          "zh": "台鐵轉乘區（B3）"
+          "zh": "臺鐵轉乘區（B3）"
         }
       },
       {

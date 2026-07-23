@@ -17,11 +17,7 @@ const model = assembleModel(stationDoc, {
 const graph = buildGraph(model);
 
 describe('真實資料 demo 路徑（Phase 3：終點延伸至臺鐵第4月台）', () => {
-  const demo = model.station.demo!;
-
-  it('station.demo 為 B4 月台中段 → B2 第4月台候車點', () => {
-    expect(demo).toEqual({ start: 'n-rp-003', end: 'n-tp-002' });
-  });
+  const demo = { start: 'n-rp-003', end: 'n-tp-002' };
 
   it('一般路徑存在：出捷運閘門、進臺鐵轉乘閘門、經 rctp 轉乘設施上月台', () => {
     const path = findPath(graph, demo.start, demo.end);

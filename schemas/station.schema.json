@@ -51,12 +51,6 @@
           "estimated": { "type": "boolean" }
         }
       }
-    },
-    "demo": {
-      "type": "object",
-      "required": ["start", "end"],
-      "additionalProperties": false,
-      "properties": { "start": { "type": "string" }, "end": { "type": "string" } }
     }
   },
   "$defs": {

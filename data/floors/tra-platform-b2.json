@@ -56,7 +56,7 @@
       "source": "tra-b2-map",
       "confidence": 2,
       "status": "traced",
-      "note": "台鐵第三月台"
+      "note": "臺鐵第三月台"
     },
     {
       "id": "a-tp-plat-4",
@@ -71,7 +71,7 @@
       "source": "tra-b2-map",
       "confidence": 2,
       "status": "traced",
-      "note": "台鐵第四月台（北端；往捷運梯群在東段）"
+      "note": "臺鐵第四月台（北端；往捷運梯群在東段）"
     }
   ],
   "pois": [

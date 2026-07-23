@@ -94,9 +94,5 @@
       "height": 4.5,
       "estimated": true
     }
-  ],
-  "demo": {
-    "start": "n-rp-003",
-    "end": "n-tp-002"
-  }
+  ]
 }
