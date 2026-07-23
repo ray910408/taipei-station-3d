@@ -65,6 +65,8 @@
     #settings-menu { position: absolute; bottom: 48px; left: 0; background: var(--bg);
       border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 190px; }
     #settings-menu button { display: block; width: 100%; margin: 4px 0; }
+    #step-row { display: block; font-size: 13px; margin: 8px 0 2px; }
+    #step-slider { width: 100%; margin-top: 4px; }
     #geom-mode { color: var(--muted); font-size: 12px; margin-top: 6px; }
     #geom-mode a { color: var(--primary); }
     #a11y-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
@@ -161,6 +163,9 @@
     <div id="settings-menu" hidden>
       <button id="btn-bigtext" aria-pressed="false">大字</button>
       <button id="btn-contrast" aria-pressed="false">高對比</button>
+      <label id="step-row">步長 <span id="step-value"></span> 公尺
+        <input id="step-slider" type="range" min="0.4" max="1" step="0.05" aria-label="步長（公尺）" />
+      </label>
       <div id="geom-mode"></div>
       <div id="a11y-note">大字／高對比僅作用於介面卡片，暫不影響 3D 地圖</div>
     </div>

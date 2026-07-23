@@ -91,6 +91,8 @@ export function setupUI(opts: {
   pdrAvailable: boolean;
   onPdrToggle(on: boolean): Promise<boolean>;
   onVoiceToggle(on: boolean): void;
+  stepLength: number;
+  onStepLength(len: number): void;
 }): UIHandles {
   const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
   const searchbar = $('#searchbar');
@@ -252,6 +254,17 @@ export function setupUI(opts: {
   function setPdrToggle(on: boolean): void {
     pdrToggle.checked = on;
   }
+
+  // 步長校正 slider：即時顯示數值、變更立即回寫（Phase 7）
+  const stepSlider = $<HTMLInputElement>('#step-slider');
+  const stepValue = $('#step-value');
+  stepSlider.value = String(opts.stepLength);
+  stepValue.textContent = opts.stepLength.toFixed(2);
+  stepSlider.addEventListener('input', () => {
+    const len = Number(stepSlider.value);
+    stepValue.textContent = len.toFixed(2);
+    opts.onStepLength(len);
+  });
 
   $<HTMLInputElement>('#voice-toggle').addEventListener('change', (ev) => {
     opts.onVoiceToggle((ev.target as HTMLInputElement).checked);

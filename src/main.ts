@@ -193,10 +193,11 @@ async function boot(): Promise<void> {
   // PDR（Phase 4）：sim 假步與沿邊推進狀態；感測器接線在 T6
   const pdrQuery = new URLSearchParams(location.search);
   const pdrSim = pdrQuery.get('pdr') === 'sim';
+  const storedStep = Number(localStorage.getItem('pdr-step-length'));
   const pdrParams: PdrParams = {
     ...PDR_DEFAULTS,
     peakThreshold: Number(pdrQuery.get('pdrPeak')) || PDR_DEFAULTS.peakThreshold,
-    stepLength: Number(pdrQuery.get('pdrStep')) || PDR_DEFAULTS.stepLength,
+    stepLength: Number(pdrQuery.get('pdrStep')) || storedStep || PDR_DEFAULTS.stepLength,
     minStepMs: Number(pdrQuery.get('pdrMinMs')) || PDR_DEFAULTS.minStepMs,
   };
   let pdrWalk: WalkState = { edgeDist: 0 };
@@ -444,6 +445,11 @@ async function boot(): Promise<void> {
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
     onPickDismiss: () => clearPick(),
     pdrAvailable: !pdrSim && motionSupported(), // sim 模式用假步、真感測 toggle 停用
+    stepLength: pdrParams.stepLength,
+    onStepLength: (len) => {
+      pdrParams.stepLength = len;
+      localStorage.setItem('pdr-step-length', String(len));
+    },
     onPdrToggle: async (on) => {
       const gen = ++pdrGen;
       stopMotion?.();
