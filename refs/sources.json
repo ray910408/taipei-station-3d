@@ -138,6 +138,13 @@
       "file": "refs/site/isometric-guide-2014.png",
       "captured": "2026-07-17",
       "license_note": "第三方作品：僅交叉比對，不直接描圖"
+    },
+    {
+      "id": "site-isometric-2017",
+      "title": "台北車站站區立體導覽圖（2017.02 wei 製作）",
+      "file": "refs/site/isometric-guide-2017.png",
+      "captured": "2026-07-23",
+      "license_note": "第三方作品：僅交叉比對，不直接描圖；圖上信用框標示 2017.02 wei 製作，含全站區 R10/BL12/G13/A1 與電梯/樓梯圖例"
     }
   ]
 }
