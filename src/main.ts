@@ -398,7 +398,8 @@ async function boot(): Promise<void> {
     } else if (!r.paused && marker) {
       refreshNav(); // 每步 UI 數字（marker 位置隨後由路徑規劃接管）
     }
-    if (!r.paused && fromPos && marker && !REDUCED_MOTION) {
+    // paused 但 advances>0＝跨完 walk 邊踩到 connector——該步仍需沿節點重建路徑（I-1 round 2b）
+    if ((!r.paused || r.advances > 0) && fromPos && marker && !REDUCED_MOTION) {
       const crossed = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
       const pts = planStepPath(pendingOld, crossed, markerWorldPos());
       markerTween = makeTween(fromPos, pts[0], performance.now());
