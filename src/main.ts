@@ -600,25 +600,32 @@ async function boot(): Promise<void> {
     }
     tickRouteArrows(performance.now());
     if (mode === 'nav' && followState && marker && chaseAuto && routeEdges) {
-      const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
-      let aim = chaseAim({
-        tween: markerTween,
-        atEnd: atEnd(followState),
-        vertical: verticalStep(routeEdges, followState) !== null,
-        nextPos: nodeWorld(nextId),
-      });
-      if (!atEnd(followState)) {
-        // 垂直段前（aim=null）與搭乘 tween 中（aim 與 marker 垂直堆疊）都改瞄出梯方向：
-        // 入場即有 goal（修 QA0723-1/2）、搭乘中不再跳北（修 QA0723-4）。
-        // 每幀重算——入場當下爆炸圖仍在收合動畫，goal 需跟著 nodeWorld 收斂。
-        const dx0 = aim ? aim.x - marker.position.x : 0;
-        const dz0 = aim ? aim.z - marker.position.z : 0;
-        if (aim === null || dx0 * dx0 + dz0 * dz0 <= 1e-4) {
-          const rest = followState.nodeIds.slice(followState.index + 1).map((id) => nodeWorld(id));
-          aim = aimPastVertical(marker.position, rest) ?? nodeWorld(nextId); // 末線防呆：整段零位移仍給 goal
+      const holdEdge = markerTween === null ? verticalStep(routeEdges, followState) : null;
+      if (holdEdge) {
+        // 梯前全景（QA0723-3）：框住 connector 兩端——豎井量體不再貼臉遮 marker，
+        // 並補齊 mode.ts transition 呈現的相機半（文字橫幅之外的視覺告知）。
+        // 每幀重算——入場（垂直第一步）當下爆炸圖仍在收合動畫，框景需跟著 nodeWorld 收斂。
+        rig.goal = frameGoal([nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], camera.aspect);
+      } else {
+        const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
+        let aim = chaseAim({
+          tween: markerTween,
+          atEnd: atEnd(followState),
+          vertical: verticalStep(routeEdges, followState) !== null,
+          nextPos: nodeWorld(nextId),
+        });
+        if (!atEnd(followState)) {
+          // 搭乘 tween 中 aim 與 marker 垂直堆疊時改瞄出梯方向——不再跳北（QA0723-4）。
+          // aim=null 理論上已被梯前全景攔截，null 檢查留作防禦。
+          const dx0 = aim ? aim.x - marker.position.x : 0;
+          const dz0 = aim ? aim.z - marker.position.z : 0;
+          if (aim === null || dx0 * dx0 + dz0 * dz0 <= 1e-4) {
+            const rest = followState.nodeIds.slice(followState.index + 1).map((id) => nodeWorld(id));
+            aim = aimPastVertical(marker.position, rest) ?? nodeWorld(nextId); // 末線防呆：整段零位移仍給 goal
+          }
         }
+        if (aim) rig.goal = chaseGoal(marker.position, aim);
       }
-      if (aim) rig.goal = chaseGoal(marker.position, aim);
     }
     rig.tick();
     controls.update();
