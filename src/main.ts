@@ -14,7 +14,10 @@ import {
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows, makePin } from './path';
-import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, type Tween, type FloorSwap } from './navview';
+import {
+  makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
+  type Tween, type FloorSwap,
+} from './navview';
 import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
@@ -381,32 +384,26 @@ async function boot(): Promise<void> {
       && routeEdges !== null && verticalStep(routeEdges, followState) !== null);
   }
 
-  /** 一個偵測到的步伐 → 沿邊累距 → 每步微滑行＋倒數；跨節點觸發 advanceOnce（可能多次）。 */
+  /** 一個偵測到的步伐 → 沿邊累距 → 每步微滑行＋倒數；跨節點觸發 advanceOnce（可能多次）。
+   *  視覺路徑以 planStepPath 規劃：既有未走完目標＋本步新目標合併，永遠沿路線向前。 */
   function onStep(): void {
     if (mode !== 'nav' || !followState || !routeEdges || atEnd(followState)) return;
     const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
+    const fromPos = marker ? marker.position.clone() : null;
+    const pendingOld = markerTween ? [markerTween.to.clone(), ...markerQueue] : [...markerQueue];
+    const fromIndex = followState.index;
     pdrWalk = r.w;
     if (r.advances > 0) {
-      // I-1：視覺路徑=沿每個被跨越節點再到殘距點，不切角、不瞬移
-      const fromPos = marker ? marker.position.clone() : null;
-      const fromIndex = followState.index;
       for (let i = 0; i < r.advances; i++) advanceOnce();
-      if (fromPos && marker && !REDUCED_MOTION) {
-        const pts = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
-        const finalPos = markerWorldPos();
-        if (pts.length === 0 || pts[pts.length - 1].distanceTo(finalPos) > 1e-6) pts.push(finalPos);
-        markerTween = makeTween(fromPos, pts[0], performance.now());
-        markerQueue = pts.slice(1);
-        marker.position.copy(fromPos);
-      }
     } else if (!r.paused && marker) {
-      // 節點間每步回饋（ISSUE-001）：與 advanceOnce 同款「先落點、再從舊位補間」
-      const fromPos = marker.position.clone();
-      refreshNav();
-      if (!REDUCED_MOTION) {
-        markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
-        marker.position.copy(fromPos);
-      }
+      refreshNav(); // 每步 UI 數字（marker 位置隨後由路徑規劃接管）
+    }
+    if (!r.paused && fromPos && marker && !REDUCED_MOTION) {
+      const crossed = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
+      const pts = planStepPath(pendingOld, crossed, markerWorldPos());
+      markerTween = makeTween(fromPos, pts[0], performance.now());
+      markerQueue = pts.slice(1);
+      marker.position.copy(fromPos);
     }
     updatePdrHint();
   }

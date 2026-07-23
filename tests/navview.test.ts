@@ -1,7 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible } from '../src/navview';
+import {
+  makeTween, tweenAt, chaseAim, swapFactors, applyFloorFade, setShellVisible, planStepPath,
+} from '../src/navview';
 import { THEME } from '../src/theme';
+
+const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+
+describe('planStepPath 每步路徑規劃（終審 I-1 round 2）', () => {
+  it('同邊、無既有路徑 → 只有殘距點', () => {
+    expect(planStepPath([], [], v(1, 0, 0))).toEqual([v(1, 0, 0)]);
+  });
+  it('同邊、有既有路徑 → 替換最後目標，保留前段（stale queue 修復）', () => {
+    const pending = [v(1, 0, 0), v(1, 0, 0.5)];
+    expect(planStepPath(pending, [], v(1, 0, 1.2))).toEqual([v(1, 0, 0), v(1, 0, 1.2)]);
+  });
+  it('跨節點、有既有路徑 → 舊目標全保留＋新節點＋殘距點（轉角不切）', () => {
+    const pending = [v(0.8, 0, 0)];
+    const out = planStepPath(pending, [v(1, 0, 0), v(1, 0, 2)], v(1, 0.5, 2));
+    expect(out).toEqual([v(0.8, 0, 0), v(1, 0, 0), v(1, 0, 2), v(1, 0.5, 2)]);
+  });
+  it('殘距點與最後節點重合 → 去重', () => {
+    expect(planStepPath([], [v(1, 0, 0)], v(1, 0, 0))).toEqual([v(1, 0, 0)]);
+  });
+});
 
 describe('marker tween（等速滑行）', () => {
   it('時長 = 距離/速度，夾在 [segMinMs, segMaxMs]', () => {

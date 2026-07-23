@@ -4,6 +4,20 @@ import { THEME } from './theme';
 /** marker 等速滑行（盤問 Q5）：時長 = 距離/速度，夾在 [segMinMs, segMaxMs]。 */
 export interface Tween { from: THREE.Vector3; to: THREE.Vector3; t0: number; ms: number }
 
+/** PDR 每步視覺路徑規劃：回傳新的目標序列（不含起點）。
+ *  pending＝尚未走到的既有目標（作用中 tween 終點＋佇列）；crossed＝本步跨越節點座標（可空）；
+ *  final＝本步結束的殘距點。同邊步伐（crossed 空）替換最後一個 pending 目標——舊殘距點被更遠的
+ *  取代（同邊單調），避免 stale queue 與佇列無限增長；跨節點步伐保留全部 pending（舊轉角不切）。 */
+export function planStepPath(
+  pending: THREE.Vector3[], crossed: THREE.Vector3[], final: THREE.Vector3,
+): THREE.Vector3[] {
+  if (crossed.length === 0)
+    return pending.length > 0 ? [...pending.slice(0, -1), final] : [final];
+  const pts = [...pending, ...crossed];
+  if (pts[pts.length - 1].distanceTo(final) > 1e-6) pts.push(final);
+  return pts;
+}
+
 export function makeTween(from: THREE.Vector3, to: THREE.Vector3, t0: number): Tween {
   const ms = THREE.MathUtils.clamp(
     (from.distanceTo(to) / THEME.nav.markerSpeed) * 1000, THEME.nav.segMinMs, THEME.nav.segMaxMs);
