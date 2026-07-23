@@ -90,6 +90,7 @@ function attachSearch(
   input.addEventListener('focus', () => render(input.value.trim()));
   input.addEventListener('input', () => { onEdit?.(); render(input.value.trim()); });
   input.addEventListener('keydown', (ev) => {
+    if (ev.isComposing || ev.keyCode === 229) return; // IME 組字確認不觸發選取（M-1）
     if (ev.key !== 'Enter' || list.hidden) return;
     list.querySelector<HTMLButtonElement>('li button')?.click(); // 第一筆（BUG-005）
   });

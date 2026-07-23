@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PDR_DEFAULTS, initStepState, stepSample, walkStep, type WalkState,
+  PDR_DEFAULTS, initStepState, stepSample, walkStep, crossedNodeIds, type WalkState,
 } from '../src/pdr';
 import { startFollow, advance } from '../src/follow';
 import type { GraphEdge } from '../src/nav';
@@ -104,5 +104,18 @@ describe('walkStep 沿邊推進', () => {
     const w: WalkState = { edgeDist: 0 };
     walkStep(walkEdges, startFollow(walkEdges), w, 1);
     expect(w.edgeDist).toBe(0);
+  });
+});
+
+describe('crossedNodeIds 跨越節點序列', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  it('advances 1 → 下一節點', () => {
+    expect(crossedNodeIds(ids, 0, 1)).toEqual(['b']);
+  });
+  it('advances 2 → 依序兩個節點（轉角不跳段）', () => {
+    expect(crossedNodeIds(ids, 0, 2)).toEqual(['b', 'c']);
+  });
+  it('advances 0 → 空', () => {
+    expect(crossedNodeIds(ids, 1, 0)).toEqual([]);
   });
 });

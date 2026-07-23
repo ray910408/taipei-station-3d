@@ -20,7 +20,10 @@ import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
-import { PDR_DEFAULTS, initStepState, stepSample, walkStep, type PdrParams, type StepState, type WalkState } from './pdr';
+import {
+  PDR_DEFAULTS, initStepState, stepSample, walkStep, crossedNodeIds,
+  type PdrParams, type StepState, type WalkState,
+} from './pdr';
 import { motionSupported, requestMotionPermission, startMotion } from './pdr-sensor';
 import { createSpeaker } from './speech';
 import { setupUI } from './ui';
@@ -187,6 +190,7 @@ async function boot(): Promise<void> {
   let routeObj: THREE.Object3D | null = null;
   let chaseAuto = true;
   let markerTween: Tween | null = null;
+  let markerQueue: THREE.Vector3[] = []; // 多段路徑：作用中 tween 完成後依序接走
   let floorSwap: FloorSwap | null = null;
   let lastNavFloor: string | null = null;
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
@@ -258,6 +262,7 @@ async function boot(): Promise<void> {
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
     followState = null;
     markerTween = null;
+    markerQueue = [];
     if (floorSwap) {
       for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
         const g = stationGroup.getObjectByName(id);
@@ -353,7 +358,7 @@ async function boot(): Promise<void> {
   /** 單次節點推進的完整體感（tween＋相機＋抵達）：手動按鈕與 PDR 步進的共同入口。 */
   function advanceOnce(): void {
     if (!followState || !marker) return;
-    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; } // 連按收斂到節點，不切角
+    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; markerQueue = []; }
     const fromPos = marker.position.clone();
     followState = advance(followState);
     chaseAuto = true;
@@ -382,7 +387,18 @@ async function boot(): Promise<void> {
     const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
     pdrWalk = r.w;
     if (r.advances > 0) {
+      // I-1：視覺路徑=沿每個被跨越節點再到殘距點，不切角、不瞬移
+      const fromPos = marker ? marker.position.clone() : null;
+      const fromIndex = followState.index;
       for (let i = 0; i < r.advances; i++) advanceOnce();
+      if (fromPos && marker && !REDUCED_MOTION) {
+        const pts = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
+        const finalPos = markerWorldPos();
+        if (pts.length === 0 || pts[pts.length - 1].distanceTo(finalPos) > 1e-6) pts.push(finalPos);
+        markerTween = makeTween(fromPos, pts[0], performance.now());
+        markerQueue = pts.slice(1);
+        marker.position.copy(fromPos);
+      }
     } else if (!r.paused && marker) {
       // 節點間每步回饋（ISSUE-001）：與 advanceOnce 同款「先落點、再從舊位補間」
       const fromPos = marker.position.clone();
@@ -431,6 +447,7 @@ async function boot(): Promise<void> {
     onBack: () => {
       if (followState) {
         markerTween = null;
+        markerQueue = [];
         followState = back(followState);
         pdrWalk = { edgeDist: 0 };
         refreshNav();
@@ -459,6 +476,9 @@ async function boot(): Promise<void> {
       if (gen !== pdrGen) return false; // 等待期間已退出導航或重切開關——晚到授權不啟動
       stepState = initStepState();
       pdrWalk = { edgeDist: 0 };
+      markerTween = null;
+      markerQueue = [];
+      if (mode === 'nav' && followState) refreshNav(); // 重新對齊節點＝立即同步 marker 與剩餘（I-2）
       stopMotion = startMotion((t, mag) => {
         const r = stepSample(stepState, t, mag, pdrParams);
         stepState = r.state;
@@ -553,8 +573,13 @@ async function boot(): Promise<void> {
       const { pos, done } = tweenAt(markerTween, performance.now());
       marker.position.copy(pos);
       if (done) {
-        markerTween = null;
-        if (mode === 'nav' && followState && atEnd(followState)) arriveGoal(); // P-6：滑行到站才後拉
+        if (markerQueue.length > 0) {
+          markerTween = makeTween(marker.position.clone(), markerQueue[0], performance.now());
+          markerQueue = markerQueue.slice(1);
+        } else {
+          markerTween = null;
+          if (mode === 'nav' && followState && atEnd(followState)) arriveGoal(); // P-6：滑行到站才後拉
+        }
       }
     }
     if (floorSwap) {
