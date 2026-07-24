@@ -25,18 +25,20 @@ describe('lerpYaw wrap-aware 平滑', () => {
 });
 
 describe('buildPositionMarker 箭頭型指標（問題4：不被路線擋）', () => {
-  it('所有 mesh：depthTest/depthWrite 關、renderOrder ≥ 10', () => {
+  it('所有 mesh 的所有材質：depthTest/depthWrite 關、renderOrder ≥ 10', () => {
     const g = buildPositionMarker();
     let checked = 0;
     g.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       expect(mesh.renderOrder).toBeGreaterThanOrEqual(10);
-      const m = mesh.material as THREE.Material;
-      expect(m.depthTest).toBe(false);
-      expect(m.depthWrite).toBe(false);
-      checked++;
+      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const m of list) {
+        expect((m as THREE.Material).depthTest).toBe(false);
+        expect((m as THREE.Material).depthWrite).toBe(false);
+        checked++;
+      }
     });
-    expect(checked).toBeGreaterThanOrEqual(2); // 箭頭＋圓環
+    expect(checked).toBeGreaterThanOrEqual(3); // 箭頭雙材質＋圓環
   });
 });

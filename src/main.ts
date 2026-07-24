@@ -407,6 +407,10 @@ async function boot(): Promise<void> {
       focusedFloor = id;
       applyEmphasis(id, THEME.emphasis.focusDim); // id=null 走還原、factor 無作用
     },
+    onPickConfirm: () => {
+      // 設為起/終點後回復全覽機位；若已成路線（tryRoute 同步切 preview 並設框景）則不蓋
+      if (mode === 'overview') rig.goal = overviewGoal();
+    },
     onPickDismiss: () => clearPick(),
     pdrAvailable: !pdrSim && motionSupported(), // sim 模式用假步、真感測 toggle 停用
     stepLength: pdrParams.stepLength,
@@ -531,7 +535,7 @@ async function boot(): Promise<void> {
     rig.tick();
     controls.update();
     compass?.tick(); // controls.update 後：target/相機皆為當幀最終值
-    labelLayer.update(camera, mode, explodeFactor, focusedFloor);
+    labelLayer.update(camera, mode, explodeFactor, focusedFloor, rig.goal !== null);
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelLayer.render(scene, camera);

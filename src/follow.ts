@@ -28,22 +28,22 @@ export function buildPositionMarker(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'position-marker';
   // 問題4：depthTest/depthWrite 關＋renderOrder 拉高——marker 永遠畫在路線與樓板之上
-  const m = new THREE.MeshBasicMaterial({
-    color: THEME.route.marker, toneMapped: false,
-    depthTest: false, depthWrite: false, side: THREE.DoubleSide,
-  });
-  // 水平扁箭頭（Google 導航風）：尖端在 yaw=0 時朝世界 +Z——headingYaw 的 atan2(dx,dz) 對齊
+  const flags = { toneMapped: false, depthTest: false, depthWrite: false, side: THREE.DoubleSide } as const;
+  const capMat = new THREE.MeshBasicMaterial({ color: THEME.route.marker, ...flags });
+  const sideMat = new THREE.MeshBasicMaterial({ color: THEME.route.markerSide, ...flags });
+  // 水平立體箭頭（Google 導航風）：尖端在 yaw=0 時朝世界 +Z——headingYaw 的 atan2(dx,dz) 對齊
   const shape = new THREE.Shape();
-  shape.moveTo(0, 1.4);
-  shape.lineTo(1.0, -1.0);
-  shape.lineTo(0, -0.45);
-  shape.lineTo(-1.0, -1.0);
+  shape.moveTo(0, 1.8);
+  shape.lineTo(1.3, -1.3);
+  shape.lineTo(0, -0.6);
+  shape.lineTo(-1.3, -1.3);
   shape.closePath();
-  const arrow = new THREE.Mesh(new THREE.ShapeGeometry(shape), m);
-  arrow.rotation.x = Math.PI / 2; // shape +y → 世界 +z，平躺樓面
-  arrow.position.y = 0.2;
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.7, bevelEnabled: false });
+  const arrow = new THREE.Mesh(geo, [capMat, sideMat]); // ExtrudeGeometry group 0=上下蓋、1=側壁
+  arrow.rotation.x = Math.PI / 2; // shape +y → 世界 +z；extrude 厚度轉為 -y
+  arrow.position.y = 0.75; // 厚度朝下 0.7——體積浮在樓面 0.05–0.75
   arrow.renderOrder = 10;
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 24), m);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 24), capMat);
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.1;
   ring.renderOrder = 10;

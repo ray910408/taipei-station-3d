@@ -55,7 +55,7 @@ export const THEME = {
   route: {
     color: '#1a73e8', radius: 0.9, linkRadius: 0.45,
     arrowInterval: 5, arrowSpeed: 0.5,
-    pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853',
+    pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853', markerSide: '#00913d',
   },
   emphasis: { dim: 0.15, focusDim: 0.05 }, // focusDim：右側樓層鍵聚焦（問題6）；dim：preview/nav 沿用
   // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 綠）

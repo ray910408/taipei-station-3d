@@ -115,6 +115,7 @@ export function setupUI(opts: {
   onRecenter(): void;
   onExitNav(): void;
   onFloorFocus(id: string | null): void;
+  onPickConfirm(): void;
   onPickDismiss(): void;
   pdrAvailable: boolean;
   onPdrToggle(on: boolean): Promise<boolean>;
@@ -259,6 +260,7 @@ export function setupUI(opts: {
       startInput.value = pickedLm.label;
       if (endId) tryRoute();
     }
+    opts.onPickConfirm();
     opts.onPickDismiss();
   });
   $('#btn-pick-end').addEventListener('click', () => {
@@ -266,6 +268,7 @@ export function setupUI(opts: {
       lmById.set(pickedLm.id, pickedLm);
       applyEnd(pickedLm);
     }
+    opts.onPickConfirm();
     opts.onPickDismiss();
   });
   $('#btn-pick-cancel').addEventListener('click', () => opts.onPickDismiss());

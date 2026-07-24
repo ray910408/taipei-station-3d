@@ -23,8 +23,10 @@ export function labelVisible(
 
 interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1 | 2; floor: string; leader?: THREE.Object3D }
 
-/** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
-export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
+/** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true；pinned 項無條件保留（仍佔格參與競爭）。 */
+export function declutter(
+  items: { x: number; y: number; priority: number; pinned?: boolean }[], cell: number,
+): boolean[] {
   const best = new Map<string, number>(); // cellKey → winning item index
   items.forEach((it, i) => {
     const key = `${Math.floor(it.x / cell)},${Math.floor(it.y / cell)}`;
@@ -32,11 +34,11 @@ export function declutter(items: { x: number; y: number; priority: number }[], c
     if (cur === undefined || items[cur].priority < it.priority) best.set(key, i);
   });
   const win = new Set(best.values());
-  return items.map((_, i) => win.has(i));
+  return items.map((it, i) => it.pinned === true || win.has(i));
 }
 
 export interface LabelLayer {
-  update(camera: THREE.Camera, mode: Mode, explodeFactor: number, focusFloor?: string | null): void;
+  update(camera: THREE.Camera, mode: Mode, explodeFactor: number, focusFloor?: string | null, inTransit?: boolean): void;
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   resize(width: number, height: number): void;
 }
@@ -124,16 +126,25 @@ export function createLabelLayer(
   const priorityOf = (e: Entry): number =>
     e.kind === 'floor-tag' ? 4 : e.tier === 0 ? 3 : e.tier === 2 ? 1 : 2;
   return {
-    update(camera, mode, explodeFactor, focusFloor = null) {
-      const cand: { e: Entry; x: number; y: number; priority: number }[] = [];
+    update(camera, mode, explodeFactor, focusFloor = null, inTransit = false) {
+      const cand: { e: Entry; x: number; y: number; priority: number; pinned: boolean }[] = [];
       for (const e of entries) {
         // 樓層聚焦：非聚焦樓層標籤直接隱藏（半透明仍佔 declutter 格——不採用）
         if (focusFloor !== null && e.floor !== focusFloor) { e.obj.visible = false; continue; }
+        // 鏡頭滑行中 landmark 不參與（距離掃過閾值會大量閃現）；floor tag 不受影響
+        if (e.kind === 'landmark' && inTransit) { e.obj.visible = false; continue; }
         const world = e.obj.getWorldPosition(tmp);
         const dist = world.distanceTo(camera.position);
         if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }
         const p = proj.copy(world).project(camera); // NDC（重用暫存，不每候選 clone）
-        cand.push({ e, x: (p.x * 0.5 + 0.5) * vw, y: (-p.y * 0.5 + 0.5) * vh, priority: priorityOf(e) });
+        const priority = priorityOf(e);
+        cand.push({
+          e,
+          x: (p.x * 0.5 + 0.5) * vw,
+          y: (-p.y * 0.5 + 0.5) * vh,
+          priority,
+          pinned: priority >= 3, // floor-tag(4)＋L0(3) 常駐——declutter 不得吃掉
+        });
       }
       const keep = declutter(cand, THEME.labels.declutterCell);
       for (const e of entries) if (e.leader) e.leader.visible = e.obj.visible;
