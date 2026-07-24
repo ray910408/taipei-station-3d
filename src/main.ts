@@ -186,7 +186,7 @@ async function boot(): Promise<void> {
   let session: NavSession | null = null; // 導航會話：一次導航＝一個實例，退出即銷毀
   let fadedFloors: string[] = []; // 會話 crossfade 作用中的樓層——掉出 directive 清單即還原
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
-  // PDR（Phase 4）：sim 假步與沿邊推進狀態；感測器接線在 T6
+  // PDR（Phase 4）：sim 假步旗標＋步偵測參數＋感測器 handle；沿邊推進狀態已入 nav-session
   const pdrQuery = new URLSearchParams(location.search);
   const pdrSim = pdrQuery.get('pdr') === 'sim';
   const storedStep = Number(localStorage.getItem('pdr-step-length'));
