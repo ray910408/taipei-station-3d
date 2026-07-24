@@ -81,53 +81,69 @@ export function updateBaseOpacity(mesh: THREE.Mesh, newBase: number): void {
   });
 }
 
+/** 單一子樹調暗/還原：dim=null 走快照還原；dim=true/false 套 dimFactor/基準。
+ *  快照與 clone 防護邏輯與原 setFloorEmphasis 相同（終審 Important 的 depthWrite 規則保留）。 */
+function dimSubtree(root: THREE.Object3D, dim: boolean | null, dimFactor: number): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    let list = materialsOf(mesh);
+    if (list.length === 0 || !list[0].isMaterial) return;
+    if (dim === null) {
+      // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次聚焦/會話
+      if (mesh.userData.baseOpacity !== undefined) {
+        const bases = mesh.userData.baseOpacity as number[];
+        const flags = mesh.userData.baseTransparent as boolean[];
+        const dws = mesh.userData.baseDepthWrite as boolean[];
+        list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; m.depthWrite = dws[i]; });
+        delete mesh.userData.baseOpacity;
+        delete mesh.userData.baseTransparent;
+        delete mesh.userData.baseDepthWrite;
+      }
+      return;
+    }
+    if (!mesh.userData.matCloned) {
+      // GLB 軌 material 可能跨 mesh 共用——調整前 clone 一次（跨會話不重複），避免調暗洩漏
+      mesh.material = Array.isArray(mesh.material)
+        ? mesh.material.map((m) => m.clone())
+        : (mesh.material as THREE.Material).clone();
+      mesh.userData.matCloned = true;
+      list = materialsOf(mesh);
+    }
+    if (mesh.userData.baseOpacity === undefined) {
+      mesh.userData.baseOpacity = list.map((m) => m.opacity);
+      mesh.userData.baseTransparent = list.map((m) => m.transparent);
+      mesh.userData.baseDepthWrite = list.map((m) => m.depthWrite);
+    }
+    const bases = mesh.userData.baseOpacity as number[];
+    const dws = mesh.userData.baseDepthWrite as boolean[];
+    list.forEach((m, i) => {
+      m.transparent = true;
+      m.opacity = bases[i] * (dim ? dimFactor : 1);
+      // 調暗即不寫深度——SSAO/透明排序不吃隱形樓層；還原走快照防描邊漂移（終審 Important）
+      m.depthWrite = dws[i] && m.opacity >= 1;
+    });
+  });
+}
+
 export function setFloorEmphasis(
   stationGroup: THREE.Group,
   active: string | readonly string[] | null,
+  dimFactor: number = THEME.emphasis.dim,
 ): void {
   const activeSet = active === null ? null
     : new Set(typeof active === 'string' ? [active] : active);
   for (const child of stationGroup.children) {
-    if (child.name === 'connectors') continue;
-    const dim = activeSet !== null && !activeSet.has(child.name);
-    child.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      let list = materialsOf(mesh);
-      if (list.length === 0 || !list[0].isMaterial) return;
-      if (activeSet === null) {
-        // 還原 opacity 與 transparent，並清除快照——快照生命週期＝單次跟隨會話
-        if (mesh.userData.baseOpacity !== undefined) {
-          const bases = mesh.userData.baseOpacity as number[];
-          const flags = mesh.userData.baseTransparent as boolean[];
-          const dws = mesh.userData.baseDepthWrite as boolean[];
-          list.forEach((m, i) => { m.opacity = bases[i]; m.transparent = flags[i]; m.depthWrite = dws[i]; });
-          delete mesh.userData.baseOpacity;
-          delete mesh.userData.baseTransparent;
-          delete mesh.userData.baseDepthWrite;
-        }
-        return;
+    if (child.name === 'connectors') {
+      // 豎井依兩端樓層判斷：任一端在 active 集合即保亮（preview 跨層路徑豎井不受害）；
+      // 未標 floors 保守不調暗
+      for (const conn of child.children) {
+        const floors = conn.userData.floors as string[] | undefined;
+        const dim = activeSet === null ? null
+          : floors === undefined ? false : !floors.some((f) => activeSet.has(f));
+        dimSubtree(conn, dim, dimFactor);
       }
-      if (!mesh.userData.matCloned) {
-        // GLB 軌 material 可能跨 mesh 共用——調整前 clone 一次（跨會話不重複），避免調暗洩漏
-        mesh.material = Array.isArray(mesh.material)
-          ? mesh.material.map((m) => m.clone())
-          : (mesh.material as THREE.Material).clone();
-        mesh.userData.matCloned = true;
-        list = materialsOf(mesh);
-      }
-      if (mesh.userData.baseOpacity === undefined) {
-        mesh.userData.baseOpacity = list.map((m) => m.opacity);
-        mesh.userData.baseTransparent = list.map((m) => m.transparent);
-        mesh.userData.baseDepthWrite = list.map((m) => m.depthWrite);
-      }
-      const bases = mesh.userData.baseOpacity as number[];
-      const dws = mesh.userData.baseDepthWrite as boolean[];
-      list.forEach((m, i) => {
-        m.transparent = true;
-        m.opacity = bases[i] * (dim ? THEME.emphasis.dim : 1);
-        // 調暗即不寫深度——SSAO/透明排序不吃隱形樓層；還原走快照防描邊漂移（終審 Important）
-        m.depthWrite = dws[i] && m.opacity >= 1;
-      });
-    });
+      continue;
+    }
+    dimSubtree(child, activeSet === null ? null : !activeSet.has(child.name), dimFactor);
   }
 }

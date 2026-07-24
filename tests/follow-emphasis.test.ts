@@ -49,26 +49,23 @@ const opacities = (root: THREE.Object3D): number[] => {
 };
 
 function checkEmphasis(station: THREE.Object3D, active: string): void {
-  const before = new Map(
-    station.children.map((c) => [c.name, opacities(c)] as const),
-  );
+  const conns = station.children.find((c) => c.name === 'connectors');
+  const tops = station.children.filter((c) => c.name !== 'connectors').concat(conns ? [...conns.children] : []);
+  const before = new Map(tops.map((c) => [c, opacities(c)] as const));
   setFloorEmphasis(station as THREE.Group, active);
-  for (const child of station.children) {
-    const base = before.get(child.name)!;
-    const now = opacities(child);
-    if (child.name === 'connectors' || child.name === active) {
-      // 當前樓層與 connectors 保持基準
-      now.forEach((v, i) => expect(v, `${child.name}[${i}]`).toBeCloseTo(base[i], 5));
-    } else {
-      now.forEach((v, i) => expect(v, `${child.name}[${i}]`).toBeCloseTo(base[i] * DIM, 5));
-    }
+  for (const [obj, base] of before) {
+    const isConn = obj.parent === conns;
+    const keep = isConn
+      ? ((obj.userData.floors as string[] | undefined)?.includes(active) ?? true) // 未標 floors 保守不調暗
+      : obj.name === active;
+    const factor = keep ? 1 : DIM;
+    opacities(obj).forEach((v, i) =>
+      expect(v, `${obj.name || String(obj.userData.kind)}[${i}]`).toBeCloseTo(base[i] * factor, 5));
   }
-  // 還原
   setFloorEmphasis(station as THREE.Group, null);
-  for (const child of station.children) {
-    const base = before.get(child.name)!;
-    opacities(child).forEach((v, i) => expect(v, `restore ${child.name}[${i}]`).toBeCloseTo(base[i], 5));
-  }
+  for (const [obj, base] of before)
+    opacities(obj).forEach((v, i) =>
+      expect(v, `restore ${obj.name || String(obj.userData.kind)}[${i}]`).toBeCloseTo(base[i], 5));
 }
 
 describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
@@ -187,5 +184,45 @@ describe('setFloorEmphasis 樓層聚焦（雙軌）', () => {
     expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8 * DIM, 5);
     setFloorEmphasis(g, null);
     expect((c.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.8, 5);
+  });
+
+  it('dimFactor 參數：focusDim 生效、還原正常', () => {
+    const g = new THREE.Group();
+    const fa = new THREE.Group();
+    fa.name = 'floor-a';
+    fa.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ opacity: 1, transparent: false })));
+    g.add(fa);
+    setFloorEmphasis(g, 'floor-b', THEME.emphasis.focusDim);
+    expect(((fa.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial).opacity)
+      .toBeCloseTo(THEME.emphasis.focusDim, 5);
+    setFloorEmphasis(g, null);
+    expect(((fa.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(1, 5);
+  });
+
+  it('connectors 依 userData.floors：不觸 active 的豎井調暗、未標的保守不動', () => {
+    const g = new THREE.Group();
+    const fa = new THREE.Group();
+    fa.name = 'floor-a';
+    g.add(fa);
+    const conns = new THREE.Group();
+    conns.name = 'connectors';
+    const mk = (floors?: string[]) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial({ opacity: 0.9, transparent: true }));
+      if (floors) m.userData.floors = floors;
+      conns.add(m);
+      return m;
+    };
+    const touching = mk(['floor-a', 'floor-b']);
+    const far = mk(['floor-b', 'floor-c']);
+    const unstamped = mk();
+    g.add(conns);
+    setFloorEmphasis(g, 'floor-a');
+    expect((touching.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.9, 5);
+    expect((far.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.9 * DIM, 5);
+    expect((unstamped.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.9, 5);
+    setFloorEmphasis(g, null);
+    expect((far.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.9, 5);
   });
 });

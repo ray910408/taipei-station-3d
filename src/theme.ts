@@ -57,7 +57,7 @@ export const THEME = {
     arrowInterval: 5, arrowSpeed: 0.5,
     pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853',
   },
-  emphasis: { dim: 0.15 },
+  emphasis: { dim: 0.15, focusDim: 0.05 }, // focusDim：右側樓層鍵聚焦（問題6）；dim：preview/nav 沿用
   // 3D 選點（Phase 4）：tap 判定閾值與 pick pin 色（紫——避開起點綠/終點紅/marker 綠）
   selection: { tapThresholdPx: 6, pin: '#a855f7' },
   poi: {

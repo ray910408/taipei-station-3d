@@ -20,7 +20,7 @@ export function labelVisible(
   return cameraDist < THEME.labels.landmarkMaxDist; // L1 依距離
 }
 
-interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1; leader?: THREE.Object3D }
+interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1; floor: string; leader?: THREE.Object3D }
 
 /** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
 export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
@@ -35,7 +35,7 @@ export function declutter(items: { x: number; y: number; priority: number }[], c
 }
 
 export interface LabelLayer {
-  update(camera: THREE.Camera, mode: Mode, explodeFactor: number): void;
+  update(camera: THREE.Camera, mode: Mode, explodeFactor: number, focusFloor?: string | null): void;
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   resize(width: number, height: number): void;
 }
@@ -85,7 +85,7 @@ export function createLabelLayer(
     const stagger = (idx % 2 === 0 ? -1 : 1) * THEME.labels.floorTagStagger; // 相鄰樓層南北交錯
     tag.position.copy(toWorld([west, midZ + stagger], meta.elevation + 2));
     floorGroup.add(tag);
-    entries.push({ obj: tag, kind: 'floor-tag' });
+    entries.push({ obj: tag, kind: 'floor-tag', floor: meta.id });
 
     // landmark：具名 nav node 名稱小籤
     for (const n of floor.nav?.nodes ?? []) {
@@ -113,7 +113,7 @@ export function createLabelLayer(
       leader.add(line, dot);
       floorGroup.add(leader);
 
-      entries.push({ obj: lm, kind: 'landmark', tier: n.tier, leader });
+      entries.push({ obj: lm, kind: 'landmark', tier: n.tier, floor: meta.id, leader });
     }
   }
 
@@ -122,9 +122,11 @@ export function createLabelLayer(
   let vw = container.clientWidth, vh = container.clientHeight;
   const priorityOf = (e: Entry): number => (e.kind === 'floor-tag' ? 3 : e.tier === 0 ? 2 : 1);
   return {
-    update(camera, mode, explodeFactor) {
+    update(camera, mode, explodeFactor, focusFloor = null) {
       const cand: { e: Entry; x: number; y: number; priority: number }[] = [];
       for (const e of entries) {
+        // 樓層聚焦：非聚焦樓層標籤直接隱藏（半透明仍佔 declutter 格——不採用）
+        if (focusFloor !== null && e.floor !== focusFloor) { e.obj.visible = false; continue; }
         const world = e.obj.getWorldPosition(tmp);
         const dist = world.distanceTo(camera.position);
         if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }

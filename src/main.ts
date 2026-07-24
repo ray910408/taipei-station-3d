@@ -225,6 +225,15 @@ async function boot(): Promise<void> {
 
   let connObj: THREE.Object3D = stationGroup.getObjectByName('connectors')!;
 
+  let focusedFloor: string | null = null; // 右側樓層鍵聚焦（問題6）——供標籤隱藏
+  // 目前 emphasis 狀態：refreshScene 重建 connectors 後重套（否則豎井 dim 隨重建流失）
+  let emphasis: { active: string | readonly string[] | null; dim: number } =
+    { active: null, dim: THEME.emphasis.dim };
+  function applyEmphasis(active: string | readonly string[] | null, dim: number = THEME.emphasis.dim): void {
+    emphasis = { active, dim };
+    setFloorEmphasis(stationGroup, active, dim);
+  }
+
   function refreshScene(): void {
     applyExplode(stationGroup, model, explodeFactor);
     // connectors 豎井/斜坡需隨層距拉伸——重建（幾何小、便宜；舊物件釋放 GPU 資源）
@@ -234,6 +243,7 @@ async function boot(): Promise<void> {
     stationGroup.add(connObj);
     refreshRoute();
     if (pickNodeId) placePickPin();
+    if (emphasis.active !== null) setFloorEmphasis(stationGroup, emphasis.active, emphasis.dim);
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
   }
 
@@ -293,7 +303,7 @@ async function boot(): Promise<void> {
       }
       fadedFloors = fadedFloors.filter((f) => !o.fadeRestore!.includes(f));
     }
-    if (o.emphasisFloor !== undefined) setFloorEmphasis(stationGroup, o.emphasisFloor);
+    if (o.emphasisFloor !== undefined) applyEmphasis(o.emphasisFloor);
     if (o.nav) {
       ui.setNavInfo(o.nav.next, o.nav.remain, o.nav.progress);
       ui.setTransition(o.nav.transition);
@@ -326,6 +336,7 @@ async function boot(): Promise<void> {
   function setMode(m: Mode): void {
     mode = m;
     clearPick(); // 模式切換一律收 pin 與小卡
+    focusedFloor = null; // 模式切換一律離開聚焦（與 emphasis 重設一致）
     setShellVisible(stationGroup, m !== 'nav'); // 效能：nav 隱外殼（dim 後不可見卻整面渲染）
     const wantShadow = m !== 'nav'; // 效能：低視角 nav 影子存在感極低、PCFSoft 採樣昂貴
     if (renderer.shadowMap.enabled !== wantShadow) {
@@ -341,12 +352,12 @@ async function boot(): Promise<void> {
     setExplode(MODE_EXPLODE[m]);
     if (m === 'overview') {
       clearRoute();
-      setFloorEmphasis(stationGroup, null);
+      applyEmphasis(null);
       rig.goal = overviewGoal(); // H-3：結束導航/取消預覽一律回全覽框景（boot 同路徑）
     }
     if (m === 'preview') {
       // 路線樓層保亮、其餘調暗——上層樓板不再遮住跨樓層路線（M-8）
-      setFloorEmphasis(stationGroup, routeEdges ? routeFloors(graph, routeEdges) : null);
+      applyEmphasis(routeEdges ? routeFloors(graph, routeEdges) : null);
       rig.goal = frameGoal(routePoints(MODE_EXPLODE[m]), camera.aspect); // 以目標爆炸係數框路徑
     }
   }
@@ -368,7 +379,7 @@ async function boot(): Promise<void> {
       setMode('preview');
     },
     onCancelRoute: () => setMode('overview'),
-    onRouteInvalid: () => { routeEdges = null; refreshRoute(); setFloorEmphasis(stationGroup, null); },
+    onRouteInvalid: () => { routeEdges = null; refreshRoute(); applyEmphasis(null); },
     onStartNav: () => {
       if (!routeEdges?.length) return;
       session = startNavSession({
@@ -392,7 +403,10 @@ async function boot(): Promise<void> {
       if (session) applyOutcome(session.handle({ type: 'recenterRequested' }, performance.now()));
     },
     onExitNav: () => setMode('overview'),
-    onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
+    onFloorFocus: (id) => {
+      focusedFloor = id;
+      applyEmphasis(id, THEME.emphasis.focusDim); // id=null 走還原、factor 無作用
+    },
     onPickDismiss: () => clearPick(),
     pdrAvailable: !pdrSim && motionSupported(), // sim 模式用假步、真感測 toggle 停用
     stepLength: pdrParams.stepLength,
@@ -517,7 +531,7 @@ async function boot(): Promise<void> {
     rig.tick();
     controls.update();
     compass?.tick(); // controls.update 後：target/相機皆為當幀最終值
-    labelLayer.update(camera, mode, explodeFactor);
+    labelLayer.update(camera, mode, explodeFactor, focusedFloor);
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelLayer.render(scene, camera);

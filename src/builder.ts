@@ -165,7 +165,8 @@ export function buildConnectorsGroup(
       if (lateral.length() < 1e-6) lateral.set(1, 0, 0);
       else lateral.normalize();
       mesh.position.addScaledVector(lateral, offset);
-      mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id };
+      mesh.userData = { kind: `connector-${c.kind}`, connectorId: c.id,
+        floors: [c.levels[i].floor, c.levels[i + 1].floor] }; // 聚焦調暗依據（問題6）
       if (c.kind === 'escalator') {
         const up = b.y >= a.y ? b : a; // 行進終點：direction up→朝高端
         const lo = b.y >= a.y ? a : b;
@@ -179,6 +180,7 @@ export function buildConnectorsGroup(
         arrow.lookAt(to);
         arrow.rotateX(Math.PI / 2); // Cone 尖端 +y → 對齊行進方向
         arrow.userData.kind = 'connector-arrow';
+        arrow.userData.floors = [c.levels[i].floor, c.levels[i + 1].floor];
         connGroup.add(arrow);
       }
       connGroup.add(mesh);
