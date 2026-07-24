@@ -27,20 +27,43 @@ export const remainingEdges = (edges: GraphEdge[], s: FollowState): GraphEdge[] 
 export function buildPositionMarker(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'position-marker';
-  const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(0.9, 2.2, 16),
-    new THREE.MeshBasicMaterial({ color: THEME.route.marker, toneMapped: false }),
-  );
-  cone.rotation.x = Math.PI; // 尖端朝下指樓面
-  cone.position.y = 1.1;
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(1.4, 0.12, 8, 24),
-    new THREE.MeshBasicMaterial({ color: THEME.route.marker, toneMapped: false }),
-  );
+  // 問題4：depthTest/depthWrite 關＋renderOrder 拉高——marker 永遠畫在路線與樓板之上
+  const m = new THREE.MeshBasicMaterial({
+    color: THEME.route.marker, toneMapped: false,
+    depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+  });
+  // 水平扁箭頭（Google 導航風）：尖端在 yaw=0 時朝世界 +Z——headingYaw 的 atan2(dx,dz) 對齊
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 1.4);
+  shape.lineTo(1.0, -1.0);
+  shape.lineTo(0, -0.45);
+  shape.lineTo(-1.0, -1.0);
+  shape.closePath();
+  const arrow = new THREE.Mesh(new THREE.ShapeGeometry(shape), m);
+  arrow.rotation.x = Math.PI / 2; // shape +y → 世界 +z，平躺樓面
+  arrow.position.y = 0.2;
+  arrow.renderOrder = 10;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 24), m);
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.1;
-  g.add(cone, ring);
+  ring.renderOrder = 10;
+  g.add(arrow, ring);
   return g;
+}
+
+/** 前後幀 marker 位置差分 → 前進 yaw（rad）；水平位移 < 1mm 回 null＝保持原朝向。 */
+export function headingYaw(prev: THREE.Vector3, cur: THREE.Vector3): number | null {
+  const dx = cur.x - prev.x;
+  const dz = cur.z - prev.z;
+  return dx * dx + dz * dz < 1e-6 ? null : Math.atan2(dx, dz);
+}
+
+/** wrap-aware 角度平滑：走最短弧；k=1 直接到位（reduced-motion）。 */
+export function lerpYaw(cur: number, target: number, k: number): number {
+  let d = (target - cur) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return cur + d * k;
 }
 
 const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>

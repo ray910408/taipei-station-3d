@@ -28,7 +28,7 @@ import { setupUI } from './ui';
 import { MODE_EXPLODE, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
 import { CameraRig, frameGoal } from './camera';
-import { buildPositionMarker, setFloorEmphasis } from './follow';
+import { buildPositionMarker, setFloorEmphasis, headingYaw, lerpYaw } from './follow';
 import { startNavSession, type EventOutcome, type NavSession } from './nav-session';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
@@ -182,6 +182,8 @@ async function boot(): Promise<void> {
   let explodeAnim: { from: number; to: number; t0: number } | null = null;
   let routeEdges: GraphEdge[] | null = null;
   let marker: THREE.Group | null = null;
+  let markerYaw: number | null = null; // null＝尚無方向；首動直接對齊，不從 0 慢轉
+  let prevMarkerPos: THREE.Vector3 | null = null;
   let routeObj: THREE.Object3D | null = null;
   let session: NavSession | null = null; // 導航會話：一次導航＝一個實例，退出即銷毀
   let fadedFloors: string[] = []; // 會話 crossfade 作用中的樓層——掉出 directive 清單即還原
@@ -251,6 +253,8 @@ async function boot(): Promise<void> {
     if (!session) return;
     session = null; // 先斷參照：onPdrToggle 的晚到授權據此判廢
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
+    markerYaw = null;
+    prevMarkerPos = null;
     for (const f of fadedFloors) {
       const g = stationGroup.getObjectByName(f);
       if (g) applyFloorFade(g, null);
@@ -502,6 +506,10 @@ async function boot(): Promise<void> {
     if (session && marker) {
       const d = session.frame(performance.now());
       marker.position.copy(d.markerPos);
+      const yaw = prevMarkerPos ? headingYaw(prevMarkerPos, d.markerPos) : null;
+      if (yaw !== null) markerYaw = markerYaw === null ? yaw : lerpYaw(markerYaw, yaw, REDUCED_MOTION ? 1 : 0.15);
+      if (markerYaw !== null) marker.rotation.y = markerYaw;
+      (prevMarkerPos ??= new THREE.Vector3()).copy(d.markerPos);
       applyFloorFades(d.floorFades);
       if (d.cameraGoal) rig.goal = d.cameraGoal;
     }
