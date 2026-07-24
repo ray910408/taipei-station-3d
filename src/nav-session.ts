@@ -8,10 +8,13 @@ import {
   startFollow, advance, back, atEnd, currentNodeId, remainingEdges, type FollowState,
 } from './follow';
 import { verticalStep, transitionLabel } from './mode';
-import type { WalkState } from './pdr';
+import { walkStep, crossedNodeIds, type WalkState } from './pdr';
 import type { CameraGoal } from './camera';
 import { chaseGoal, frameGoal } from './camera';
-import { makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget, swapFactors, type FloorSwap } from './navview';
+import {
+  makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget, swapFactors,
+  type FloorSwap, planStepPath,
+} from './navview';
 import { THEME } from './theme';
 
 /** 導航事件：使用者或感測器對會話說的話。discriminated union——QA 重現步驟＝可回放腳本。 */
@@ -19,7 +22,10 @@ export type NavEvent =
   | { type: 'advanceRequested' } // 手動「我到了」
   | { type: 'backRequested' }
   | { type: 'recenterRequested' } // 「回正」：恢復自動跟隨
-  | { type: 'userCameraGrab' };    // 拖曳/指南針點擊＝使用者接管相機
+  | { type: 'userCameraGrab' }     // 拖曳/指南針點擊＝使用者接管相機
+  | { type: 'stepDetected' }      // 感測器/假步鍵偵測到一步（50Hz 取樣留 sensor adapter）
+  | { type: 'pdrToggleRequested'; on: boolean }
+  | { type: 'pdrPermissionResult'; granted: boolean; ticket: number };
 
 /** nav 面板一次性文案（原 refreshNav 的 UI 更新組）。 */
 export interface NavInfo {
@@ -70,6 +76,8 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   const { model, graph, edges, nodeWorld } = deps;
   let follow: FollowState = startFollow(edges); // 空路線在此 throw（沿既有行為）
   let pdrWalk: WalkState = { edgeDist: 0 };
+  let pdrOn = deps.pdrSim; // sim 模式：假步鍵常時視為啟用
+  let ticket = 0; // PDR 授權世代票：任何切換遞增，晚到結果票號不符即作廢（終審 F1）
   let lastFloor: string | null = null;
   let swap: FloorSwap | null = null;
   let tween: Tween | null = null;
@@ -89,6 +97,11 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   /** 當下視覺位置：滑行中取 tween 插值，否則 markerWorldPos。 */
   function markerPos(now2: number): THREE.Vector3 {
     return tween ? tweenAt(tween, now2).pos : markerWorldPos();
+  }
+
+  /** 「梯前請手動確認」提示：PDR 啟用且下一段是垂直設施。 */
+  function pdrHint(): boolean {
+    return pdrOn && verticalStep(edges, follow) !== null;
   }
 
   /** 原 refreshNav 對應：nav 文案＋emphasis＋（跨層時）啟動 crossfade。 */
@@ -115,6 +128,7 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
         progress, arrived: false, transition,
       };
     }
+    o.pdrHint = pdrHint();
     return o;
   }
 
@@ -154,6 +168,49 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
       case 'userCameraGrab': {
         chaseAuto = false;
         return {};
+      }
+      case 'stepDetected': {
+        if (atEnd(follow)) return {};
+        const fromPos = markerPos(now2).clone(); // 滑行中＝當下視覺位置（路徑規劃起點）
+        const pendingOld = path.map((t) => ({ pos: t.pos.clone(), residual: t.residual }));
+        const fromIndex = follow.index;
+        const r = walkStep(edges, follow, pdrWalk, deps.stepLength());
+        pdrWalk = r.w;
+        let o: EventOutcome = {};
+        if (r.advances > 0) {
+          for (let i = 0; i < r.advances; i++) o = advanceOnce(now2); // 文案/語音以最後一節點為準
+        } else if (!r.paused) {
+          o = navRefresh(now2); // 每步 UI 數字
+        }
+        // paused 但 advances>0＝跨完 walk 邊踩到 connector——該步仍需沿節點重建路徑（I-1 round 2b）
+        if ((!r.paused || r.advances > 0) && !deps.reducedMotion) {
+          const crossed = crossedNodeIds(follow.nodeIds, fromIndex, r.advances)
+            .map((id) => nodeWorld(id));
+          path = planStepPath(pendingOld, crossed,
+            { pos: markerWorldPos(), residual: pdrWalk.edgeDist > 0 });
+          tween = makeTween(fromPos, path[0].pos, now2);
+        }
+        o.pdrHint = pdrHint();
+        return o;
+      }
+      case 'pdrToggleRequested': {
+        ticket++; // 任何切換皆令在途授權作廢（終審 F1）
+        if (!ev.on) {
+          pdrOn = false;
+          return { pdrToggle: false, pdrHint: false };
+        }
+        return { requestPermission: { ticket } };
+      }
+      case 'pdrPermissionResult': {
+        if (ev.ticket !== ticket) return {}; // 晚到授權：票已作廢（終審 F1）
+        if (!ev.granted) return { pdrToggle: false }; // 拒絕/不支援 → toggle 回滾
+        pdrOn = true;
+        pdrWalk = { edgeDist: 0 };
+        tween = null;
+        path = [];
+        const o = navRefresh(now2); // 重新對齊節點＝立即同步 marker 與剩餘（I-2）
+        o.pdrToggle = true;
+        return o;
       }
     }
   }

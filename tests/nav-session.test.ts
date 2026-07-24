@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { assembleModel } from '../src/loader';
-import { buildGraph, findPath, routeSteps } from '../src/nav';
+import { buildGraph, findPath, routeSteps, formatStats, partialRemaining } from '../src/nav';
 import { toWorld } from '../src/builder';
 import { startNavSession, type NavSessionDeps } from '../src/nav-session';
 import stationDoc from './fixtures/mini/data/station.json';
@@ -202,5 +202,81 @@ describe('換層 crossfade', () => {
     const fades = session.frame(5101).floorFades;
     expect(fades[0].floor).toBe('plat-b2'); // 新場 from＝plat
     expect(fades[1].floor).toBe('hall-b1');
+  });
+});
+
+describe('PDR 步進與授權（I-1、終審 F1 事件腳本）', () => {
+  it('梯前步進：不推進、pdrHint 亮', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002', { pdrSim: true }); // 首段電扶梯
+    expect(session.initial.pdrHint).toBe(true); // sim＝PDR 常時啟用、站在梯前
+    const o = session.handle({ type: 'stepDetected' }, 1100);
+    expect(o.nav).toBeUndefined(); // paused 且零推進：不重繪文案
+    expect(o.pdrHint).toBe(true);
+    expect(session.frame(1101).markerPos.distanceTo(nodeWorld('n-pl-001'))).toBeLessThan(1e-6);
+  });
+
+  it('I-1 round 2b：walk 邊一步跨進 connector——沿節點重建滑行路徑', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002',
+      { pdrSim: true, stepLength: () => 4 }); // walk 3m：一步 4m 跨過 ha003 踩到電梯
+    const o = session.handle({ type: 'stepDetected' }, 1000);
+    expect(o.nav!.progress).toBe('進度 2/3'); // advances=1
+    expect(o.nav!.transition).toBe('搭電梯下行，前往「B2 測試月台」');
+    expect(o.pdrHint).toBe(true); // 踩到 connector → paused 退手動
+    // 滑行沿節點：足時後 marker 停在 ha003（電梯前），非斜切他處
+    expect(session.frame(20000).markerPos.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1e-6);
+  });
+
+  it('步進殘距：remain 隨 edgeDist 縮短、marker 沿邊插值', () => {
+    const { edges, session } = makeSession('n-ha-001', 'n-pl-002',
+      { pdrSim: true, stepLength: () => 1 });
+    const before = session.initial.nav!.remain;
+    const o = session.handle({ type: 'stepDetected' }, 1000);
+    expect(o.nav!.remain).not.toBe(before);
+    expect(o.nav!.remain).toBe(
+      `剩餘 ${formatStats(partialRemaining(edges, 1))}`); // 走 1m 後
+    // 滑行完停在 1/3 處：lerp(ha001→ha003, 1/3) = (-5,-4,-1)
+    const p = session.frame(20000).markerPos;
+    expect(p.x).toBeCloseTo(-5, 5);
+    expect(p.z).toBeCloseTo(-1, 5);
+  });
+
+  it('連續兩步（前段滑行未完）：目標鏈接、終點正確', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002',
+      { pdrSim: true, stepLength: () => 2 });
+    session.handle({ type: 'stepDetected' }, 1000); // 殘距 2m
+    session.handle({ type: 'stepDetected' }, 1100); // 跨 ha003 踩電梯（滑行未完）
+    session.frame(30000); // 第一段目標出列、鏈接第二段（鏈接以本幀為 t0）
+    expect(session.frame(60000).markerPos.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1e-6);
+  });
+
+  it('終審 F1：晚到授權作廢（票號不符）', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002'); // pdrSim:false
+    const o1 = session.handle({ type: 'pdrToggleRequested', on: true }, 1000);
+    expect(o1.requestPermission).toBeDefined();
+    const t1 = o1.requestPermission!.ticket;
+    session.handle({ type: 'pdrToggleRequested', on: false }, 1100); // 等待期間關掉
+    const o3 = session.handle(
+      { type: 'pdrPermissionResult', granted: true, ticket: t1 }, 1200);
+    expect(o3).toEqual({}); // 舊票作廢：不啟動、不回寫 toggle
+    const o4 = session.handle({ type: 'recenterRequested' }, 1300);
+    expect(o4.pdrHint).toBe(false); // PDR 未啟用（雖站在梯前）
+  });
+
+  it('授權通過：重新對齊節點、toggle 回寫、hint 亮', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002');
+    const o1 = session.handle({ type: 'pdrToggleRequested', on: true }, 1000);
+    const o2 = session.handle(
+      { type: 'pdrPermissionResult', granted: true, ticket: o1.requestPermission!.ticket }, 1100);
+    expect(o2.pdrToggle).toBe(true);
+    expect(o2.nav).toBeDefined(); // 對齊即重繪（I-2）
+    expect(o2.pdrHint).toBe(true); // 梯前
+  });
+
+  it('授權拒絕：toggle 回滾', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002');
+    const o1 = session.handle({ type: 'pdrToggleRequested', on: true }, 1000);
+    const o2 = session.handle(
+      { type: 'pdrPermissionResult', granted: false, ticket: o1.requestPermission!.ticket }, 1100);
+    expect(o2).toEqual({ pdrToggle: false });
   });
 });
