@@ -37,7 +37,9 @@ class MainActivity : ComponentActivity() {
           Screen.SETUP -> SetupScreen(app) { app.screen = Screen.COLLECT }
           Screen.COLLECT -> {
             DisposableEffect(Unit) { rig.start(); onDispose { rig.stop() } }
-            Text("collect placeholder") // Task 8 換成 CollectScreen
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            val ctl = androidx.compose.runtime.remember { CollectController(app, engine, rig, scope) }
+            CollectScreen(app, ctl, rig) { /* onExport Task 9 接線 */ }
           }
         }
       }
