@@ -96,3 +96,36 @@ describe('手動推進/退回', () => {
     expect(o2.nav!.progress).toBe('進度 1/3');
   });
 });
+
+describe('滑行佇列（glide queue）', () => {
+  it('advanceRequested 產生等速滑行：中途在兩節點之間、足時後到位', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002'); // R3: walk 3m → elevator
+    session.handle({ type: 'advanceRequested' }, 1000);
+    const mid = session.frame(1500).markerPos; // 3m/3(m/s)=1000ms，夾 600ms 下限 → 取 1000ms
+    expect(mid.distanceTo(nodeWorld('n-ha-001'))).toBeGreaterThan(0.1);
+    expect(mid.distanceTo(nodeWorld('n-ha-003'))).toBeGreaterThan(0.1);
+    const done = session.frame(12000).markerPos;
+    expect(done.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1e-6);
+  });
+
+  it('滑行中再推進＝快轉：新滑行自前段終點出發，無斜切', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002');
+    session.handle({ type: 'advanceRequested' }, 1000);
+    session.handle({ type: 'advanceRequested' }, 1100); // 前段未完
+    const p = session.frame(1150).markerPos; // 新段 50ms/2500ms——仍貼近 n-ha-003
+    expect(p.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1.0);
+  });
+
+  it('backRequested 取消滑行：frame 立即回節點位置', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002');
+    session.handle({ type: 'advanceRequested' }, 1000);
+    session.handle({ type: 'backRequested' }, 1100);
+    expect(session.frame(1101).markerPos.distanceTo(nodeWorld('n-ha-001'))).toBeLessThan(1e-6);
+  });
+
+  it('reducedMotion：免滑行直接到位', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002', { reducedMotion: true });
+    session.handle({ type: 'advanceRequested' }, 1000);
+    expect(session.frame(1001).markerPos.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1e-6);
+  });
+});

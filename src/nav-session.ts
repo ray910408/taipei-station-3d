@@ -10,6 +10,7 @@ import {
 import { verticalStep, transitionLabel } from './mode';
 import type { WalkState } from './pdr';
 import type { CameraGoal } from './camera';
+import { makeTween, tweenAt, type Tween, type PathTarget } from './navview';
 
 /** 導航事件：使用者或感測器對會話說的話。discriminated union——QA 重現步驟＝可回放腳本。 */
 export type NavEvent =
@@ -66,6 +67,10 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   let follow: FollowState = startFollow(edges); // 空路線在此 throw（沿既有行為）
   let pdrWalk: WalkState = { edgeDist: 0 };
   let lastFloor: string | null = null;
+  let tween: Tween | null = null;
+  // 滑行佇列（glide queue）：尚未抵達的目標點。不變量：tween≠null ⟺ path 非空且
+  // tween.to＝path[0].pos——佇列只在本檔集中建構，invariant 由建構保證（審查候選 C 歸零）。
+  let path: PathTarget[] = [];
 
   /** marker 世界座標：邊上有 PDR 殘距時沿邊插值，否則所在節點（connector 邊 edgeDist 恆 0）。 */
   function markerWorldPos(): THREE.Vector3 {
@@ -73,6 +78,11 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
     const edge = edges[follow.index];
     if (!edge || pdrWalk.edgeDist <= 0) return pos;
     return pos.lerp(nodeWorld(edge.to), Math.min(pdrWalk.edgeDist / edge.length, 1));
+  }
+
+  /** 當下視覺位置：滑行中取 tween 插值，否則 markerWorldPos。 */
+  function markerPos(now2: number): THREE.Vector3 {
+    return tween ? tweenAt(tween, now2).pos : markerWorldPos();
   }
 
   /** 原 refreshNav 對應：nav 文案＋emphasis。now2 供後續換層 crossfade 起算（Task 4）。 */
@@ -100,20 +110,29 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   }
 
   /** 單次節點推進的完整體感：手動確認與 PDR 跨節點的共同入口（原 main.ts advanceOnce）。 */
-  function advanceOnce(now2: number): EventOutcome {
+  function advanceOnce(now2: number, fromPosIn?: THREE.Vector3): EventOutcome {
+    let fromPos = fromPosIn ?? markerWorldPos();
+    if (tween) { fromPos = tween.to.clone(); tween = null; path = []; } // 快轉：站上前段終點
     follow = advance(follow);
     const o = navRefresh(now2);
     o.speech = o.nav!.arrived ? '已抵達目的地' : o.nav!.next;
+    if (deps.reducedMotion) return o; // 免滑行：frame() 直接回新節點位置
+    const to = markerWorldPos();
+    path = [{ pos: to, residual: false }]; // 手動推進目標＝節點
+    tween = makeTween(fromPos, to, now2);
     return o;
   }
 
   function handle(ev: NavEvent, now2: number): EventOutcome {
     switch (ev.type) {
       case 'advanceRequested': {
+        const fromPos = markerPos(now2).clone(); // 殘距視覺位置——重置前取
         pdrWalk = { edgeDist: 0 }; // 手動確認＝重新對齊節點，殘距作廢
-        return advanceOnce(now2);
+        return advanceOnce(now2, fromPos);
       }
       case 'backRequested': {
+        tween = null;
+        path = [];
         follow = back(follow);
         pdrWalk = { edgeDist: 0 };
         return navRefresh(now2);
@@ -122,8 +141,12 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   }
 
   function frame(now2: number): FrameDirective {
-    void now2;
-    return { markerPos: markerWorldPos(), cameraGoal: null, floorFades: [] };
+    if (tween && tweenAt(tween, now2).done) {
+      const reached = tween.to;
+      path = path.slice(1); // [0] 已抵達
+      tween = path.length > 0 ? makeTween(reached, path[0].pos, now2) : null;
+    }
+    return { markerPos: markerPos(now2), cameraGoal: null, floorFades: [] };
   }
 
   return { initial: navRefresh(now), handle, frame };
