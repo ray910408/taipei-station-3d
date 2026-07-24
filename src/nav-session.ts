@@ -11,7 +11,8 @@ import { verticalStep, transitionLabel } from './mode';
 import type { WalkState } from './pdr';
 import type { CameraGoal } from './camera';
 import { chaseGoal, frameGoal } from './camera';
-import { makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget } from './navview';
+import { makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget, swapFactors, type FloorSwap } from './navview';
+import { THEME } from './theme';
 
 /** 導航事件：使用者或感測器對會話說的話。discriminated union——QA 重現步驟＝可回放腳本。 */
 export type NavEvent =
@@ -70,6 +71,7 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   let follow: FollowState = startFollow(edges); // 空路線在此 throw（沿既有行為）
   let pdrWalk: WalkState = { edgeDist: 0 };
   let lastFloor: string | null = null;
+  let swap: FloorSwap | null = null;
   let tween: Tween | null = null;
   let chaseAuto = true;
   // 滑行佇列（glide queue）：尚未抵達的目標點。不變量：tween≠null ⟺ path 非空且
@@ -89,12 +91,15 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
     return tween ? tweenAt(tween, now2).pos : markerWorldPos();
   }
 
-  /** 原 refreshNav 對應：nav 文案＋emphasis。now2 供後續換層 crossfade 起算（Task 4）。 */
+  /** 原 refreshNav 對應：nav 文案＋emphasis＋（跨層時）啟動 crossfade。 */
   function navRefresh(now2: number): EventOutcome {
-    void now2;
     const o: EventOutcome = {};
     const cur = graph.nodes.get(currentNodeId(follow))!;
     o.emphasisFloor = cur.floor;
+    if (lastFloor !== null && lastFloor !== cur.floor) {
+      if (swap) o.fadeRestore = [swap.fromFloor, swap.toFloor]; // 前一場未完先收尾（連續換層）
+      swap = { fromFloor: lastFloor, toFloor: cur.floor, t0: now2 };
+    }
     lastFloor = cur.floor;
     const vEdge = verticalStep(edges, follow);
     const transition = vEdge ? transitionLabel(model, graph, vEdge) : null;
@@ -191,7 +196,19 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
       tween = path.length > 0 ? makeTween(reached, path[0].pos, now2) : null;
     }
     const pos = markerPos(now2);
-    return { markerPos: pos, cameraGoal: cameraGoal(pos), floorFades: [] };
+    let floorFades: FrameDirective['floorFades'] = [];
+    if (swap) {
+      const f = swapFactors(swap, now2, THEME.emphasis.dim);
+      if (f.done) {
+        swap = null; // 完成：本幀起掉出清單，adapter 據此還原
+      } else {
+        floorFades = [
+          { floor: swap.fromFloor, factor: f.fromFactor },
+          { floor: swap.toFloor, factor: f.toFactor },
+        ];
+      }
+    }
+    return { markerPos: pos, cameraGoal: cameraGoal(pos), floorFades };
   }
 
   return { initial: navRefresh(now), handle, frame };

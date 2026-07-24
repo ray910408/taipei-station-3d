@@ -175,3 +175,32 @@ describe('相機意圖（QA0723 事件腳本）', () => {
     expect(g.target.y).toBeCloseTo(-4, 5);
   });
 });
+
+describe('換層 crossfade', () => {
+  it('跨層推進啟動 900ms crossfade，完成後清空', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002'); // R3
+    session.handle({ type: 'advanceRequested' }, 1000); // → ha003（同層，無 swap）
+    expect(session.frame(1001).floorFades).toEqual([]);
+    session.handle({ type: 'advanceRequested' }, 5000);  // → pl002（B1→B2）
+    const fades = session.frame(5450).floorFades; // t=0.5
+    expect(fades).toHaveLength(2);
+    expect(fades[0].floor).toBe('hall-b1');
+    expect(fades[0].factor).toBeGreaterThan(1); // from 側起始 1/dim 補償
+    expect(fades[1].floor).toBe('plat-b2');
+    expect(fades[1].factor).toBeGreaterThan(0);
+    expect(fades[1].factor).toBeLessThan(1);
+    expect(session.frame(5901).floorFades).toEqual([]); // 完成即清（掉出清單→adapter 還原）
+  });
+
+  it('連續換層：前一場未完先收尾（fadeRestore），新場重起', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002');
+    session.handle({ type: 'advanceRequested' }, 1000);
+    session.handle({ type: 'advanceRequested' }, 5000); // swap hall→plat 開跑
+    const o = session.handle({ type: 'backRequested' }, 5100); // 未完即折返：plat→hall
+    expect(o.fadeRestore).toEqual(['hall-b1', 'plat-b2']); // 舊場兩層先還原
+    expect(o.emphasisFloor).toBe('hall-b1');
+    const fades = session.frame(5101).floorFades;
+    expect(fades[0].floor).toBe('plat-b2'); // 新場 from＝plat
+    expect(fades[1].floor).toBe('hall-b1');
+  });
+});
