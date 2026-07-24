@@ -416,8 +416,8 @@ async function boot(): Promise<void> {
       focusedFloor = id;
       applyEmphasis(id, THEME.emphasis.focusDim); // id=null 走還原、factor 無作用
     },
-    onPickConfirm: () => {
-      // 設為起/終點後回復全覽機位；若已成路線（tryRoute 同步切 preview 並設框景）則不蓋
+    onPickClosed: () => {
+      // 選點卡收起（確認或取消）即回全覽；若已成路線（tryRoute 同步切 preview 並設框景）則不蓋
       if (mode === 'overview') rig.goal = overviewGoal();
     },
     onPickDismiss: () => clearPick(),

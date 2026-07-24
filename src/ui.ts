@@ -115,7 +115,7 @@ export function setupUI(opts: {
   onRecenter(): void;
   onExitNav(): void;
   onFloorFocus(id: string | null): void;
-  onPickConfirm(): void;
+  onPickClosed(): void;
   onPickDismiss(): void;
   pdrAvailable: boolean;
   onPdrToggle(on: boolean): Promise<boolean>;
@@ -173,7 +173,7 @@ export function setupUI(opts: {
     }
     const open = document.querySelector<HTMLElement>('.results:not([hidden])');
     if (open) { open.hidden = true; return; }
-    if (!pickCard.hidden) { opts.onPickDismiss(); return; } // 先關選點卡，不動整條路線（終審 F6）
+    if (!pickCard.hidden) { opts.onPickClosed(); opts.onPickDismiss(); return; } // 先關選點卡（回全覽），不動整條路線（終審 F6）
     if (document.body.dataset.mode === 'preview') opts.onCancelRoute();
   });
 
@@ -260,7 +260,7 @@ export function setupUI(opts: {
       startInput.value = pickedLm.label;
       if (endId) tryRoute();
     }
-    opts.onPickConfirm();
+    opts.onPickClosed();
     opts.onPickDismiss();
   });
   $('#btn-pick-end').addEventListener('click', () => {
@@ -268,10 +268,10 @@ export function setupUI(opts: {
       lmById.set(pickedLm.id, pickedLm);
       applyEnd(pickedLm);
     }
-    opts.onPickConfirm();
+    opts.onPickClosed();
     opts.onPickDismiss();
   });
-  $('#btn-pick-cancel').addEventListener('click', () => opts.onPickDismiss());
+  $('#btn-pick-cancel').addEventListener('click', () => { opts.onPickClosed(); opts.onPickDismiss(); });
 
   // 步感應 toggle：預設關；開啟在手勢內請求權限，拒絕/不支援時回滾
   const pdrToggle = $<HTMLInputElement>('#pdr-toggle');
