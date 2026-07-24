@@ -34,6 +34,38 @@ export function tickRouteArrows(nowMs: number): void {
   if (arrowTex) arrowTex.offset.x = -(((nowMs / 1000) * THEME.route.arrowSpeed) % 1);
 }
 
+/** 水平平帶幾何：up 恆為世界 +Y——chevron 永遠完整朝上（問題1根因：管壁繞圈＋Frenet 扭轉）。
+ *  UV u＝弧長/interval（RepeatWrapping 吃 u>1）、v 橫跨帶寬 0→1。 */
+export function ribbonGeometry(
+  curve: THREE.Curve<THREE.Vector3>, segments: number, width: number, interval: number,
+): THREE.BufferGeometry {
+  const len = curve.getLength();
+  const half = width / 2;
+  const pos: number[] = [];
+  const uvs: number[] = [];
+  const idx: number[] = [];
+  const side = new THREE.Vector3(1, 0, 0); // 切線水平分量趨零時沿用前一側向
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const p = curve.getPointAt(t);
+    const tan = curve.getTangentAt(t);
+    if (tan.x * tan.x + tan.z * tan.z > 1e-8) side.set(tan.z, 0, -tan.x).normalize(); // 世界+Y × 切線
+    pos.push(p.x - side.x * half, p.y, p.z - side.z * half,
+             p.x + side.x * half, p.y, p.z + side.z * half);
+    const u = (t * len) / interval;
+    uvs.push(u, 0, u, 1);
+    if (i < segments) {
+      const a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(idx);
+  return geo;
+}
+
 /** 水滴 pin：球頭＋倒錐尾（Google 風）。route 起訖與 3D 選點共用。 */
 export function makePin(color: string): THREE.Group {
   const g = new THREE.Group();
@@ -61,21 +93,18 @@ export function buildRouteObject(
   const pts = nodes.map((n) => toWorld(n.xy, n.z + offsetY(n.floor) + 1.2)); // 浮在樓面上方
 
   const tex = routeArrowTexture();
-  const tubeMat = new THREE.MeshBasicMaterial(
-    tex ? { map: tex, toneMapped: false } : { color: THEME.route.color, toneMapped: false });
+  const routeMat = new THREE.MeshBasicMaterial(
+    tex ? { map: tex, toneMapped: false, side: THREE.DoubleSide }
+        : { color: THEME.route.color, toneMapped: false, side: THREE.DoubleSide });
 
   // 依樓層切段：連續同層節點成 run（粗管＋箭頭）、跨層邊成 link（細管）——nav 可逐層開關
   let run: { floor: string; pts: THREE.Vector3[] } | null = null;
   const flushRun = (): void => {
     if (run && run.pts.length >= 2) {
       const curve = new THREE.CatmullRomCurve3(run.pts);
-      const len = curve.getLength();
-      const geo = new THREE.TubeGeometry(
-        curve, Math.max(16, run.pts.length * 8), THEME.route.radius, 8, false);
-      // u 由 [0,1] 改為 len/interval 圈：共用紋理下每 run 箭頭間距一致（RepeatWrapping 吃 u>1）
-      const uv = geo.attributes.uv as THREE.BufferAttribute;
-      for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * (len / THEME.route.arrowInterval));
-      const mesh = new THREE.Mesh(geo, tubeMat);
+      const geo = ribbonGeometry(
+        curve, Math.max(16, run.pts.length * 8), THEME.route.radius * 2, THEME.route.arrowInterval);
+      const mesh = new THREE.Mesh(geo, routeMat);
       mesh.userData.floor = run.floor;
       group.add(mesh);
     }
