@@ -12,6 +12,7 @@
     "validate": "node tools/validate.mjs",
     "format:data": "node tools/format-data.mjs",
     "export:glb": "vite-node tools/export-glb.ts",
+    "gen:rp": "vite-node tools/gen-rp-points.ts",
     "validate:glb": "node tools/validate-glb.mjs"
   },
   "dependencies": {
