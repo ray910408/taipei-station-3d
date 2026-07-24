@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(Unit) { rig.start(); onDispose { rig.stop() } }
             val scope = androidx.compose.runtime.rememberCoroutineScope()
             val ctl = androidx.compose.runtime.remember { CollectController(app, engine, rig, scope) }
-            CollectScreen(app, ctl, rig) { /* onExport Task 9 接線 */ }
+            CollectScreen(app, ctl, rig) { app.writer?.let { w -> shareSession(this@MainActivity, w.file) } }
           }
         }
       }

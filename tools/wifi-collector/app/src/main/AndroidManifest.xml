@@ -8,6 +8,15 @@
     android:label="WiFi 指紋採集"
     android:icon="@android:mipmap/sym_def_app_icon"
     android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="com.taipeistation.wififp.files"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+    </provider>
     <activity
       android:name=".MainActivity"
       android:exported="true"

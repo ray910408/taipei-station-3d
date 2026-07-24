@@ -27,12 +27,38 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   var heading by remember { mutableStateOf(Double.NaN) }
   LaunchedEffect(Unit) { while (true) { heading = rig.currentHeadingDeg; delay(200) } }
   LaunchedEffect(Unit) { ctl.ensureCurrent() }
+  var showSkip by remember { mutableStateOf(false) }
+  var skipReason by remember { mutableStateOf("") }
+  var showJump by remember { mutableStateOf(false) }
 
   val p = ctl.current()
   val total = app.rpList?.points?.size ?: 0
   val doneCount = app.rpList?.points?.count { ctl.isPointComplete(it.id) } ?: 0
   val floorPts = app.rpList?.points?.filter { it.floor == p?.floor } ?: emptyList()
   val floorDone = floorPts.count { ctl.isPointComplete(it.id) }
+
+  // 四朝向閘門
+  val slot = p?.let { ctl.pendingSlots(it.id).firstOrNull() }
+  val quadGateOk = app.mode != "quad" || slot == null ||
+    (!heading.isNaN() && angDiffDeg(heading, slot.toDouble()) <= 20.0)
+
+  if (showJump) {
+    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(20.dp)) {
+      items(app.rpList?.points?.size ?: 0) { i ->
+        val pt = app.rpList!!.points[i]
+        val mark = when {
+          pt.id in app.progress.skipped -> "⏭"
+          ctl.isPointComplete(pt.id) -> "✓"
+          else -> "·"
+        }
+        OutlinedButton(
+          onClick = { ctl.jumpTo(pt.id); showJump = false },
+          modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        ) { Text("$mark ${pt.id}  (${pt.x}, ${pt.y})" + (pt.note?.let { " $it" } ?: "")) }
+      }
+    }
+    return
+  }
 
   Column(
     Modifier.fillMaxSize().padding(20.dp),
@@ -41,6 +67,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     if (p == null) {
       Text("全部完成 🎉", style = MaterialTheme.typography.headlineLarge)
       Button(onClick = onExport, modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
+      OutlinedButton(onClick = { showJump = true }, modifier = Modifier.fillMaxWidth()) { Text("點位清單") }
       return@Column
     }
 
@@ -48,14 +75,22 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     Text("${p.floor} · (${p.x}, ${p.y})" + (p.note?.let { " · $it" } ?: ""),
       style = MaterialTheme.typography.titleMedium)
     Text("全站 $doneCount/$total · 本層 $floorDone/${floorPts.size}")
-    Text("羅盤 ${if (heading.isNaN()) "--" else "%.0f°".format(heading)}")
 
-    if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後按「重採上一點」",
+    if (app.mode == "quad" && slot != null) {
+      Text("目標朝向 ${slot}° · 目前 ${if (heading.isNaN()) "--" else "%.0f°".format(heading)}" +
+        if (quadGateOk) " ✓ 可掃" else "（轉到 ±20° 內）",
+        style = MaterialTheme.typography.titleLarge,
+        color = if (quadGateOk) Color(0xFF166534) else Color(0xFF92400E))
+    } else {
+      Text("羅盤 ${if (heading.isNaN()) "--" else "%.0f°".format(heading)}")
+    }
+
+    if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後重採",
       color = Color.Red, style = MaterialTheme.typography.titleMedium)
     if (ctl.lowScanWarn) Text("⚠ 上一點成功掃描 <60%,建議重採", color = Color(0xFF92400E))
 
     Button(
-      onClick = { ctl.startScan() }, enabled = !ctl.scanning,
+      onClick = { ctl.startScan() }, enabled = !ctl.scanning && quadGateOk,
       modifier = Modifier.fillMaxWidth().height(80.dp),
     ) {
       Text(if (ctl.scanning) "${ctl.scanK}/${app.scansPerPoint} 次 · ${ctl.apCount} AP"
@@ -64,8 +99,39 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
       OutlinedButton(onClick = { ctl.cancel() }, enabled = ctl.scanning) { Text("中斷") }
-      OutlinedButton(onClick = { ctl.skip("現場不可達") }, enabled = !ctl.scanning) { Text("跳過") }
+      OutlinedButton(onClick = { showSkip = true }, enabled = !ctl.scanning) { Text("跳過") }
+      OutlinedButton(onClick = { ctl.redo(p.id) }, enabled = !ctl.scanning) { Text("重採此點") }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+      OutlinedButton(onClick = { showJump = true }, enabled = !ctl.scanning) { Text("點位清單") }
       OutlinedButton(onClick = onExport, enabled = !ctl.scanning) { Text("匯出") }
     }
   }
+
+  if (showSkip) {
+    androidx.compose.material3.AlertDialog(
+      onDismissRequest = { showSkip = false },
+      title = { Text("跳過 ${p?.id}") },
+      text = {
+        androidx.compose.material3.OutlinedTextField(
+          value = skipReason, onValueChange = { skipReason = it }, label = { Text("原因") })
+      },
+      confirmButton = {
+        Button(onClick = {
+          ctl.skip(skipReason.ifBlank { "未填" }); skipReason = ""; showSkip = false
+        }) { Text("確定跳過") }
+      },
+      dismissButton = { OutlinedButton(onClick = { showSkip = false }) { Text("取消") } },
+    )
+  }
+}
+
+fun shareSession(ctx: android.content.Context, file: java.io.File) {
+  val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "com.taipeistation.wififp.files", file)
+  val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+    type = "application/json"
+    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+  }
+  ctx.startActivity(android.content.Intent.createChooser(send, "分享 session 檔"))
 }
