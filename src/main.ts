@@ -476,6 +476,7 @@ async function boot(): Promise<void> {
     placePickPin();
     scene.add(pickPin);
     ui.showPickCard(toLandmark(model, node));
+    rig.goal = frameGoal([nodeWorld(node.id)], camera.aspect); // 問題2：選點即拉近（MIN_RADIUS 保底）
   });
 
   // ?pdr=sim：按 s 鍵＝一步假步伐——與真感測器共用 stepDetected 事件管線
