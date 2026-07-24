@@ -10,12 +10,15 @@ import {
 import { verticalStep, transitionLabel } from './mode';
 import type { WalkState } from './pdr';
 import type { CameraGoal } from './camera';
-import { makeTween, tweenAt, type Tween, type PathTarget } from './navview';
+import { chaseGoal, frameGoal } from './camera';
+import { makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget } from './navview';
 
 /** 導航事件：使用者或感測器對會話說的話。discriminated union——QA 重現步驟＝可回放腳本。 */
 export type NavEvent =
   | { type: 'advanceRequested' } // 手動「我到了」
-  | { type: 'backRequested' };
+  | { type: 'backRequested' }
+  | { type: 'recenterRequested' } // 「回正」：恢復自動跟隨
+  | { type: 'userCameraGrab' };    // 拖曳/指南針點擊＝使用者接管相機
 
 /** nav 面板一次性文案（原 refreshNav 的 UI 更新組）。 */
 export interface NavInfo {
@@ -68,6 +71,7 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
   let pdrWalk: WalkState = { edgeDist: 0 };
   let lastFloor: string | null = null;
   let tween: Tween | null = null;
+  let chaseAuto = true;
   // 滑行佇列（glide queue）：尚未抵達的目標點。不變量：tween≠null ⟺ path 非空且
   // tween.to＝path[0].pos——佇列只在本檔集中建構，invariant 由建構保證（審查候選 C 歸零）。
   let path: PathTarget[] = [];
@@ -114,6 +118,7 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
     let fromPos = fromPosIn ?? markerWorldPos();
     if (tween) { fromPos = tween.to.clone(); tween = null; path = []; } // 快轉：站上前段終點
     follow = advance(follow);
+    chaseAuto = true;
     const o = navRefresh(now2);
     o.speech = o.nav!.arrived ? '已抵達目的地' : o.nav!.next;
     if (deps.reducedMotion) return o; // 免滑行：frame() 直接回新節點位置
@@ -137,7 +142,46 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
         pdrWalk = { edgeDist: 0 };
         return navRefresh(now2);
       }
+      case 'recenterRequested': {
+        chaseAuto = true;
+        return navRefresh(now2); // 原 onRecenter：refreshNav（含 emphasis 重套）
+      }
+      case 'userCameraGrab': {
+        chaseAuto = false;
+        return {};
+      }
     }
+  }
+
+  /** 每幀相機意圖（QA0723-1..4 的決策現場）：null＝本幀不干預。 */
+  function cameraGoal(markerP: THREE.Vector3): CameraGoal | null {
+    if (!chaseAuto) return null;
+    const holdEdge = tween === null ? verticalStep(edges, follow) : null;
+    if (holdEdge) {
+      // 梯前全景（QA0723-3）：框 connector 兩端；每幀重算——爆炸收合期間跟著 nodeWorld 收斂
+      return frameGoal([nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], deps.aspect());
+    }
+    if (atEnd(follow) && tween === null) {
+      // 抵達後拉（P-6）：框最後兩節點；持續發出——rig 收斂即釋放，視覺等同原單次設定
+      return frameGoal(follow.nodeIds.slice(-2).map((id) => nodeWorld(id)), deps.aspect());
+    }
+    const nextId = follow.nodeIds[Math.min(follow.index + 1, follow.nodeIds.length - 1)];
+    let aim = chaseAim({
+      tween,
+      atEnd: atEnd(follow),
+      vertical: verticalStep(edges, follow) !== null,
+      nextPos: nodeWorld(nextId),
+    });
+    if (!atEnd(follow)) {
+      // 搭乘 tween 中 aim 與 marker 垂直堆疊時改瞄出梯方向——不再跳北（QA0723-4）
+      const dx0 = aim ? aim.x - markerP.x : 0;
+      const dz0 = aim ? aim.z - markerP.z : 0;
+      if (aim === null || dx0 * dx0 + dz0 * dz0 <= 1e-4) {
+        const rest = follow.nodeIds.slice(follow.index + 1).map((id) => nodeWorld(id));
+        aim = aimPastVertical(markerP, rest) ?? nodeWorld(nextId); // 末線防呆：整段零位移仍給 goal
+      }
+    }
+    return aim ? chaseGoal(markerP, aim) : null;
   }
 
   function frame(now2: number): FrameDirective {
@@ -146,7 +190,8 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
       path = path.slice(1); // [0] 已抵達
       tween = path.length > 0 ? makeTween(reached, path[0].pos, now2) : null;
     }
-    return { markerPos: markerPos(now2), cameraGoal: null, floorFades: [] };
+    const pos = markerPos(now2);
+    return { markerPos: pos, cameraGoal: cameraGoal(pos), floorFades: [] };
   }
 
   return { initial: navRefresh(now), handle, frame };

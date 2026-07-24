@@ -129,3 +129,49 @@ describe('滑行佇列（glide queue）', () => {
     expect(session.frame(1001).markerPos.distanceTo(nodeWorld('n-ha-003'))).toBeLessThan(1e-6);
   });
 });
+
+describe('相機意圖（QA0723 事件腳本）', () => {
+  it('QA0723-1/2/3：入場梯前全景框 connector 兩端；接管→null；回正→恢復', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002'); // R1 首段電扶梯
+    const g = session.frame(1000).cameraGoal;
+    expect(g).not.toBeNull(); // 入場即有 goal——不卡死（QA0723-1）
+    // 全景框景 target＝兩端中點：pl001(-5,-9,0)、ha001(-5,-4,0) → (-5,-6.5,0)（QA0723-3）
+    expect(g!.target.x).toBeCloseTo(-5, 5);
+    expect(g!.target.y).toBeCloseTo(-6.5, 5);
+    expect(g!.target.z).toBeCloseTo(0, 5);
+    session.handle({ type: 'userCameraGrab' }, 1100);
+    expect(session.frame(1101).cameraGoal).toBeNull(); // 使用者接管
+    session.handle({ type: 'recenterRequested' }, 1200);
+    expect(session.frame(1201).cameraGoal).not.toBeNull(); // 回正恢復——不卡死（QA0723-2）
+  });
+
+  it('QA0723-4：垂直堆疊搭乘中改瞄出梯方向，不跳北', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002');
+    session.handle({ type: 'advanceRequested' }, 1000); // 搭電扶梯（兩端同 xz）
+    const d = session.frame(1100); // 滑行中
+    const g = d.cameraGoal!;
+    expect(g).not.toBeNull();
+    // 出梯方向朝 n-ha-002（+x）：target 在 marker 前方 +x，不是預設北向（-z）
+    expect(g.target.x - d.markerPos.x).toBeCloseTo(8, 3);
+    expect(Math.abs(g.target.z - d.markerPos.z)).toBeLessThan(1e-3);
+  });
+
+  it('水平段 chase：goal 朝下一節點', () => {
+    const { session } = makeSession('n-ha-001', 'n-pl-002'); // R3 首段 walk（水平）
+    const d = session.frame(1000);
+    const g = d.cameraGoal!;
+    expect(g).not.toBeNull(); // 非垂直段、非 atEnd → chase
+    // n-ha-003 在 -z 方向：target.z < marker.z
+    expect(g.target.z).toBeLessThan(d.markerPos.z);
+  });
+
+  it('抵達後拉：框最後兩節點（reducedMotion 立即路徑）', () => {
+    const { session } = makeSession('n-pl-001', 'n-ha-002', { reducedMotion: true });
+    session.handle({ type: 'advanceRequested' }, 1000);
+    session.handle({ type: 'advanceRequested' }, 2000);
+    const g = session.frame(2001).cameraGoal!;
+    // 末兩節點 ha001(-5,-4,0)、ha002(2,-4,0) → 中點 (-1.5,-4,0)
+    expect(g.target.x).toBeCloseTo(-1.5, 5);
+    expect(g.target.y).toBeCloseTo(-4, 5);
+  });
+});
