@@ -458,7 +458,7 @@ async function boot(): Promise<void> {
   const pickPin = makePin(THEME.selection.pin);
   function placePickPin(): void {
     pickPin.position.copy(nodeWorld(pickNodeId!));
-    pickPin.position.y += 1.2; // 與 route pin 同高（浮在樓面上方）
+    pickPin.position.y += THEME.route.hover; // 與 route pin 同高（浮在樓面上方）
   }
   function clearPick(): void {
     scene.remove(pickPin);
@@ -539,6 +539,7 @@ async function boot(): Promise<void> {
     if (session && marker) {
       const d = session.frame(now);
       marker.position.copy(d.markerPos);
+      marker.position.y += THEME.route.hover; // marker 騎在路線平面上（QA2-1：幾何解相交，非畫序 hack）
       const yaw = prevMarkerPos ? headingYaw(prevMarkerPos, d.markerPos) : null;
       if (yaw !== null) markerYaw = markerYaw === null ? yaw : lerpYaw(markerYaw, yaw, REDUCED_MOTION ? 1 : 0.15);
       if (markerYaw !== null) marker.rotation.y = markerYaw;

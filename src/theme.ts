@@ -53,7 +53,7 @@ export const THEME = {
     },
   },
   route: {
-    color: '#1a73e8', radius: 0.9, linkRadius: 0.45,
+    color: '#1a73e8', radius: 0.9, linkRadius: 0.45, hover: 1.2, // hover：路線／pin／marker 懸浮高度單一真源
     arrowInterval: 5, arrowSpeed: 0.5,
     pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853', markerSide: '#00913d',
   },

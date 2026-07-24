@@ -90,7 +90,7 @@ export function buildRouteObject(
 
   const ids = [edges[0].from, ...edges.map((e) => e.to)];
   const nodes = ids.map((id) => graph.nodes.get(id)!);
-  const pts = nodes.map((n) => toWorld(n.xy, n.z + offsetY(n.floor) + 1.2)); // 浮在樓面上方
+  const pts = nodes.map((n) => toWorld(n.xy, n.z + offsetY(n.floor) + THEME.route.hover)); // 浮在樓面上方
 
   const tex = routeArrowTexture();
   const routeMat = new THREE.MeshBasicMaterial(

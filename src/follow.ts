@@ -27,7 +27,7 @@ export const remainingEdges = (edges: GraphEdge[], s: FollowState): GraphEdge[] 
 export function buildPositionMarker(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'position-marker';
-  // 問題4：depthTest/depthWrite 關＋renderOrder 拉高——marker 永遠畫在路線與樓板之上
+  // 與路線的關係由幾何解（marker 騎在帶面上）；此處 depthTest/depthWrite 關＋renderOrder 僅作穿牆保險（低視角牆帶/柱不遮 marker）
   const flags = { toneMapped: false, depthTest: false, depthWrite: false, side: THREE.DoubleSide } as const;
   const capMat = new THREE.MeshBasicMaterial({ color: THEME.route.marker, ...flags });
   const sideMat = new THREE.MeshBasicMaterial({ color: THEME.route.markerSide, ...flags });
@@ -38,14 +38,14 @@ export function buildPositionMarker(): THREE.Group {
   shape.lineTo(0, -0.6);
   shape.lineTo(-1.3, -1.3);
   shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.7, bevelEnabled: false });
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.6, bevelEnabled: false });
   const arrow = new THREE.Mesh(geo, [capMat, sideMat]); // ExtrudeGeometry group 0=上下蓋、1=側壁
   arrow.rotation.x = Math.PI / 2; // shape +y → 世界 +z；extrude 厚度轉為 -y
-  arrow.position.y = 0.75; // 厚度朝下 0.7——體積浮在樓面 0.05–0.75
+  arrow.position.y = 0.65; // 厚度朝下 0.6——體積佔 0.05–0.65，全在帶面之上
   arrow.renderOrder = 10;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 24), capMat);
   ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.1;
+  ring.position.y = 0.15; // 管半徑 0.14——0.15 使環底 0.01 完全在帶面之上（0.03 會微沉 0.11）
   ring.renderOrder = 10;
   g.add(arrow, ring);
   return g;

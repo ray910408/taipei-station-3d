@@ -41,4 +41,18 @@ describe('buildPositionMarker 箭頭型指標（問題4：不被路線擋）', (
     });
     expect(checked).toBeGreaterThanOrEqual(3); // 箭頭雙材質＋圓環
   });
+
+  it('QA2-1：所有 mesh 體積不低於 group origin（路線平面）——幾何上不與 ribbon 相交', () => {
+    const g = buildPositionMarker();
+    g.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.geometry.computeBoundingBox();
+      const bb = mesh.geometry.boundingBox!;
+      // rotation.x=π/2 後 local z → world -y：world 最低點 = position.y - bb.max.z（旋轉者）或 position.y + bb.min.y
+      const rotated = Math.abs(mesh.rotation.x) > 1e-6;
+      const worldMinY = rotated ? mesh.position.y - bb.max.z : mesh.position.y + bb.min.y;
+      expect(worldMinY).toBeGreaterThanOrEqual(0);
+    });
+  });
 });
