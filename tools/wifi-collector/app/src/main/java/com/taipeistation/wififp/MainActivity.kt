@@ -1,14 +1,46 @@
 package com.taipeistation.wififp
 
+import android.hardware.SensorManager
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+enum class Screen { SETUP, COLLECT }
+
+class AppState {
+  var screen by mutableStateOf(Screen.SETUP)
+  var rpList by mutableStateOf<RpList?>(null)
+  var mode by mutableStateOf("single")
+  var scansPerPoint by mutableStateOf(10)
+  var writer by mutableStateOf<SessionWriter?>(null)
+  var progress by mutableStateOf(Progress(emptySet(), emptySet()))
+}
 
 class MainActivity : ComponentActivity() {
+  val app = AppState()
+  val engine by lazy { WifiScanEngine(this) }
+  val rig by lazy { SensorRig(getSystemService(SensorManager::class.java)) }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContent { MaterialTheme { Text("wifi-collector scaffold") } }
+    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    setContent {
+      MaterialTheme {
+        when (app.screen) {
+          Screen.SETUP -> SetupScreen(app) { app.screen = Screen.COLLECT }
+          Screen.COLLECT -> {
+            DisposableEffect(Unit) { rig.start(); onDispose { rig.stop() } }
+            Text("collect placeholder") // Task 8 換成 CollectScreen
+          }
+        }
+      }
+    }
   }
 }
