@@ -9,35 +9,27 @@ import { assembleModel, LoaderError } from './loader';
 import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
 import { THEME, applyUITheme } from './theme';
 import {
-  buildGraph, findPath, routeSteps, routeStats, partialRemaining, formatStats,
+  buildGraph, findPath, routeSteps, routeStats, formatStats,
   listLandmarks, sameEndpointMessage, routeFloors,
 } from './nav';
 import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows, makePin } from './path';
-import {
-  makeTween, tweenAt, chaseAim, aimPastVertical, swapFactors, applyFloorFade, setShellVisible,
-  planStepPath, type Tween, type FloorSwap, type PathTarget,
-} from './navview';
+import { applyFloorFade, setShellVisible } from './navview';
 import { attachPoiIcons } from './icons';
 import { attachFloorTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { attachCompass } from './compass';
 import { resolveFloor, snapToNode, toLandmark } from './selection';
-import {
-  PDR_DEFAULTS, initStepState, stepSample, walkStep, crossedNodeIds,
-  type PdrParams, type StepState, type WalkState,
-} from './pdr';
+import { PDR_DEFAULTS, initStepState, stepSample, type PdrParams, type StepState } from './pdr';
 import { motionSupported, requestMotionPermission, startMotion } from './pdr-sensor';
 import { createSpeaker } from './speech';
 import { setupUI } from './ui';
-import { MODE_EXPLODE, verticalStep, transitionLabel, type Mode } from './mode';
+import { MODE_EXPLODE, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
-import { CameraRig, frameGoal, chaseGoal } from './camera';
-import {
-  startFollow, advance, back, atEnd, currentNodeId, remainingEdges,
-  buildPositionMarker, setFloorEmphasis, type FollowState,
-} from './follow';
+import { CameraRig, frameGoal } from './camera';
+import { buildPositionMarker, setFloorEmphasis } from './follow';
+import { startNavSession, type EventOutcome, type NavSession } from './nav-session';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 
@@ -189,16 +181,10 @@ async function boot(): Promise<void> {
   let explodeFactor = 0; // boot 時由實高動畫展開至 overview 爆炸
   let explodeAnim: { from: number; to: number; t0: number } | null = null;
   let routeEdges: GraphEdge[] | null = null;
-  let followState: FollowState | null = null;
   let marker: THREE.Group | null = null;
   let routeObj: THREE.Object3D | null = null;
-  let chaseAuto = true;
-  let markerTween: Tween | null = null;
-  // 尚未抵達的路徑目標（[0]=作用中 tween 目標）；不變量：markerTween!==null ⟺ markerPath 非空，
-  // 且 markerTween.to 恆等於 markerPath[0].pos。
-  let markerPath: PathTarget[] = [];
-  let floorSwap: FloorSwap | null = null;
-  let lastNavFloor: string | null = null;
+  let session: NavSession | null = null; // 導航會話：一次導航＝一個實例，退出即銷毀
+  let fadedFloors: string[] = []; // 會話 crossfade 作用中的樓層——掉出 directive 清單即還原
   let pickNodeId: string | null = null; // 3D 選點目前 snap 的節點
   // PDR（Phase 4）：sim 假步與沿邊推進狀態；感測器接線在 T6
   const pdrQuery = new URLSearchParams(location.search);
@@ -210,16 +196,14 @@ async function boot(): Promise<void> {
     stepLength: Number(pdrQuery.get('pdrStep')) || storedStep || PDR_DEFAULTS.stepLength,
     minStepMs: Number(pdrQuery.get('pdrMinMs')) || PDR_DEFAULTS.minStepMs,
   };
-  let pdrWalk: WalkState = { edgeDist: 0 };
   let stopMotion: (() => void) | null = null;
   let stepState: StepState = initStepState();
-  let pdrGen = 0; // permission await 的世代票：晚到的授權不得啟動舊請求（終審 F1）
   const speaker = createSpeaker();
 
   // 常駐指南針（所有模式可見）；點擊＝使用者接管相機，nav 中暫停自動跟隨（「回正」可恢復）
   const compass = attachCompass(camera, controls, () => {
     rig.cancel();
-    if (mode === 'nav') chaseAuto = false;
+    session?.handle({ type: 'userCameraGrab' }, performance.now());
   });
 
   const offsetAt = (factor: number) => (floorId: string) => floorOffsetY(model, floorId, factor);
@@ -238,13 +222,6 @@ async function boot(): Promise<void> {
   }
 
   let connObj: THREE.Object3D = stationGroup.getObjectByName('connectors')!;
-  /** marker 世界座標：邊上有 PDR 殘距時沿邊插值，否則所在節點（connector 邊 edgeDist 恆 0）。 */
-  function markerWorldPos(): THREE.Vector3 {
-    const pos = nodeWorld(currentNodeId(followState!));
-    const edge = routeEdges?.[followState!.index];
-    if (!edge || pdrWalk.edgeDist <= 0) return pos;
-    return pos.lerp(nodeWorld(edge.to), Math.min(pdrWalk.edgeDist / edge.length, 1));
-  }
 
   function refreshScene(): void {
     applyExplode(stationGroup, model, explodeFactor);
@@ -254,7 +231,6 @@ async function boot(): Promise<void> {
     connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
     stationGroup.add(connObj);
     refreshRoute();
-    if (marker && followState) marker.position.copy(markerWorldPos());
     if (pickNodeId) placePickPin();
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
   }
@@ -270,32 +246,75 @@ async function boot(): Promise<void> {
     return ids.map((id) => nodeWorldAt(id, factor));
   }
 
-  function exitNav(): void {
+  /** 銷毀即清理（設計裁決 2）：會話態隨實例消失，這裡只收 THREE/DOM/sensor 殘留。 */
+  function destroySession(): void {
+    if (!session) return;
+    session = null; // 先斷參照：onPdrToggle 的晚到授權據此判廢
     if (marker) scene.remove(marker); // marker 建一次重用（Phase 3 慣例）
-    followState = null;
-    markerTween = null;
-    markerPath = [];
-    if (floorSwap) {
-      for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
-        const g = stationGroup.getObjectByName(id);
-        if (g) applyFloorFade(g, null);
-      }
-      floorSwap = null;
+    for (const f of fadedFloors) {
+      const g = stationGroup.getObjectByName(f);
+      if (g) applyFloorFade(g, null);
     }
-    lastNavFloor = null;
+    fadedFloors = [];
     ui.setTransition(null);
     ui.showArrive(false);
-    pdrGen++; // 等待中的 permission 結果作廢（終審 F1）
     stopMotion?.();
     stopMotion = null;
     ui.setPdrToggle(false);
-    pdrWalk = { edgeDist: 0 };
     ui.setPdrHint(false);
     speaker.stop(); // 殘句不跨出導航（終審 F4）
   }
 
+  /** 冪等 crossfade 套用：掉出清單的樓層還原（swap 完成/會話收尾皆循此徑）。 */
+  function applyFloorFades(fades: { floor: string; factor: number }[]): void {
+    for (const f of fadedFloors) {
+      if (!fades.some((x) => x.floor === f)) {
+        const g = stationGroup.getObjectByName(f);
+        if (g) applyFloorFade(g, null);
+      }
+    }
+    for (const { floor, factor } of fades) {
+      const g = stationGroup.getObjectByName(floor);
+      if (g) applyFloorFade(g, factor);
+    }
+    fadedFloors = fades.map((x) => x.floor);
+  }
+
+  /** 一次性效果套用。順序固定：fadeRestore → emphasis → nav 文案 → pdr → 語音。 */
+  function applyOutcome(o: EventOutcome): void {
+    if (o.fadeRestore) {
+      for (const f of o.fadeRestore) {
+        const g = stationGroup.getObjectByName(f);
+        if (g) applyFloorFade(g, null);
+      }
+      fadedFloors = fadedFloors.filter((f) => !o.fadeRestore!.includes(f));
+    }
+    if (o.emphasisFloor !== undefined) setFloorEmphasis(stationGroup, o.emphasisFloor);
+    if (o.nav) {
+      ui.setNavInfo(o.nav.next, o.nav.remain, o.nav.progress);
+      ui.setTransition(o.nav.transition);
+      ui.showArrive(o.nav.arrived);
+    }
+    if (o.pdrToggle === true) {
+      ui.setPdrToggle(true);
+      stepState = initStepState();
+      stopMotion?.();
+      stopMotion = startMotion((t, mag) => {
+        const r = stepSample(stepState, t, mag, pdrParams);
+        stepState = r.state;
+        if (r.step && session) applyOutcome(session.handle({ type: 'stepDetected' }, performance.now()));
+      });
+    } else if (o.pdrToggle === false) {
+      stopMotion?.();
+      stopMotion = null;
+      ui.setPdrToggle(false);
+    }
+    if (o.pdrHint !== undefined) ui.setPdrHint(o.pdrHint);
+    if (o.speech) speaker.speak(o.speech);
+  }
+
   function clearRoute(): void {
-    exitNav();
+    destroySession();
     routeEdges = null;
     refreshRoute();
   }
@@ -326,97 +345,6 @@ async function boot(): Promise<void> {
       setFloorEmphasis(stationGroup, routeEdges ? routeFloors(graph, routeEdges) : null);
       rig.goal = frameGoal(routePoints(MODE_EXPLODE[m]), camera.aspect); // 以目標爆炸係數框路徑
     }
-    if (m === 'nav') chaseAuto = true;
-  }
-
-  /** 抵達後相機後拉：框住最後兩節點展示終點周邊（P-6）。 */
-  function arriveGoal(): void {
-    if (!followState) return;
-    const pts = followState.nodeIds.slice(-2).map((id) => nodeWorld(id));
-    rig.goal = frameGoal(pts, camera.aspect);
-  }
-
-  function refreshNav(): { next: string; arrived: boolean } {
-    if (!followState || !routeEdges || !marker) return { next: '', arrived: false };
-    marker.position.copy(markerWorldPos());
-    const cur = graph.nodes.get(currentNodeId(followState))!;
-    setFloorEmphasis(stationGroup, cur.floor); // 半透明看見上下樓層（風格關卡回饋 1）
-    if (lastNavFloor !== null && lastNavFloor !== cur.floor) {
-      if (floorSwap) { // 前一場未完先收尾，避免殘留錯誤透明度
-        for (const id of [floorSwap.fromFloor, floorSwap.toFloor]) {
-          const g = stationGroup.getObjectByName(id);
-          if (g) applyFloorFade(g, null);
-        }
-        setFloorEmphasis(stationGroup, cur.floor); // 舊快照還原後重套，連續換層不覆寫新 dim
-      }
-      floorSwap = { fromFloor: lastNavFloor, toFloor: cur.floor, t0: performance.now() };
-    }
-    lastNavFloor = cur.floor;
-    const vEdge = verticalStep(routeEdges, followState);
-    ui.setTransition(vEdge ? transitionLabel(model, graph, vEdge) : null);
-    const remain = remainingEdges(routeEdges, followState);
-    const progress = `進度 ${followState.index + 1}/${followState.nodeIds.length}`;
-    if (atEnd(followState)) {
-      ui.setNavInfo('已抵達目的地', '', progress);
-      ui.showArrive(true);
-      return { next: '已抵達目的地', arrived: true };
-    }
-    ui.showArrive(false);
-    const next = routeSteps(model, graph, remain)[0] ?? '前往下一節點';
-    ui.setNavInfo(`下一步：${next}`, `剩餘 ${formatStats(partialRemaining(remain, pdrWalk.edgeDist))}`, progress);
-    return { next: `下一步：${next}`, arrived: false };
-  }
-
-  /** 單次節點推進的完整體感（tween＋相機＋抵達）：手動按鈕與 PDR 步進的共同入口。 */
-  function advanceOnce(): void {
-    if (!followState || !marker) return;
-    if (markerTween) { marker.position.copy(markerTween.to); markerTween = null; markerPath = []; }
-    const fromPos = marker.position.clone();
-    followState = advance(followState);
-    chaseAuto = true;
-    const info = refreshNav();
-    speaker.speak(info.arrived ? '已抵達目的地' : info.next); // enabled 才真的出聲
-    if (REDUCED_MOTION) { // 免滑行：refreshNav 已把 marker 放到新節點；抵達直接後拉
-      if (atEnd(followState)) arriveGoal();
-      return;
-    }
-    markerPath = [{ pos: marker.position.clone(), residual: false }]; // 手動推進目標=節點
-    markerTween = makeTween(fromPos, marker.position.clone(), performance.now());
-    marker.position.copy(fromPos);
-  }
-
-  function pdrActive(): boolean {
-    return pdrSim || stopMotion !== null;
-  }
-
-  function updatePdrHint(): void {
-    ui.setPdrHint(pdrActive() && mode === 'nav' && followState !== null
-      && routeEdges !== null && verticalStep(routeEdges, followState) !== null);
-  }
-
-  /** 一個偵測到的步伐 → 沿邊累距 → 每步微滑行＋倒數；跨節點觸發 advanceOnce（可能多次）。
-   *  視覺路徑以 planStepPath 規劃：既有未走完目標＋本步新目標合併，永遠沿路線向前。 */
-  function onStep(): void {
-    if (mode !== 'nav' || !followState || !routeEdges || atEnd(followState)) return;
-    const r = walkStep(routeEdges, followState, pdrWalk, pdrParams.stepLength);
-    const fromPos = marker ? marker.position.clone() : null;
-    const pendingOld = markerPath.map((t) => ({ pos: t.pos.clone(), residual: t.residual }));
-    const fromIndex = followState.index;
-    pdrWalk = r.w;
-    if (r.advances > 0) {
-      for (let i = 0; i < r.advances; i++) advanceOnce();
-    } else if (!r.paused && marker) {
-      refreshNav(); // 每步 UI 數字（marker 位置隨後由路徑規劃接管）
-    }
-    // paused 但 advances>0＝跨完 walk 邊踩到 connector——該步仍需沿節點重建路徑（I-1 round 2b）
-    if ((!r.paused || r.advances > 0) && fromPos && marker && !REDUCED_MOTION) {
-      const crossed = crossedNodeIds(followState.nodeIds, fromIndex, r.advances).map((id) => nodeWorld(id));
-      const pts = planStepPath(pendingOld, crossed, { pos: markerWorldPos(), residual: pdrWalk.edgeDist > 0 });
-      markerPath = pts;
-      markerTween = makeTween(fromPos, pts[0].pos, performance.now());
-      marker.position.copy(fromPos);
-    }
-    updatePdrHint();
   }
 
   const ui = setupUI({
@@ -439,32 +367,25 @@ async function boot(): Promise<void> {
     onRouteInvalid: () => { routeEdges = null; refreshRoute(); setFloorEmphasis(stationGroup, null); },
     onStartNav: () => {
       if (!routeEdges?.length) return;
-      followState = startFollow(routeEdges);
+      session = startNavSession({
+        model, graph, edges: routeEdges, nodeWorld,
+        aspect: () => camera.aspect,
+        stepLength: () => pdrParams.stepLength,
+        reducedMotion: REDUCED_MOTION, pdrSim,
+      }, performance.now());
       if (!marker) marker = buildPositionMarker();
       scene.add(marker);
       setMode('nav');
-      refreshNav();
-      pdrWalk = { edgeDist: 0 };
-      updatePdrHint();
+      applyOutcome(session.initial);
     },
     onAdvance: () => {
-      pdrWalk = { edgeDist: 0 }; // 手動確認＝重新對齊節點，殘距作廢
-      advanceOnce();
-      updatePdrHint();
+      if (session) applyOutcome(session.handle({ type: 'advanceRequested' }, performance.now()));
     },
     onBack: () => {
-      if (followState) {
-        markerTween = null;
-        markerPath = [];
-        followState = back(followState);
-        pdrWalk = { edgeDist: 0 };
-        refreshNav();
-        updatePdrHint();
-      }
+      if (session) applyOutcome(session.handle({ type: 'backRequested' }, performance.now()));
     },
     onRecenter: () => {
-      chaseAuto = true;
-      if (followState) refreshNav();
+      if (session) applyOutcome(session.handle({ type: 'recenterRequested' }, performance.now()));
     },
     onExitNav: () => setMode('overview'),
     onFloorFocus: (id) => setFloorEmphasis(stationGroup, id),
@@ -476,24 +397,20 @@ async function boot(): Promise<void> {
       localStorage.setItem('pdr-step-length', String(len));
     },
     onPdrToggle: async (on) => {
-      const gen = ++pdrGen;
+      if (!session) return false;
+      const s = session; // 晚到授權雙防線之一：會話身分（票號比對在會話內）
+      const o1 = s.handle({ type: 'pdrToggleRequested', on }, performance.now());
+      applyOutcome(o1);
+      if (!o1.requestPermission) return o1.pdrToggle === true;
       stopMotion?.();
       stopMotion = null;
-      if (!on) { updatePdrHint(); return false; }
-      if (!(await requestMotionPermission())) return false; // 拒絕/不支援 → toggle 回滾
-      if (gen !== pdrGen) return false; // 等待期間已退出導航或重切開關——晚到授權不啟動
-      stepState = initStepState();
-      pdrWalk = { edgeDist: 0 };
-      markerTween = null;
-      markerPath = [];
-      if (mode === 'nav' && followState) refreshNav(); // 重新對齊節點＝立即同步 marker 與剩餘（I-2）
-      stopMotion = startMotion((t, mag) => {
-        const r = stepSample(stepState, t, mag, pdrParams);
-        stepState = r.state;
-        if (r.step) onStep();
-      });
-      updatePdrHint();
-      return true;
+      const granted = await requestMotionPermission();
+      if (s !== session) return false; // 等待期間會話已銷毀/重建——不啟動
+      const o2 = s.handle(
+        { type: 'pdrPermissionResult', granted, ticket: o1.requestPermission.ticket },
+        performance.now());
+      applyOutcome(o2);
+      return o2.pdrToggle === true;
     },
     onVoiceToggle: (on) => {
       speaker.setEnabled(on);
@@ -523,7 +440,7 @@ async function boot(): Promise<void> {
   // 使用者拖曳＝接管鏡頭（任何模式）；nav 中另暫停自動跟隨
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     rig.cancel();
-    if (mode === 'nav') chaseAuto = false;
+    session?.handle({ type: 'userCameraGrab' }, performance.now());
     if (tapStart !== null) { tapVoid = true; return; } // 第二指（DOLLY_ROTATE）→ 本次點擊作廢
     tapStart = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
     tapVoid = false;
@@ -557,8 +474,12 @@ async function boot(): Promise<void> {
     ui.showPickCard(toLandmark(model, node));
   });
 
-  // ?pdr=sim：按 s 鍵＝一步假步伐——走 onStep → walkStep → advanceOnce 同一條管線
-  if (pdrSim) addEventListener('keydown', (ev) => { if (ev.key === 's') onStep(); });
+  // ?pdr=sim：按 s 鍵＝一步假步伐——與真感測器共用 stepDetected 事件管線
+  if (pdrSim) addEventListener('keydown', (ev) => {
+    if (ev.key === 's' && session) {
+      applyOutcome(session.handle({ type: 'stepDetected' }, performance.now()));
+    }
+  });
 
   setMode('overview'); // boot：實高 → 爆炸圖展開動畫
 
@@ -577,55 +498,12 @@ async function boot(): Promise<void> {
       refreshScene();
       if (t >= 1) explodeAnim = null;
     }
-    if (markerTween && marker) {
-      const { pos, done } = tweenAt(markerTween, performance.now());
-      marker.position.copy(pos);
-      if (done) {
-        markerPath = markerPath.slice(1); // [0] 已抵達
-        if (markerPath.length > 0) {
-          markerTween = makeTween(marker.position.clone(), markerPath[0].pos, performance.now());
-        } else {
-          markerTween = null;
-          if (mode === 'nav' && followState && atEnd(followState)) arriveGoal(); // P-6：滑行到站才後拉
-        }
-      }
-    }
-    if (floorSwap) {
-      const { fromFactor, toFactor, done } = swapFactors(floorSwap, performance.now(), THEME.emphasis.dim);
-      const fromG = stationGroup.getObjectByName(floorSwap.fromFloor);
-      const toG = stationGroup.getObjectByName(floorSwap.toFloor);
-      if (fromG) applyFloorFade(fromG, done ? null : fromFactor);
-      if (toG) applyFloorFade(toG, done ? null : toFactor);
-      if (done) floorSwap = null;
-    }
     tickRouteArrows(performance.now());
-    if (mode === 'nav' && followState && marker && chaseAuto && routeEdges) {
-      const holdEdge = markerTween === null ? verticalStep(routeEdges, followState) : null;
-      if (holdEdge) {
-        // 梯前全景（QA0723-3）：框住 connector 兩端——豎井量體不再貼臉遮 marker，
-        // 並補齊 mode.ts transition 呈現的相機半（文字橫幅之外的視覺告知）。
-        // 每幀重算——入場（垂直第一步）當下爆炸圖仍在收合動畫，框景需跟著 nodeWorld 收斂。
-        rig.goal = frameGoal([nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], camera.aspect);
-      } else {
-        const nextId = followState.nodeIds[Math.min(followState.index + 1, followState.nodeIds.length - 1)];
-        let aim = chaseAim({
-          tween: markerTween,
-          atEnd: atEnd(followState),
-          vertical: verticalStep(routeEdges, followState) !== null,
-          nextPos: nodeWorld(nextId),
-        });
-        if (!atEnd(followState)) {
-          // 搭乘 tween 中 aim 與 marker 垂直堆疊時改瞄出梯方向——不再跳北（QA0723-4）。
-          // aim=null 理論上已被梯前全景攔截，null 檢查留作防禦。
-          const dx0 = aim ? aim.x - marker.position.x : 0;
-          const dz0 = aim ? aim.z - marker.position.z : 0;
-          if (aim === null || dx0 * dx0 + dz0 * dz0 <= 1e-4) {
-            const rest = followState.nodeIds.slice(followState.index + 1).map((id) => nodeWorld(id));
-            aim = aimPastVertical(marker.position, rest) ?? nodeWorld(nextId); // 末線防呆：整段零位移仍給 goal
-          }
-        }
-        if (aim) rig.goal = chaseGoal(marker.position, aim);
-      }
+    if (session && marker) {
+      const d = session.frame(performance.now());
+      marker.position.copy(d.markerPos);
+      applyFloorFades(d.floorFades);
+      if (d.cameraGoal) rig.goal = d.cameraGoal;
     }
     rig.tick();
     controls.update();
