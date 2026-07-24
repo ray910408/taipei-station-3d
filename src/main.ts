@@ -164,6 +164,10 @@ async function boot(): Promise<void> {
   controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
   controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
   const rig = new CameraRig(camera, controls, REDUCED_MOTION ? 1 : 0.08);
+  // 問題7 dirty-flag：無持續動畫、無互動、無髒污時整幀跳過 render（手機發燙主因）
+  let needsRender = true; // boot 首幀必畫
+  const invalidate = (): void => { needsRender = true; };
+  controls.addEventListener('change', invalidate); // 拖曳/縮放/慣性每一步都算髒
   // 開場：從初始視角滑入、框住整棟爆炸後的建築
   const framePts: THREE.Vector3[] = [];
   for (const meta of model.station.floors) {
@@ -221,6 +225,7 @@ async function boot(): Promise<void> {
       routeObj = buildRouteObject(graph, routeEdges, offsetAt(explodeFactor));
       scene.add(routeObj);
     }
+    invalidate();
   }
 
   let connObj: THREE.Object3D = stationGroup.getObjectByName('connectors')!;
@@ -232,6 +237,7 @@ async function boot(): Promise<void> {
   function applyEmphasis(active: string | readonly string[] | null, dim: number = THEME.emphasis.dim): void {
     emphasis = { active, dim };
     setFloorEmphasis(stationGroup, active, dim);
+    invalidate();
   }
 
   function refreshScene(): void {
@@ -245,6 +251,7 @@ async function boot(): Promise<void> {
     if (pickNodeId) placePickPin();
     if (emphasis.active !== null) setFloorEmphasis(stationGroup, emphasis.active, emphasis.dim);
     renderer.shadowMap.needsUpdate = true; // 樓層/connectors 位移＝唯一會動到影子的來源
+    invalidate();
   }
 
   function setExplode(target: number): void {
@@ -277,6 +284,7 @@ async function boot(): Promise<void> {
     ui.setPdrToggle(false);
     ui.setPdrHint(false);
     speaker.stop(); // 殘句不跨出導航（終審 F4）
+    invalidate(); // marker 移除需重畫
   }
 
   /** 冪等 crossfade 套用：掉出清單的樓層還原（swap 完成/會話收尾皆循此徑）。 */
@@ -360,6 +368,7 @@ async function boot(): Promise<void> {
       applyEmphasis(routeEdges ? routeFloors(graph, routeEdges) : null);
       rig.goal = frameGoal(routePoints(MODE_EXPLODE[m]), camera.aspect); // 以目標爆炸係數框路徑
     }
+    invalidate();
   }
 
   const ui = setupUI({
@@ -455,12 +464,14 @@ async function boot(): Promise<void> {
     scene.remove(pickPin);
     pickNodeId = null;
     ui.showPickCard(null);
+    invalidate();
   }
   let tapStart: { x: number; y: number; id: number } | null = null;
   let tapVoid = false;
   let tapMaxDist = 0; // 途中最大位移——拖遠繞回原點不算 tap（終審人工項）
   // 使用者拖曳＝接管鏡頭（任何模式）；nav 中另暫停自動跟隨
   renderer.domElement.addEventListener('pointerdown', (ev) => {
+    invalidate(); // 互動兜底：任何指標按下至少畫一幀
     rig.cancel();
     session?.handle({ type: 'userCameraGrab' }, performance.now());
     if (tapStart !== null) { tapVoid = true; return; } // 第二指（DOLLY_ROTATE）→ 本次點擊作廢
@@ -472,8 +483,9 @@ async function boot(): Promise<void> {
     if (tapStart && ev.pointerId === tapStart.id)
       tapMaxDist = Math.max(tapMaxDist, Math.hypot(ev.clientX - tapStart.x, ev.clientY - tapStart.y));
   });
-  renderer.domElement.addEventListener('pointercancel', () => { tapVoid = true; tapStart = null; });
+  renderer.domElement.addEventListener('pointercancel', () => { invalidate(); tapVoid = true; tapStart = null; });
   renderer.domElement.addEventListener('pointerup', (ev) => {
+    invalidate(); // 互動兜底：任何指標放開至少畫一幀
     const start = tapStart;
     tapStart = null;
     if (tapVoid || !start || ev.pointerId !== start.id || mode === 'nav') return;
@@ -493,6 +505,7 @@ async function boot(): Promise<void> {
     pickNodeId = node.id;
     placePickPin();
     scene.add(pickPin);
+    invalidate();
     ui.showPickCard(toLandmark(model, node));
     rig.goal = frameGoal([nodeWorld(node.id)], camera.aspect); // 問題2：選點即拉近（MIN_RADIUS 保底）
   });
@@ -512,18 +525,19 @@ async function boot(): Promise<void> {
     renderer.setSize(innerWidth, innerHeight);
     composer?.setSize(innerWidth, innerHeight);
     labelLayer.resize(innerWidth, innerHeight);
+    invalidate();
   });
 
   renderer.setAnimationLoop(() => {
+    const now = performance.now();
     if (explodeAnim) {
-      const t = Math.min(1, (performance.now() - explodeAnim.t0) / EXPLODE_MS);
+      const t = Math.min(1, (now - explodeAnim.t0) / EXPLODE_MS);
       explodeFactor = explodeAnim.from + (explodeAnim.to - explodeAnim.from) * easeInOutCubic(t);
       refreshScene();
       if (t >= 1) explodeAnim = null;
     }
-    tickRouteArrows(performance.now());
     if (session && marker) {
-      const d = session.frame(performance.now());
+      const d = session.frame(now);
       marker.position.copy(d.markerPos);
       const yaw = prevMarkerPos ? headingYaw(prevMarkerPos, d.markerPos) : null;
       if (yaw !== null) markerYaw = markerYaw === null ? yaw : lerpYaw(markerYaw, yaw, REDUCED_MOTION ? 1 : 0.15);
@@ -532,10 +546,15 @@ async function boot(): Promise<void> {
       applyFloorFades(d.floorFades);
       if (d.cameraGoal) rig.goal = d.cameraGoal;
     }
-    rig.tick();
-    controls.update();
-    compass?.tick(); // controls.update 後：target/相機皆為當幀最終值
-    labelLayer.update(camera, mode, explodeFactor, focusedFloor, rig.goal !== null);
+    // 持續動畫源：爆炸、導航會話、鏡頭滑行、路線箭頭流動（routeObj 只在 preview/nav 存在）
+    const animating = explodeAnim !== null || session !== null || rig.goal !== null || routeObj !== null;
+    const moved = controls.update(); // 每幀都要跑（damping）；回傳當幀是否有變化
+    if (!animating && !moved && !needsRender) return; // 問題7：靜止幀整段跳過（n8ao／render／CSS2D 全省）
+    needsRender = false;
+    tickRouteArrows(now);
+    rig.tick(); // controls.update 之後：goal 滑行不被 damping 蓋掉；到位自動釋放
+    compass?.tick();
+    labelLayer.update(camera, mode, explodeFactor, focusedFloor, rig.goal !== null); // rig.tick 後：反映當幀 goal 釋放
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelLayer.render(scene, camera);
