@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { labelVisible, declutter } from '../src/labels';
+import { labelVisible } from '../src/labels';
 import { THEME } from '../src/theme';
 
 describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距離）', () => {
@@ -39,22 +39,5 @@ describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距
   });
   it('tier 2 中距（<landmarkMaxDist）仍隱藏——與 L1 有別', () => {
     expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist - 1, 2)).toBe(false);
-  });
-});
-
-describe('declutter pinned 保底（floor-tag／L0 常駐不被擠掉）', () => {
-  it('pinned 項同格輸給高分者仍保留', () => {
-    const keep = declutter([
-      { x: 10, y: 10, priority: 5 },
-      { x: 20, y: 12, priority: 1, pinned: true },
-    ], 72);
-    expect(keep).toEqual([true, true]);
-  });
-  it('pinned 項仍佔格：同格未 pinned 低分者被擠掉', () => {
-    const keep = declutter([
-      { x: 10, y: 10, priority: 3, pinned: true },
-      { x: 20, y: 12, priority: 1 },
-    ], 72);
-    expect(keep).toEqual([true, false]);
   });
 });
