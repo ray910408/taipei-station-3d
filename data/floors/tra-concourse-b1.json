@@ -270,6 +270,7 @@
       {
         "id": "n-tc-005",
         "xy": [92, 21],
+        "tier": 2,
         "area": "a-tc-unpaid-e",
         "name": {
           "zh": "B1 東剪票口 寬閘門外"
@@ -283,6 +284,7 @@
       {
         "id": "n-tc-007",
         "xy": [76, 26],
+        "tier": 2,
         "area": "a-tc-tra-paid",
         "name": {
           "zh": "B1 付費島 第4月台梯口"
@@ -291,6 +293,7 @@
       {
         "id": "n-tc-008",
         "xy": [76, 6],
+        "tier": 2,
         "area": "a-tc-tra-paid",
         "name": {
           "zh": "B1 付費島 第3月台梯口"

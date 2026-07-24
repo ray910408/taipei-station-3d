@@ -33,4 +33,11 @@ describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距
   it('tier 0 landmark 在 preview 仍隱藏（讓位給路線）', () => {
     expect(labelVisible('landmark', 'preview', 1, 10, 0)).toBe(false);
   });
+  it('tier 2 只在近距顯示（landmarkNearDist）', () => {
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkNearDist - 1, 2)).toBe(true);
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkNearDist + 1, 2)).toBe(false);
+  });
+  it('tier 2 中距（<landmarkMaxDist）仍隱藏——與 L1 有別', () => {
+    expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist - 1, 2)).toBe(false);
+  });
 });

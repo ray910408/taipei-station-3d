@@ -7,20 +7,21 @@ import type { Mode } from './mode';
 
 export type LabelKind = 'floor-tag' | 'landmark';
 
-/** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依鏡頭距離進退，preview/nav 隱藏；
- *  tier:0 大地標在 overview 常駐（不受距離限制）；
+/** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依三級 LOD 進退，preview/nav 隱藏；
+ *  L0 大地標常駐、L1 中距顯示、L2 近距顯示；
  *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
-  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1,
+  kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1 | 2,
 ): boolean {
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
   if (mode === 'preview') return false; // landmark：preview 讓位給路線（Phase 4 舊債 2）
   if (tier === 0) return true; // L0 大地標常駐
-  return cameraDist < THEME.labels.landmarkMaxDist; // L1 依距離
+  if (tier === 2) return cameraDist < THEME.labels.landmarkNearDist; // L2 次要：近距才出
+  return cameraDist < THEME.labels.landmarkMaxDist; // L1（未標 tier 預設）
 }
 
-interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1; floor: string; leader?: THREE.Object3D }
+interface Entry { obj: CSS2DObject; kind: LabelKind; tier?: 0 | 1 | 2; floor: string; leader?: THREE.Object3D }
 
 /** 螢幕格去疊：每 cell px 桶只留 priority 最高者 true。floor-tag 應給最高 priority。 */
 export function declutter(items: { x: number; y: number; priority: number }[], cell: number): boolean[] {
@@ -120,7 +121,8 @@ export function createLabelLayer(
   const tmp = new THREE.Vector3();
   const proj = new THREE.Vector3(); // 重用投影暫存，避免每 frame×label clone（手機 GC 抖動）
   let vw = container.clientWidth, vh = container.clientHeight;
-  const priorityOf = (e: Entry): number => (e.kind === 'floor-tag' ? 3 : e.tier === 0 ? 2 : 1);
+  const priorityOf = (e: Entry): number =>
+    e.kind === 'floor-tag' ? 4 : e.tier === 0 ? 3 : e.tier === 2 ? 1 : 2;
   return {
     update(camera, mode, explodeFactor, focusFloor = null) {
       const cand: { e: Entry; x: number; y: number; priority: number }[] = [];
