@@ -5,8 +5,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+// —— 純邏輯(JVM 可測)——
+
+fun slotsForMode(mode: String): List<Int?> = if (mode == "quad") listOf(0, 90, 180, 270) else listOf(null)
+
+fun pendingSlotsFor(id: String, mode: String, progress: Progress): List<Int?> =
+  slotsForMode(mode).filter { DoneKey(id, it) !in progress.done }
+
+fun isPointCompleteFor(id: String, mode: String, progress: Progress): Boolean =
+  id in progress.skipped || pendingSlotsFor(id, mode, progress).isEmpty()
+
+fun nextPendingPoint(points: List<RpPoint>, mode: String, progress: Progress): RpPoint? =
+  points.firstOrNull { !isPointCompleteFor(it.id, mode, progress) }
+
+fun progressAfterRedo(progress: Progress, id: String): Progress =
+  progress.copy(done = progress.done.filterNot { it.pointId == id }.toSet())
 
 class CollectController(
   private val app: AppState,
@@ -19,18 +37,17 @@ class CollectController(
   var apCount by mutableStateOf(0)
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
+  var writeWarn by mutableStateOf(false)
   var currentId by mutableStateOf<String?>(null)
   private var job: Job? = null
 
-  fun slotsFor(): List<Int?> = if (app.mode == "quad") listOf(0, 90, 180, 270) else listOf(null)
+  fun slotsFor(): List<Int?> = slotsForMode(app.mode)
 
-  fun pendingSlots(id: String): List<Int?> =
-    slotsFor().filter { DoneKey(id, it) !in app.progress.done }
+  fun pendingSlots(id: String): List<Int?> = pendingSlotsFor(id, app.mode, app.progress)
 
-  fun isPointComplete(id: String): Boolean =
-    id in app.progress.skipped || pendingSlots(id).isEmpty()
+  fun isPointComplete(id: String): Boolean = isPointCompleteFor(id, app.mode, app.progress)
 
-  fun nextPending(): RpPoint? = app.rpList?.points?.firstOrNull { !isPointComplete(it.id) }
+  fun nextPending(): RpPoint? = nextPendingPoint(app.rpList?.points ?: emptyList(), app.mode, app.progress)
 
   fun current(): RpPoint? = currentId?.let { id -> app.rpList?.points?.firstOrNull { it.id == id } }
 
@@ -48,13 +65,14 @@ class CollectController(
 
   fun redo(id: String) {
     // 檔案裡舊行留著（離線同 key 取最後一行）；記憶體中清掉重跑
-    app.progress = app.progress.copy(done = app.progress.done.filterNot { it.pointId == id }.toSet())
+    app.progress = progressAfterRedo(app.progress, id)
     currentId = id
   }
 
   fun skip(reason: String) {
     val p = current() ?: return
-    app.writer?.append(buildSkipLine(p.id, reason, isoNow()))
+    val ok = app.writer?.append(buildSkipLine(p.id, reason, isoNow())) ?: false
+    writeWarn = !ok
     app.progress = app.progress.copy(skipped = app.progress.skipped + p.id)
     ensureCurrent()
   }
@@ -87,13 +105,16 @@ class CollectController(
         scanK = i + 1
       }
       val win = rig.endWindow()
-      app.writer?.append(buildPointLine(p, slot, win.headingMeanDeg, win.headingAcc, startedAt,
-        SystemClock.elapsedRealtime() - t0, ok, throttled, batches, win.mag))
+      val line = buildPointLine(p, slot, win.headingMeanDeg, win.headingAcc, startedAt,
+        SystemClock.elapsedRealtime() - t0, ok, throttled, batches, win.mag)
+      val okWrite = withContext(Dispatchers.IO) { app.writer?.append(line) ?: false }
+      writeWarn = !okWrite
       app.progress = app.progress.copy(done = app.progress.done + DoneKey(p.id, slot))
       lastThrottled = throttled
       lowScanWarn = ok * 10 < app.scansPerPoint * 6 // ok < 60% N
       ensureCurrent()
     } finally {
+      rig.endWindow() // 中斷路徑關閉時窗；正常路徑已取值，重複呼叫無害
       scanning = false
     }
   }

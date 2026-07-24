@@ -13,7 +13,7 @@ export function pointInPolygon(p: Pt, poly: Pt[]): boolean {
   return inside
 }
 
-function distPointToSegment(p: Pt, a: Pt, b: Pt): number {
+export function distPointToSegment(p: Pt, a: Pt, b: Pt): number {
   const dx = b[0] - a[0]
   const dy = b[1] - a[1]
   const len2 = dx * dx + dy * dy

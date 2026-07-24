@@ -62,7 +62,8 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
       ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
       val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().readText()
       app.rpList = parseRpList(text)
-      prefs.edit().putString("lastRpUri", uri.toString()).apply()
+      app.rpName = uri.lastPathSegment?.substringAfterLast('/') ?: "rp-points.json"
+      prefs.edit().putString("lastRpUri", uri.toString()).putString("lastRpName", app.rpName).apply()
       rpError = null
     } catch (e: Exception) { rpError = e.message ?: "讀檔失敗"; app.rpList = null }
   }
@@ -75,6 +76,7 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
       val uri = Uri.parse(last)
       val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().readText()
       app.rpList = parseRpList(text)
+      app.rpName = prefs.getString("lastRpName", null) ?: app.rpName
     } catch (e: Exception) { /* 上次的檔失效就重選 */ }
   }
 
@@ -114,17 +116,22 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
 
     // 模式與 N
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      FilterChip(selected = app.mode == "single", onClick = { app.mode = "single" }, label = { Text("單朝向") })
-      FilterChip(selected = app.mode == "quad", onClick = { app.mode = "quad" }, label = { Text("四朝向") })
+      FilterChip(selected = app.mode == "single", onClick = { app.mode = "single" }, label = { Text("單朝向") }, enabled = resumeFile == null)
+      FilterChip(selected = app.mode == "quad", onClick = { app.mode = "quad" }, label = { Text("四朝向") }, enabled = resumeFile == null)
     }
     Text("每點掃描次數 N = ${app.scansPerPoint}")
-    Slider(value = app.scansPerPoint.toFloat(), onValueChange = { app.scansPerPoint = it.toInt() }, valueRange = 3f..30f)
+    Slider(value = app.scansPerPoint.toFloat(), onValueChange = { app.scansPerPoint = it.toInt() }, valueRange = 3f..30f, enabled = resumeFile == null)
 
     // session 選擇
     Text("Session", style = MaterialTheme.typography.titleMedium)
     FilterChip(selected = resumeFile == null, onClick = { resumeFile = null }, label = { Text("新 session") })
     sessions.value.take(5).forEach { f ->
-      FilterChip(selected = resumeFile == f, onClick = { resumeFile = f },
+      FilterChip(selected = resumeFile == f, onClick = {
+        resumeFile = f
+        parseSessionHeader(f.readLines().asSequence())?.let { h ->
+          app.mode = h.mode; app.scansPerPoint = h.scansPerPoint
+        }
+      },
         label = { Text("續採 ${f.name.removePrefix("wifi-fp-").removeSuffix(".jsonl")}") })
     }
 
@@ -137,8 +144,8 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
           SessionWriter(baseDir, resumeFile!!.name.removePrefix("wifi-fp-").removeSuffix(".jsonl"))
         } else {
           SessionWriter(baseDir, SessionWriter.newSessionId()).also {
-            it.append(buildSessionLine(Build.MODEL, Build.VERSION.SDK_INT, "0.1.0",
-              app.mode, app.scansPerPoint, list.generated, isoNow()))
+            it.append(buildSessionLine(it.sessionId, Build.MODEL, Build.VERSION.SDK_INT, "0.1.0",
+              app.mode, app.scansPerPoint, app.rpName, list.generated, isoNow()))
           }
         }
         app.writer = w

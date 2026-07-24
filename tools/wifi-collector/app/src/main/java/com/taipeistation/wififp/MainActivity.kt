@@ -19,6 +19,7 @@ class AppState {
   var rpList by mutableStateOf<RpList?>(null)
   var mode by mutableStateOf("single")
   var scansPerPoint by mutableStateOf(10)
+  var rpName by mutableStateOf("rp-points.json")
   var writer by mutableStateOf<SessionWriter?>(null)
   var progress by mutableStateOf(Progress(emptySet(), emptySet()))
 }

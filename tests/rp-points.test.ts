@@ -69,4 +69,19 @@ describe('generateFloorPoints', () => {
     expect(pts[0].note).toBe('測試區')
     // 離牆 0.8:貼 area 邊(x=2 邊,候選最近 x=4 距 2)全過 —— 驗上界:沒有點離自己 area 邊 <0.8
   })
+
+  it('內部縫不剔點:兩相鄰可走區', () => {
+    const seamFloor = {
+      id: 'seam-floor',
+      slab: { outline: [[0, 0], [20, 0], [20, 10], [0, 10]] as Pt[] },
+      areas: [
+        { id: 'L', kind: 'paid', polygon: [[0, 0], [10, 0], [10, 10], [0, 10]] as Pt[] },
+        { id: 'R', kind: 'unpaid', polygon: [[10, 0], [20, 0], [20, 10], [10, 10]] as Pt[] },
+      ],
+    }
+    const pts = generateFloorPoints(seamFloor as never, 'S', 3, 0.8)
+    const coords = pts.map(p => [p.x, p.y])
+    expect(coords).toContainEqual([10.5, 4.5])   // 距內部縫 0.5m → 保留(非牆)
+    expect(coords).not.toContainEqual([19.5, 4.5]) // 距外牆 0.5m → 剔除
+  })
 })

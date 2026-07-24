@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { distToPolygonEdge, pointInPolygon, serpentineOrder, type Pt } from './rp-geometry'
+import { distPointToSegment, distToPolygonEdge, pointInPolygon, serpentineOrder, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
 const AREA_FILL: Record<string, string> = {
@@ -17,6 +17,24 @@ export interface FloorJson {
   units?: FloorUnit[]
 }
 export interface RpPoint { id: string; floor: string; x: number; y: number; note?: string }
+
+/** host 邊界中距 p < clearance 的邊,若越過該邊 5cm 仍在任一可走區內(內部縫)就不算牆 */
+function nearWall(p: Pt, host: Pt[], areas: FloorArea[], clearance: number): boolean {
+  for (let i = 0, j = host.length - 1; i < host.length; j = i++) {
+    const a = host[j], b = host[i]
+    if (distPointToSegment(p, a, b) >= clearance) continue
+    const dx = b[0] - a[0], dy = b[1] - a[1]
+    const len2 = dx * dx + dy * dy
+    let t = len2 === 0 ? 0 : ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2
+    t = Math.max(0, Math.min(1, t))
+    const qx = a[0] + t * dx, qy = a[1] + t * dy
+    const nx = p[0] - qx, ny = p[1] - qy
+    const nl = Math.hypot(nx, ny) || 1
+    const probe: Pt = [qx - (nx / nl) * 0.05, qy - (ny / nl) * 0.05]
+    if (!areas.some(ar => pointInPolygon(probe, ar.polygon))) return true
+  }
+  return false
+}
 
 export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: number, clearance = 0.8): RpPoint[] {
   const areas = (floor.areas ?? []).filter(a => WALKABLE_KINDS.has(a.kind) && (a.polygon?.length ?? 0) >= 3)
@@ -35,7 +53,7 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
       const p: Pt = [x, y]
       const host = areas.find(a => pointInPolygon(p, a.polygon))
       if (!host) continue
-      if (distToPolygonEdge(p, host.polygon) < clearance) continue // 貼牆/月台緣/軌道緣剔除
+      if (nearWall(p, host.polygon, areas, clearance)) continue // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
       if (units.some(u => pointInPolygon(p, u.polygon!) || distToPolygonEdge(p, u.polygon!) < clearance)) continue
       raw.push({ x, y, note: host.note })
     }

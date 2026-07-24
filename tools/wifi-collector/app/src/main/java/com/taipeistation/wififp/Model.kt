@@ -31,12 +31,13 @@ data class MagSummary(val n: Int, val mean: List<Double>, val std: List<Double>,
 
 fun isoNow(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-fun buildSessionLine(device: String, android: Int, app: String, mode: String,
-                     scansPerPoint: Int, rpGenerated: String, startedAt: String): String =
+fun buildSessionLine(session: String, device: String, android: Int, app: String, mode: String,
+                     scansPerPoint: Int, rpList: String, rpGenerated: String, startedAt: String): String =
   JSONObject().put("type", "session").put("schema", "wifi-fp@1")
+    .put("session", session)
     .put("device", device).put("android", android).put("app", app)
     .put("mode", mode).put("scansPerPoint", scansPerPoint)
-    .put("rpGenerated", rpGenerated).put("startedAt", startedAt).toString()
+    .put("rpList", rpList).put("rpGenerated", rpGenerated).put("startedAt", startedAt).toString()
 
 fun buildPointLine(p: RpPoint, headingSlot: Int?, headingDeg: Double?, headingAcc: Int,
                    startedAt: String, durationMs: Long, actualScans: Int, throttled: Boolean,
@@ -79,4 +80,17 @@ fun parseSession(lines: Sequence<String>): Progress {
     }
   }
   return Progress(done, skipped)
+}
+
+data class SessionHeader(val mode: String, val scansPerPoint: Int)
+
+/** 讀 session 檔第一個 type=session 行的 mode/N;無則 null */
+fun parseSessionHeader(lines: Sequence<String>): SessionHeader? {
+  for (line in lines) {
+    val o = try { JSONObject(line) } catch (e: Exception) { continue }
+    if (o.optString("type") == "session") {
+      return SessionHeader(o.optString("mode", "single"), o.optInt("scansPerPoint", 10))
+    }
+  }
+  return null
 }

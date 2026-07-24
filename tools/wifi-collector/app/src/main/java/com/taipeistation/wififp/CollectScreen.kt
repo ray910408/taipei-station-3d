@@ -41,6 +41,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   val slot = p?.let { ctl.pendingSlots(it.id).firstOrNull() }
   val quadGateOk = app.mode != "quad" || slot == null ||
     (!heading.isNaN() && angDiffDeg(heading, slot.toDouble()) <= 20.0)
+  val pointDone = p != null && ctl.pendingSlots(p.id).isEmpty()
 
   if (showJump) {
     androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(20.dp)) {
@@ -88,13 +89,17 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後重採",
       color = Color.Red, style = MaterialTheme.typography.titleMedium)
     if (ctl.lowScanWarn) Text("⚠ 上一點成功掃描 <60%,建議重採", color = Color(0xFF92400E))
+    if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
 
     Button(
-      onClick = { ctl.startScan() }, enabled = !ctl.scanning && quadGateOk,
+      onClick = { ctl.startScan() }, enabled = !ctl.scanning && quadGateOk && !pointDone,
       modifier = Modifier.fillMaxWidth().height(80.dp),
     ) {
-      Text(if (ctl.scanning) "${ctl.scanK}/${app.scansPerPoint} 次 · ${ctl.apCount} AP"
-           else "開始掃描", style = MaterialTheme.typography.headlineMedium)
+      Text(when {
+        ctl.scanning -> "${ctl.scanK}/${app.scansPerPoint} 次 · ${ctl.apCount} AP"
+        pointDone -> "此點已完成——重測按「重採此點」"
+        else -> "開始掃描"
+      }, style = MaterialTheme.typography.headlineMedium)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

@@ -56,7 +56,7 @@ class ModelTest {
   @Test fun parseSession_progress() {
     val p = RpPoint("B1-001", "f", 0.0, 0.0, null)
     val lines = sequenceOf(
-      buildSessionLine("Redmi", 33, "0.1.0", "quad", 10, "g", "s"),
+      buildSessionLine("s1", "Redmi", 33, "0.1.0", "quad", 10, "rp-points.json", "g", "s"),
       buildPointLine(p, 0, 1.0, 3, "t", 1, 1, false, emptyList(), null),
       buildPointLine(p, 90, 1.0, 3, "t", 1, 1, false, emptyList(), null),
       "not json at all",
@@ -65,5 +65,15 @@ class ModelTest {
     val prog = parseSession(lines)
     assertEquals(setOf(DoneKey("B1-001", 0), DoneKey("B1-001", 90)), prog.done)
     assertEquals(setOf("B1-002"), prog.skipped)
+  }
+
+  @Test fun sessionLine_fields_and_header() {
+    val line = buildSessionLine("s20260724-1030", "Redmi", 33, "0.1.0", "quad", 12, "rp-points.json", "g", "t")
+    val o = JSONObject(line)
+    assertEquals("s20260724-1030", o.getString("session"))
+    assertEquals("rp-points.json", o.getString("rpList"))
+    val h = parseSessionHeader(sequenceOf("junk", line))!!
+    assertEquals("quad", h.mode)
+    assertEquals(12, h.scansPerPoint)
   }
 }
