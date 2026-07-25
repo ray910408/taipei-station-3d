@@ -26,6 +26,15 @@ fun nextPendingPoint(points: List<RpPoint>, mode: String, progress: Progress): R
 fun progressAfterRedo(progress: Progress, id: String): Progress =
   progress.copy(done = progress.done.filterNot { it.pointId == id }.toSet())
 
+sealed class SlotPick {
+  data object Done : SlotPick()
+  data class Run(val slot: Int?) : SlotPick()
+}
+
+/** 決定本輪要跑的槽:空=Done;否則 Run(第一個槽)——單朝向槽本身是 null,不可用 firstOrNull()?:return 判空 */
+fun pickSlot(pending: List<Int?>): SlotPick =
+  if (pending.isEmpty()) SlotPick.Done else SlotPick.Run(pending.first())
+
 class CollectController(
   private val app: AppState,
   private val engine: WifiScanEngine,
@@ -80,7 +89,10 @@ class CollectController(
   fun jumpTo(id: String) { if (!scanning) currentId = id }
 
   private suspend fun runOneSlot(p: RpPoint) {
-    val slot = pendingSlots(p.id).firstOrNull() ?: return
+    val slot = when (val s = pickSlot(pendingSlots(p.id))) {
+      SlotPick.Done -> return
+      is SlotPick.Run -> s.slot
+    }
     scanning = true; scanK = 0; lowScanWarn = false
     val startedAt = isoNow()
     val t0 = SystemClock.elapsedRealtime()

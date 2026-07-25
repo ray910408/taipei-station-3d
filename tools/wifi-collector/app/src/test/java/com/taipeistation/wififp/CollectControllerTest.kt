@@ -18,6 +18,13 @@ class CollectControllerTest {
     assertEquals(listOf<Int?>(0, 90, 180, 270), slotsForMode("quad"))
   }
 
+  @Test fun pickSlot_single_null_slot_runs_not_done() {
+    // 單朝向 pending=[null] 必須 Run(null);原 firstOrNull()?:return 會誤判 Done → 掃描不啟動
+    assertEquals(SlotPick.Run(null), pickSlot(listOf<Int?>(null)))
+    assertEquals(SlotPick.Run(0), pickSlot(listOf<Int?>(0, 90, 180, 270)))
+    assertEquals(SlotPick.Done, pickSlot(emptyList()))
+  }
+
   @Test fun quad_partial_progress() {
     val prog = Progress(setOf(DoneKey("B1-001", 0), DoneKey("B1-001", 90)), emptySet())
     assertEquals(listOf<Int?>(180, 270), pendingSlotsFor("B1-001", "quad", prog))
