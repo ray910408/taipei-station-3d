@@ -18,6 +18,18 @@ class CollectControllerTest {
     assertEquals(listOf<Int?>(0, 90, 180, 270), slotsForMode("quad"))
   }
 
+  @Test fun magQuality_separates_rotation_from_ambient() {
+    fun mag(std: List<Double>, magStd: Double) =
+      MagSummary(100, listOf(0.0, 0.0, 0.0), std, 40.0, magStd, 3)
+    // 真機實測:握穩(16:45)三軸 std 皆 <0.5、magStd 0.36
+    assertEquals(MagQuality.OK, magQuality(mag(listOf(0.42, 0.33, 0.44), 0.36)))
+    // 真機實測:轉動手機(16:49)三軸 std ~16 但 magStd 僅 1.75——合力是旋轉不變量,抓不到
+    assertEquals(MagQuality.DEVICE_MOVED, magQuality(mag(listOf(16.27, 14.58, 13.55), 1.75)))
+    // 環境磁場真的變(列車):合力也跟著飆
+    assertEquals(MagQuality.AMBIENT_NOISY, magQuality(mag(listOf(8.0, 7.0, 6.0), 5.0)))
+    assertEquals(MagQuality.OK, magQuality(null))
+  }
+
   @Test fun magAccuracy_labels_and_calibration_gate() {
     assertEquals("未校正", magAccLabel(0))
     assertEquals("低", magAccLabel(1))

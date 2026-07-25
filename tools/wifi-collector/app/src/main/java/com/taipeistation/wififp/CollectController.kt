@@ -26,8 +26,21 @@ fun nextPendingPoint(points: List<RpPoint>, mode: String, progress: Progress): R
 fun progressAfterRedo(progress: Progress, id: String): Progress =
   progress.copy(done = progress.done.filterNot { it.pointId == id }.toSet())
 
-/** 磁力擾動門檻(µT):站定不動時 magStd 應遠小於此;超標多半是列車/電梯/手晃 */
+/** 合力擾動門檻(µT):magStd 超標=環境磁場本身在變(列車/電梯) */
 const val MAG_NOISY_STD = 2.0
+
+/** 單軸擾動門檻(µT):合力穩但三軸狂擺=手機被轉動;magStd 是旋轉不變量,抓不到這種 */
+const val MAG_AXIS_NOISY_STD = 3.0
+
+enum class MagQuality { OK, AMBIENT_NOISY, DEVICE_MOVED }
+
+/** 先判合力(磁場真的變了),再判單軸(合力穩=純轉動) */
+fun magQuality(mag: MagSummary?): MagQuality = when {
+  mag == null -> MagQuality.OK
+  mag.magStd > MAG_NOISY_STD -> MagQuality.AMBIENT_NOISY
+  (mag.std.maxOrNull() ?: 0.0) > MAG_AXIS_NOISY_STD -> MagQuality.DEVICE_MOVED
+  else -> MagQuality.OK
+}
 
 fun magAccLabel(acc: Int): String = when (acc) {
   3 -> "高"
@@ -60,7 +73,7 @@ class CollectController(
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
   var writeWarn by mutableStateOf(false)
-  var magNoisyWarn by mutableStateOf(false)
+  var lastMagQuality by mutableStateOf(MagQuality.OK)
   var lastMagAcc by mutableStateOf(-1)
   var scanStartMs by mutableStateOf(0L)
   var currentId by mutableStateOf<String?>(null)
@@ -144,7 +157,7 @@ class CollectController(
       lastThrottled = throttled
       lowScanWarn = ok * 10 < app.scansPerPoint * 6 // ok < 60% N
       lastMagAcc = win.headingAcc
-      magNoisyWarn = (win.mag?.magStd ?: 0.0) > MAG_NOISY_STD
+      lastMagQuality = magQuality(win.mag)
       ensureCurrent()
     } finally {
       rig.endWindow() // 中斷路徑關閉時窗；正常路徑已取值，重複呼叫無害

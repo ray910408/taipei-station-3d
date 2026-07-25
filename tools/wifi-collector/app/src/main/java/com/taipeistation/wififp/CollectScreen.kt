@@ -100,7 +100,11 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後重採",
       color = Color.Red, style = MaterialTheme.typography.titleMedium)
     if (ctl.lowScanWarn) Text("⚠ 上一點成功掃描 <60%,建議重採", color = Color(0xFF92400E))
-    if (ctl.magNoisyWarn) Text("⚠ 上一點磁場擾動大(列車/電梯?)——建議重採", color = Color(0xFF92400E))
+    when (ctl.lastMagQuality) {
+      MagQuality.AMBIENT_NOISY -> Text("⚠ 上一點磁場擾動大(列車/電梯?)——等環境穩定再重採", color = Color(0xFF92400E))
+      MagQuality.DEVICE_MOVED -> Text("⚠ 上一點手機有轉動/晃動——磁力資料作廢,請握穩重採", color = Color(0xFF92400E))
+      MagQuality.OK -> {}
+    }
     if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
 
     Button(
