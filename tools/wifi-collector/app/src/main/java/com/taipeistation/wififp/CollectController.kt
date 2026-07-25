@@ -26,6 +26,19 @@ fun nextPendingPoint(points: List<RpPoint>, mode: String, progress: Progress): R
 fun progressAfterRedo(progress: Progress, id: String): Progress =
   progress.copy(done = progress.done.filterNot { it.pointId == id }.toSet())
 
+/** 磁力擾動門檻(µT):站定不動時 magStd 應遠小於此;超標多半是列車/電梯/手晃 */
+const val MAG_NOISY_STD = 2.0
+
+fun magAccLabel(acc: Int): String = when (acc) {
+  3 -> "高"
+  2 -> "中"
+  1 -> "低"
+  else -> "未校正"
+}
+
+/** accuracy ≤ 1 代表磁力資料不可信,要提示畫 8 字 */
+fun magNeedsCalibration(acc: Int): Boolean = acc <= 1
+
 sealed class SlotPick {
   data object Done : SlotPick()
   data class Run(val slot: Int?) : SlotPick()
@@ -47,6 +60,8 @@ class CollectController(
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
   var writeWarn by mutableStateOf(false)
+  var magNoisyWarn by mutableStateOf(false)
+  var lastMagAcc by mutableStateOf(-1)
   var scanStartMs by mutableStateOf(0L)
   var currentId by mutableStateOf<String?>(null)
   private var job: Job? = null
@@ -128,6 +143,8 @@ class CollectController(
       app.progress = app.progress.copy(done = app.progress.done + DoneKey(p.id, slot))
       lastThrottled = throttled
       lowScanWarn = ok * 10 < app.scansPerPoint * 6 // ok < 60% N
+      lastMagAcc = win.headingAcc
+      magNoisyWarn = (win.mag?.magStd ?: 0.0) > MAG_NOISY_STD
       ensureCurrent()
     } finally {
       rig.endWindow() // 中斷路徑關閉時窗；正常路徑已取值，重複呼叫無害

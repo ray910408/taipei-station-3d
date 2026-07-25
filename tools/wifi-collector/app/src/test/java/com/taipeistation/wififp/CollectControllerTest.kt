@@ -18,6 +18,17 @@ class CollectControllerTest {
     assertEquals(listOf<Int?>(0, 90, 180, 270), slotsForMode("quad"))
   }
 
+  @Test fun magAccuracy_labels_and_calibration_gate() {
+    assertEquals("未校正", magAccLabel(0))
+    assertEquals("低", magAccLabel(1))
+    assertEquals("中", magAccLabel(2))
+    assertEquals("高", magAccLabel(3))
+    assertTrue(magNeedsCalibration(0))   // 真機首採實測值:accuracy 0 必須提示
+    assertTrue(magNeedsCalibration(1))
+    assertFalse(magNeedsCalibration(2))
+    assertFalse(magNeedsCalibration(3))
+  }
+
   @Test fun pickSlot_single_null_slot_runs_not_done() {
     // 單朝向 pending=[null] 必須 Run(null);原 firstOrNull()?:return 會誤判 Done → 掃描不啟動
     assertEquals(SlotPick.Run(null), pickSlot(listOf<Int?>(null)))

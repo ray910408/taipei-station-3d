@@ -61,6 +61,9 @@ class WifiScanEngine(context: Context) {
 class SensorRig(private val sm: SensorManager) : SensorEventListener {
   @Volatile var currentHeadingDeg: Double = Double.NaN
     private set
+  /** 即時磁力計校正等級 0..3;供 UI 在開掃前就提示校正 */
+  @Volatile var currentMagAccuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
+    private set
   private var magAccuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
   private var window: MagStats? = null
   private val headingWindow = ArrayList<Double>()
@@ -86,8 +89,13 @@ class SensorRig(private val sm: SensorManager) : SensorEventListener {
 
   override fun onSensorChanged(e: SensorEvent) {
     when (e.sensor.type) {
-      Sensor.TYPE_MAGNETIC_FIELD -> synchronized(this) {
-        window?.add(e.values[0].toDouble(), e.values[1].toDouble(), e.values[2].toDouble())
+      Sensor.TYPE_MAGNETIC_FIELD -> {
+        // 每個 event 自帶 accuracy——不能只靠 onAccuracyChanged(部分裝置不觸發,值會假性停在 0)
+        magAccuracy = e.accuracy
+        currentMagAccuracy = e.accuracy
+        synchronized(this) {
+          window?.add(e.values[0].toDouble(), e.values[1].toDouble(), e.values[2].toDouble())
+        }
       }
       Sensor.TYPE_ROTATION_VECTOR -> {
         SensorManager.getRotationMatrixFromVector(rotMat, e.values)
@@ -100,6 +108,6 @@ class SensorRig(private val sm: SensorManager) : SensorEventListener {
   }
 
   override fun onAccuracyChanged(s: Sensor, accuracy: Int) {
-    if (s.type == Sensor.TYPE_MAGNETIC_FIELD) magAccuracy = accuracy
+    if (s.type == Sensor.TYPE_MAGNETIC_FIELD) { magAccuracy = accuracy; currentMagAccuracy = accuracy }
   }
 }

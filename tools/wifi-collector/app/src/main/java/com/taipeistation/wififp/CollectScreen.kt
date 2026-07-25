@@ -25,10 +25,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExport: () -> Unit) {
   var heading by remember { mutableStateOf(Double.NaN) }
+  var magAcc by remember { mutableStateOf(0) }
   var elapsedS by remember { mutableStateOf(0L) }
   LaunchedEffect(Unit) {
     while (true) {
       heading = rig.currentHeadingDeg
+      magAcc = rig.currentMagAccuracy
       elapsedS = if (ctl.scanning) (android.os.SystemClock.elapsedRealtime() - ctl.scanStartMs) / 1000 else 0
       delay(200)
     }
@@ -90,12 +92,15 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
         style = MaterialTheme.typography.titleLarge,
         color = if (quadGateOk) Color(0xFF166534) else Color(0xFF92400E))
     } else {
-      Text("羅盤 ${if (heading.isNaN()) "--" else "%.0f°".format(heading)}")
+      Text("羅盤 ${if (heading.isNaN()) "--" else "%.0f°".format(heading)} · 磁力校正 ${magAccLabel(magAcc)}")
     }
 
+    if (magNeedsCalibration(magAcc)) Text("⚠ 磁力計${magAccLabel(magAcc)}——手機畫 8 字(∞)約 10 秒,轉到「中」以上再掃",
+      color = Color(0xFF92400E), style = MaterialTheme.typography.titleMedium)
     if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後重採",
       color = Color.Red, style = MaterialTheme.typography.titleMedium)
     if (ctl.lowScanWarn) Text("⚠ 上一點成功掃描 <60%,建議重採", color = Color(0xFF92400E))
+    if (ctl.magNoisyWarn) Text("⚠ 上一點磁場擾動大(列車/電梯?)——建議重採", color = Color(0xFF92400E))
     if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
 
     Button(
