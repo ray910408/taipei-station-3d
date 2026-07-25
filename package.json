@@ -13,6 +13,7 @@
     "format:data": "node tools/format-data.mjs",
     "export:glb": "vite-node tools/export-glb.ts",
     "gen:rp": "vite-node tools/gen-rp-points.ts",
+    "analyze:spacing": "vite-node tools/analyze-spacing.ts",
     "validate:glb": "node tools/validate-glb.mjs"
   },
   "dependencies": {

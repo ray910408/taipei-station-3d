@@ -1,0 +1,86 @@
+{
+  "schema": "rp-list@1",
+  "station": "taipei-main-station",
+  "coordSystem": "model",
+  "generated": "2026-07-25T14:21:54.530Z",
+  "spacing": 2,
+  "points": [
+    {
+      "id": "P01",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -50,
+      "note": "間距試驗第1點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P02",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -48,
+      "note": "間距試驗第2點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P03",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -46,
+      "note": "間距試驗第3點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P04",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -44,
+      "note": "間距試驗第4點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P05",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -42,
+      "note": "間距試驗第5點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P06",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -40,
+      "note": "間距試驗第6點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P07",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -38,
+      "note": "間距試驗第7點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P08",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -36,
+      "note": "間距試驗第8點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P09",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -34,
+      "note": "間距試驗第9點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P10",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -32,
+      "note": "間距試驗第10點（東側非付費帶，沿南北直線）"
+    },
+    {
+      "id": "P11",
+      "floor": "tra-concourse-b1",
+      "x": 93,
+      "y": -50,
+      "note": "回到第1點重測——量時間漂移"
+    }
+  ]
+}
