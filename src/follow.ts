@@ -24,11 +24,30 @@ export const currentNodeId = (s: FollowState): string => s.nodeIds[s.index];
 export const remainingEdges = (edges: GraphEdge[], s: FollowState): GraphEdge[] =>
   edges.slice(s.index);
 
+let shadowTex: THREE.CanvasTexture | null = null;
+function markerShadowTexture(): THREE.CanvasTexture | null {
+  if (shadowTex || typeof document === 'undefined') return shadowTex;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext('2d')!;
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0,0,0,1)');
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.85)'); // 中段保深——環外露出的一圈才夠暗，淡出只留最外緣
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  shadowTex = new THREE.CanvasTexture(c);
+  return shadowTex;
+}
+
 export function buildPositionMarker(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'position-marker';
-  // 與路線的關係由幾何解（marker 騎在帶面上）；此處 depthTest/depthWrite 關＋renderOrder 僅作穿牆保險（低視角牆帶/柱不遮 marker）
-  const flags = { toneMapped: false, depthTest: false, depthWrite: false, side: THREE.DoubleSide } as const;
+  // 懸浮感靠兩件事：mesh 整體抬 markerLift＋路線平面上的接觸陰影盤（無光照材質下唯一的高度線索，
+  // 亦遮掉低視角時環/箭頭螢幕空隙漏出的 ribbon）。全材質 transparent——同進 transparent pass 使
+  // renderOrder（陰影 9 < 本體 10）成為唯一畫序；depthTest/depthWrite 關＝穿牆保險（牆帶/柱不遮 marker）
+  const flags = { toneMapped: false, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide } as const;
   const capMat = new THREE.MeshBasicMaterial({ color: THEME.route.marker, ...flags });
   const sideMat = new THREE.MeshBasicMaterial({ color: THEME.route.markerSide, ...flags });
   // 水平立體箭頭（Google 導航風）：尖端在 yaw=0 時朝世界 +Z——headingYaw 的 atan2(dx,dz) 對齊
@@ -39,15 +58,27 @@ export function buildPositionMarker(): THREE.Group {
   shape.lineTo(-1.3, -1.3);
   shape.closePath();
   const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.6, bevelEnabled: false });
+  const lift = THEME.route.markerLift; // group origin 在路線平面——mesh 整體抬 lift 形成可見空隙
   const arrow = new THREE.Mesh(geo, [capMat, sideMat]); // ExtrudeGeometry group 0=上下蓋、1=側壁
   arrow.rotation.x = Math.PI / 2; // shape +y → 世界 +z；extrude 厚度轉為 -y
-  arrow.position.y = 0.65; // 厚度朝下 0.6——體積佔 0.05–0.65，全在帶面之上
+  arrow.position.y = lift + 0.65; // 厚度朝下 0.6——體積佔 lift+0.05 至 lift+0.65
   arrow.renderOrder = 10;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 24), capMat);
   ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.15; // 管半徑 0.14——0.15 使環底 0.01 完全在帶面之上（0.03 會微沉 0.11）
+  ring.position.y = lift + 0.15; // 管半徑 0.14——環底 lift+0.01，完全在空隙之上
   ring.renderOrder = 10;
-  g.add(arrow, ring);
+  const tex = markerShadowTexture();
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(THEME.route.markerShadow.radius, 32),
+    new THREE.MeshBasicMaterial({
+      map: tex ?? undefined, color: tex ? '#ffffff' : '#000000',
+      opacity: THEME.route.markerShadow.opacity, ...flags,
+    }));
+  shadow.name = 'marker-shadow';
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.02; // 貼路線平面——本體與影分離＝懸浮
+  shadow.renderOrder = 9;
+  g.add(arrow, ring, shadow);
   return g;
 }
 

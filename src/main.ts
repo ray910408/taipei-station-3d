@@ -539,7 +539,7 @@ async function boot(): Promise<void> {
     if (session && marker) {
       const d = session.frame(now);
       marker.position.copy(d.markerPos);
-      marker.position.y += THEME.route.hover; // marker 騎在路線平面上（QA2-1：幾何解相交，非畫序 hack）
+      marker.position.y += THEME.route.hover; // group origin 對齊路線平面；mesh 在 group 內再抬 markerLift 懸浮
       const yaw = prevMarkerPos ? headingYaw(prevMarkerPos, d.markerPos) : null;
       if (yaw !== null) markerYaw = markerYaw === null ? yaw : lerpYaw(markerYaw, yaw, REDUCED_MOTION ? 1 : 0.15);
       if (markerYaw !== null) marker.rotation.y = markerYaw;

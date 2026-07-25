@@ -54,6 +54,8 @@ export const THEME = {
   },
   route: {
     color: '#1a73e8', radius: 0.9, linkRadius: 0.45, hover: 1.2, // hover：路線／pin／marker 懸浮高度單一真源
+    markerLift: 1.8, // marker 相對路線平面的額外懸浮空隙——chase 俯角 27° 下要能看見本體與影之間的分離
+    markerShadow: { radius: 3.0, opacity: 0.45 }, // 接觸陰影盤：需明顯大於環外徑 1.84，露出的環外暗圈才是懸浮線索
     arrowInterval: 5, arrowSpeed: 0.5,
     pinStart: '#188038', pinEnd: '#d93025', marker: '#00c853', markerSide: '#00913d',
   },
