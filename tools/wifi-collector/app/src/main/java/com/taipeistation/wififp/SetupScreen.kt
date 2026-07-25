@@ -128,7 +128,7 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
     sessions.value.take(5).forEach { f ->
       FilterChip(selected = resumeFile == f, onClick = {
         resumeFile = f
-        parseSessionHeader(f.readLines().asSequence())?.let { h ->
+        f.useLines { parseSessionHeader(it) }?.let { h ->
           app.mode = h.mode; app.scansPerPoint = h.scansPerPoint
         }
       },

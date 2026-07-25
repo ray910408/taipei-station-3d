@@ -25,7 +25,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExport: () -> Unit) {
   var heading by remember { mutableStateOf(Double.NaN) }
-  LaunchedEffect(Unit) { while (true) { heading = rig.currentHeadingDeg; delay(200) } }
+  var elapsedS by remember { mutableStateOf(0L) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      heading = rig.currentHeadingDeg
+      elapsedS = if (ctl.scanning) (android.os.SystemClock.elapsedRealtime() - ctl.scanStartMs) / 1000 else 0
+      delay(200)
+    }
+  }
   LaunchedEffect(Unit) { ctl.ensureCurrent() }
   var showSkip by remember { mutableStateOf(false) }
   var skipReason by remember { mutableStateOf("") }
@@ -96,7 +103,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
       modifier = Modifier.fillMaxWidth().height(80.dp),
     ) {
       Text(when {
-        ctl.scanning -> "${ctl.scanK}/${app.scansPerPoint} 次 · ${ctl.apCount} AP"
+        ctl.scanning -> "掃描中 ${elapsedS}s · ${ctl.scanK}/${app.scansPerPoint} 次 · ${ctl.apCount} AP"
         pointDone -> "此點已完成——重測按「重採此點」"
         else -> "開始掃描"
       }, style = MaterialTheme.typography.headlineMedium)

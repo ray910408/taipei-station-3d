@@ -47,6 +47,7 @@ class CollectController(
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
   var writeWarn by mutableStateOf(false)
+  var scanStartMs by mutableStateOf(0L)
   var currentId by mutableStateOf<String?>(null)
   private var job: Job? = null
 
@@ -67,6 +68,8 @@ class CollectController(
   fun startScan() {
     if (scanning) return
     val p = current() ?: return
+    scanning = true // 同步豎旗封雙擊——coroutine 內設旗會慢一拍,連點會塞進兩個掃描迴圈
+    scanStartMs = SystemClock.elapsedRealtime()
     job = scope.launch { runOneSlot(p) }
   }
 
@@ -89,19 +92,20 @@ class CollectController(
   fun jumpTo(id: String) { if (!scanning) currentId = id }
 
   private suspend fun runOneSlot(p: RpPoint) {
-    val slot = when (val s = pickSlot(pendingSlots(p.id))) {
-      SlotPick.Done -> return
-      is SlotPick.Run -> s.slot
-    }
-    scanning = true; scanK = 0; lowScanWarn = false
-    val startedAt = isoNow()
-    val t0 = SystemClock.elapsedRealtime()
-    rig.beginWindow()
-    val batches = ArrayList<ScanBatch>()
-    var cachedStreak = 0
-    var throttled = false
-    var ok = 0
     try {
+      // 早退路徑也在 try 內——確保 finally 一定放下 scanning 旗
+      val slot = when (val s = pickSlot(pendingSlots(p.id))) {
+        SlotPick.Done -> return
+        is SlotPick.Run -> s.slot
+      }
+      scanK = 0; lowScanWarn = false
+      val startedAt = isoNow()
+      val t0 = scanStartMs
+      rig.beginWindow()
+      val batches = ArrayList<ScanBatch>()
+      var cachedStreak = 0
+      var throttled = false
+      var ok = 0
       repeat(app.scansPerPoint) { i ->
         when (val o = engine.scanOnce()) {
           is WifiScanEngine.Outcome.Fresh -> {
