@@ -66,9 +66,22 @@ describe('cleanSamples(spec 1.1 逐條)', () => {
     expect(kept[0]).toMatchObject({ w: 1, magOk: false })
   })
 
-  it('轉動(max std>3 且 magStd<2)→ 剔磁力＋WiFi 降權 0.5', () => {
+  it('轉動(軸向>3 且 軸向>合力×2)→ 剔磁力＋WiFi 降權 0.5', () => {
     const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [16, 15, 2], magStd: 1.7 } })]))
     expect(kept[0]).toMatchObject({ w: 0.5, magOk: false })
+  })
+
+  it('殘留硬鐵下的大幅轉動:合力也超標仍判轉動(真機 0726 P01/P07——舊 magStd<2 規則會誤標環境擾動)', () => {
+    // P01 軸10.16/合2.75、P07 軸18.70/合3.95:舊規則因 magStd>2 落進環境擾動分支 → 污染的 WiFi 拿全權重
+    for (const [axis, magStd] of [[10.16, 2.75], [18.70, 3.95]]) {
+      const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [axis, axis * 0.9, 2], magStd } })]))
+      expect(kept[0]).toMatchObject({ w: 0.5, magOk: false })
+    }
+  })
+
+  it('兩者同幅度漲=環境擾動:軸向超標但未達合力×2 → WiFi 不降權', () => {
+    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [3.5, 3.2, 3], magStd: 1.9 } })]))
+    expect(kept[0]).toMatchObject({ w: 1, magOk: false }) // 軸 3.5 未達 1.9×2=3.8 → 非轉動
   })
 
   it('環境擾動(magStd>2)→ 剔磁力、留 WiFi 全權重', () => {

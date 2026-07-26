@@ -45,8 +45,9 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
 // Stage 1.1 門檻(真機資料進來後的調參旋鈕;可調可回溯)
 export const SHORT_SCAN_RATIO = 0.6 // actualScans < 此×scansPerPoint → 降權
 export const DOWNWEIGHT = 0.5       // 短掃描/轉動共用降權係數
-export const ROT_AXIS_STD = 3       // 三軸 std 超過此(µT)且 magStd<MAGSTD_SPLIT → 手機轉動
-export const MAGSTD_SPLIT = 2       // 合力 std 分流線(µT):<此=轉動特徵、>此=環境擾動
+export const ROT_AXIS_STD = 3       // 軸向 std 超過此(µT)才談轉動
+export const ROT_AXIS_RATIO = 2     // 且軸向 > 合力×此 → 手機轉動(轉動的軸向擾動遠大於合力擾動)
+export const MAGSTD_SPLIT = 2       // 合力 std 超過此(µT)=環境磁場真的變了
 export const MIN_MAG_ACCURACY = 1   // accuracy ≤ 此 → 剔磁力
 
 export interface CleanSample { rec: RawSample; w: number; magOk: boolean }
@@ -59,9 +60,13 @@ export function cleanSamples(samples: RawSample[]): { kept: CleanSample[]; dropp
     let w = 1, magOk = true
     if (rec.actualScans < SHORT_SCAN_RATIO * rec.scansPerPoint) w *= DOWNWEIGHT
     const m = rec.mag
+    // 轉動的特徵是「軸向擾動遠大於合力擾動」,環境磁場變化則兩者同步漲。不可只看 magStd 門檻:
+    // 殘留硬鐵偏移會讓合力也隨轉動超標(真機 0726 P01 軸10.16/合2.75、P07 軸18.70/合3.95),
+    // 單看門檻會把轉動誤判成環境擾動而讓污染的 WiFi 拿到全權重。與 APK magQuality() 同一判別式。
+    const axisMax = Math.max(...m.std)
     if (m.accuracy <= MIN_MAG_ACCURACY) magOk = false
-    else if (Math.max(...m.std) > ROT_AXIS_STD && m.magStd < MAGSTD_SPLIT) { magOk = false; w *= DOWNWEIGHT } // 手機轉動:WiFi 亦污染
-    else if (m.magStd > MAGSTD_SPLIT) magOk = false // 列車/電梯環境擾動:WiFi 保留
+    else if (axisMax > ROT_AXIS_STD && axisMax > m.magStd * ROT_AXIS_RATIO) { magOk = false; w *= DOWNWEIGHT } // 手機轉動:WiFi 亦污染
+    else if (m.magStd > MAGSTD_SPLIT || axisMax > ROT_AXIS_STD) magOk = false // 環境擾動(含兩者同幅度漲):WiFi 保留
     kept.push({ rec, w, magOk })
   }
   return { kept, dropped }
