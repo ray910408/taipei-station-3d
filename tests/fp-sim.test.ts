@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FloorJson } from '../tools/gen-rp-points'
 import { pointInPolygon } from '../tools/rp-geometry'
-import { HOTSPOT_SSIDS, buildWorld, gauss, hash32, magTrueAt, mulberry32, sampleMag, scanAt, type SimWorld } from '../tools/fp-sim'
+import { HOTSPOT_SSIDS, buildWorld, gauss, hash32, magTrueAt, mulberry32, sampleMag, scanAt, simSession, type SimWorld } from '../tools/fp-sim'
 import { fingerprint, fpDistance } from '../src/fp/core'
 
 const loadMini = (): FloorJson[] => ['hall-b1', 'plat-b2']
@@ -230,5 +230,74 @@ describe('磁力模型', () => {
     expect(s.mean[0]).toBeCloseTo(-wy + 12, 0)
     expect(s.mean[1]).toBeCloseTo(wx + 6, 0)
     expect(s.mean[2]).toBeCloseTo(wz, 0)
+  })
+})
+
+describe('simSession:wifi-fp@1 輸出', () => {
+  const mkOpts = (extra: object = {}) => ({
+    seed: 7, floors: loadMini(),
+    rpPoints: [
+      { id: 'B1-001', floor: 'hall-b1', x: -5, y: 0 }, { id: 'B1-002', floor: 'hall-b1', x: 5, y: 0 },
+      { id: 'B2-001', floor: 'plat-b2', x: 0, y: 0 },
+    ],
+    world: { apsPerFloor: 5, hotspotCount: 2 }, ...extra,
+  })
+
+  it('schema key 一字不差對齊 collector spec 範例', () => {
+    const { lines } = simSession(mkOpts())
+    const recs = lines.map(l => JSON.parse(l))
+    const session = recs[0]
+    expect(Object.keys(session).sort()).toEqual(
+      ['android', 'app', 'device', 'mode', 'rpGenerated', 'rpList', 'scansPerPoint', 'schema', 'session', 'startedAt', 'type'].sort())
+    expect(session.schema).toBe('wifi-fp@1')
+    const p = recs[1]
+    expect(Object.keys(p).sort()).toEqual(
+      ['actualScans', 'durationMs', 'floor', 'headingAcc', 'headingDeg', 'headingSlot', 'mag', 'pointId', 'scans', 'startedAt', 'throttled', 'type', 'x', 'y'].sort())
+    expect(Object.keys(p.scans[0]).sort()).toEqual(['aps', 'fresh', 't'].sort())
+    expect(Object.keys(p.scans[0].aps[0]).sort()).toEqual(['bssid', 'freq', 'rssi', 'ssid'].sort())
+    expect(Object.keys(p.mag).sort()).toEqual(['accuracy', 'magMean', 'magStd', 'mean', 'n', 'std'].sort())
+    expect(p.headingSlot).toBeNull() // 單朝向
+  })
+
+  it('決定性假時鐘:同 opts 同輸出;時戳 ISO 且遞增', () => {
+    const a = simSession(mkOpts()), b = simSession(mkOpts())
+    expect(a.lines).toEqual(b.lines)
+    const pts = a.lines.slice(1).map(l => JSON.parse(l))
+    const ts = pts.map(p => Date.parse(p.startedAt))
+    expect(ts.every(t => Number.isFinite(t))).toBe(true)
+    expect([...ts].sort((x, y) => x - y)).toEqual(ts)
+  })
+
+  it('quad 模式:每點 4 行,slot 0/90/180/270', () => {
+    const { lines } = simSession(mkOpts({ mode: 'quad' }))
+    const pts = lines.slice(1).map(l => JSON.parse(l)).filter(r => r.pointId === 'B1-001')
+    expect(pts.map(p => p.headingSlot)).toEqual([0, 90, 180, 270])
+  })
+
+  it('髒資料旋鈕:throttled/短掃描/轉動/低磁力 accuracy 各自留下可抓特徵', () => {
+    const { lines } = simSession(mkOpts({ dirt: { throttledRate: 1 } }))
+    for (const p of lines.slice(1).map(l => JSON.parse(l))) {
+      expect(p.throttled).toBe(true)
+      expect(p.scans.every((s: { fresh: boolean }) => s.fresh === false)).toBe(true)
+      expect(new Set(p.scans.map((s: object) => JSON.stringify((s as { aps: object }).aps))).size).toBe(1) // 快取:每批相同
+    }
+    const short = simSession(mkOpts({ dirt: { shortScanRate: 1 } })).lines.slice(1).map(l => JSON.parse(l))
+    for (const p of short) { expect(p.actualScans).toBeLessThan(6); expect(p.scans.length).toBe(p.actualScans) }
+    const rot = simSession(mkOpts({ dirt: { rotationRate: 1 } })).lines.slice(1).map(l => JSON.parse(l))
+    for (const p of rot) {
+      expect(Math.max(...p.mag.std)).toBeGreaterThan(3)
+      expect(p.mag.magStd).toBeLessThan(2)
+      // WiFi 中途階梯跳變:前後半批朝向差 180 → 有 AP 前後半均值差得開
+      expect(p.scans.length).toBe(10)
+    }
+    const lowAcc = simSession(mkOpts({ dirt: { lowMagAccRate: 1 } })).lines.slice(1).map(l => JSON.parse(l))
+    for (const p of lowAcc) expect(p.mag.accuracy).toBeLessThanOrEqual(1)
+  })
+
+  it('重採語意:resampleRate=1 → 每 (pointId,slot) 出現兩行', () => {
+    const { lines } = simSession(mkOpts({ dirt: { resampleRate: 1 } }))
+    const ids = lines.slice(1).map(l => JSON.parse(l)).map(p => `${p.pointId}|${p.headingSlot}`)
+    expect(ids.length).toBe(6) // 3 點 × 2
+    expect(new Set(ids).size).toBe(3)
   })
 })

@@ -249,3 +249,115 @@ export function sampleMag(
     accuracy: dirt.lowAccuracy ? 1 : 3,
   }
 }
+
+// ---- session 模擬 ----
+
+export interface DirtOpts {
+  throttledRate?: number; shortScanRate?: number; rotationRate?: number
+  lowMagAccRate?: number; resampleRate?: number
+}
+export interface SimSessionOpts {
+  seed: number
+  floors: FloorJson[]
+  rpPoints: RpPoint[]
+  scansPerPoint?: number
+  mode?: 'single' | 'quad'
+  world?: WorldOpts
+  dirt?: DirtOpts
+  hardIron?: [number, number, number]
+}
+export interface SimResult { world: SimWorld; lines: string[] }
+
+const SCAN_MS = 4400 // 單批 4.3–4.6s(實測)
+const T0 = Date.parse('2026-07-25T01:00:00Z') // 假時鐘起點;seed 平移,禁 Date.now
+const iso = (ms: number) => new Date(ms).toISOString()
+
+/** 圓形方位角:p → q(模型 +Y 朝北) */
+const bearingTo = (p: RpPoint, q: RpPoint) => (Math.atan2(q.x - p.x, q.y - p.y) * 180) / Math.PI
+
+export function simSession(opts: SimSessionOpts): SimResult {
+  const { seed, rpPoints, scansPerPoint: N = 10, mode = 'single', hardIron = [0, 0, 0] } = opts
+  const dirt = { throttledRate: 0, shortScanRate: 0, rotationRate: 0, lowMagAccRate: 0, resampleRate: 0, ...opts.dirt }
+  const world = buildWorld(opts.floors, seed, opts.world)
+  const rng = mulberry32(hash32(`session|${seed}`))
+  let clock = T0 + seed * 60_000
+  const lines: string[] = []
+
+  lines.push(JSON.stringify({
+    type: 'session', schema: 'wifi-fp@1', session: `sim-s${seed}`, device: 'sim', android: 0,
+    app: 'fp-sim/0.1', mode, scansPerPoint: N, rpList: 'sim', rpGenerated: iso(T0), startedAt: iso(clock),
+  }))
+
+  /** 一個 (point, slot) 的完整 point record;會被主迴圈與重採共用 */
+  const emitPoint = (p: RpPoint, slot: number | null, walkHeading: number) => {
+    const throttled = rng() < dirt.throttledRate
+    const short = rng() < dirt.shortScanRate
+    const rotating = rng() < dirt.rotationRate
+    const lowAcc = rng() < dirt.lowMagAccRate
+    const heading = slot === null ? walkHeading : slot + gauss(rng, 0, 5) // quad:對準磁方位槽 ±小噪
+    const n = short ? Math.floor(N * 0.5) : N // < 0.6×N → Stage 1 降權可抓
+    const started = clock
+    const scans: object[] = []
+    let cached: ScanAp[] | null = null
+    for (let i = 0; i < n; i++) {
+      // 轉動污染:中途 180° → RSSI 階梯跳變(對齊實測 s1702 slot 180)
+      const hdg = rotating && i >= n / 2 ? heading + 180 : heading
+      const aps = throttled ? (cached ??= scanAt(world, p.floor, p.x, p.y, hdg, rng)) : scanAt(world, p.floor, p.x, p.y, hdg, rng)
+      clock += SCAN_MS
+      scans.push({ t: iso(clock), fresh: !throttled, aps })
+    }
+    const mag = sampleMag(world, p.floor, p.x, p.y, heading, hardIron, rng,
+      { rotating, disturbed: !rotating && rng() < world.mag[p.floor].disturbProb, lowAccuracy: lowAcc }) // 轉動與擾動互斥:各留乾淨特徵給 Stage 1 抓
+    clock += 15_000 // 換點
+    lines.push(JSON.stringify({
+      type: 'point', pointId: p.id, floor: p.floor, x: p.x, y: p.y,
+      headingSlot: slot, headingDeg: Math.round(((heading % 360) + 360) % 360 * 10) / 10, headingAcc: 3,
+      startedAt: iso(started), durationMs: n * SCAN_MS, actualScans: n, throttled, scans, mag,
+    }))
+  }
+
+  const slots = mode === 'quad' ? [0, 90, 180, 270] : [null]
+  let walkHeading = 0
+  for (const [i, p] of rpPoints.entries()) {
+    const next = rpPoints[i + 1]
+    if (next && next.floor === p.floor) walkHeading = bearingTo(p, next) // 面向行走方向;末點沿用
+    for (const slot of slots) emitPoint(p, slot, walkHeading)
+  }
+  // 重採:同 (pointId,slot) 再 append 一行 → 離線「取最後一行」語意可測
+  for (const p of rpPoints) if (rng() < dirt.resampleRate) for (const slot of slots) emitPoint(p, slot, walkHeading)
+
+  return { world, lines }
+}
+
+// ---- CLI ----
+function arg(name: string, def: string): string {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
+}
+
+function main() {
+  const seed = Number(arg('seed', '1'))
+  const rpFile = arg('rp', 'rp/rp-points.json')
+  const outDir = arg('out', 'rp/sim')
+  const mode = arg('mode', 'single') as 'single' | 'quad'
+  const N = Number(arg('n', '10'))
+  const rpList = JSON.parse(readFileSync(rpFile, 'utf8')) as { points: RpPoint[] }
+  const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
+  const wanted = new Set(rpList.points.map(p => p.floor))
+  const floors: FloorJson[] = station.floors
+    .filter((f: { id: string }) => wanted.has(f.id))
+    .map((f: { file: string }) => JSON.parse(readFileSync(join('data', f.file), 'utf8')))
+  // 預設帶少量髒資料:Stage 1 每條規則都有東西可抓
+  const { lines, world } = simSession({
+    seed, floors, rpPoints: rpList.points, scansPerPoint: N, mode,
+    dirt: { throttledRate: 0.05, shortScanRate: 0.05, rotationRate: 0.05, lowMagAccRate: 0.05, resampleRate: 0.02 },
+  })
+  mkdirSync(outDir, { recursive: true })
+  const out = join(outDir, `wifi-fp-sim-s${seed}.jsonl`)
+  writeFileSync(out, lines.join('\n') + '\n')
+  console.log(`${rpList.points.length} 點 × ${mode} → ${lines.length - 1} 筆 point`)
+  console.log(`世界:${world.aps.length} 顆實體 AP(${world.aps.reduce((s, a) => s + a.bssids.length, 0)} BSSID)、${world.hotspots.length} 熱點`)
+  console.log(`→ ${out}`)
+}
+
+if (process.env.npm_lifecycle_event === 'sim:fp' || process.argv[1]?.replace(/\\/g, '/').endsWith('fp-sim.ts')) main()
