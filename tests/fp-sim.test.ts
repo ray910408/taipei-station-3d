@@ -220,4 +220,15 @@ describe('磁力模型', () => {
     const s = sampleMag(w(), 'hall-b1', 3, 1, 0, IRON0, mulberry32(4), { lowAccuracy: true })
     expect(s.accuracy).toBeLessThanOrEqual(1)
   })
+
+  it('硬鐵在裝置座標:heading 90° 時偏移不隨世界向量旋轉', () => {
+    const world = w()
+    const [wx, wy, wz] = magTrueAt(world, 'hall-b1', 3, 1)
+    const s = sampleMag(world, 'hall-b1', 3, 1, 90, [12, 6, 0], mulberry32(1))
+    // R(+90°):dev = [wx·cos−wy·sin, wx·sin+wy·cos, wz] = [−wy, wx, wz],硬鐵加在旋轉之後
+    // 若誤把硬鐵放世界座標(旋轉前),mean[0] 會變 −(wy+6) 而非 −wy+12,差 18 → 必抓
+    expect(s.mean[0]).toBeCloseTo(-wy + 12, 0)
+    expect(s.mean[1]).toBeCloseTo(wx + 6, 0)
+    expect(s.mean[2]).toBeCloseTo(wz, 0)
+  })
 })
