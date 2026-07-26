@@ -221,9 +221,9 @@ export function buildDb(texts: string[], opts: { station: string; generated: str
   for (const [bssid, anchor] of anchorOf) (anchorMembers.get(anchor) ?? anchorMembers.set(anchor, []).get(anchor)!).push(bssid)
   const anchors: Record<string, { bssids: string[]; ssid: string }> = {}
   for (const anchor of usedAnchors) {
-    const bssids = anchorMembers.get(anchor) ?? [anchor]
+    const bssids = [...(anchorMembers.get(anchor) ?? [anchor])].sort() // 先排序再取 ssid——首個非空與掃描遭遇序無關
     const ssid = bssids.map(b => members.get(b) ?? '').find(s => s !== '') ?? ''
-    anchors[anchor] = { bssids: bssids.sort(), ssid }
+    anchors[anchor] = { bssids, ssid }
   }
 
   return {
