@@ -34,7 +34,9 @@ locality / leverage）依 `/codebase-design` 定義，不在此重複。
   connector 邊一律暫停退手動。
 - **爆炸圖（explode）**：overview/preview 將樓層沿 y 拉開的呈現；nav 收合回實高。
 - **體感**：一次節點推進的完整呈現組合——滑行、相機、語音、UI 更新（`advanceOnce` 的責任）。
-- **錨點（anchor）**：多 BSSID 合併後的實體 AP（OUI 同＋尾 3 bytes 差 ≤1 bit 併同源），
-  指紋庫的比對單位；id 取組內最小 bssid。
+- **錨點（anchor）**：指紋比對時算作**一份獨立證據**的訊號來源。一台實體 AP 常同時廣播多個
+  BSSID（雙頻、隱藏 SSID、mesh backhaul），它們的 RSSI 走同一條傳播路徑而高度相關；各自計分
+  會讓同一份證據被重複加權，故合併為一個錨點。判準是「訊號是否相關」而非「是否同一台機器」——
+  MAC 結構相似只是目前採用的代理指標。
 - **指紋庫（fp-db）**：每站一個靜態 JSON（`fp-db@1`）——RP×錨點的 RSSI 統計＋磁力指紋；
   引擎以 `loadFingerprintDb(url)` 載入，future backend＝換 URL。
