@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fingerprint, fpDistance } from '../tools/analyze-spacing'
+import { fingerprint, fpDistance } from '../src/fp/core'
 
 const scan = (aps: [string, number][]) => ({ aps: aps.map(([bssid, rssi]) => ({ bssid, rssi })) })
 
