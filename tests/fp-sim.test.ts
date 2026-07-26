@@ -289,7 +289,7 @@ describe('simSession:wifi-fp@1 輸出', () => {
       expect(p.mag.magStd).toBeLessThan(2)
       // WiFi 中途階梯跳變:前後半批朝向差 180 → 有 AP 前後半均值差得開
       expect(p.scans.length).toBe(10)
-      // 階梯訊號釘測:對齊朝向的 AP 前後半均值差 >6 dB(來源 bodyShadow ±12,jitter SEM ~3.2)
+      // 階梯訊號釘測:對齊朝向的 AP 前後半均值差 >10 dB(來源 bodyShadow ±12;無階梯時取極值的雜訊期望 ~8,10 才有鑑別力;實測 13.7+)
       const half = (ss: { aps: { bssid: string; rssi: number }[] }[]) => {
         const m = new Map<string, { s: number; c: number }>()
         for (const s of ss) for (const a of s.aps) {
@@ -304,7 +304,7 @@ describe('simSession:wifi-fp@1 輸出', () => {
         const e2 = h2.get(b)
         if (e1.c >= 3 && e2 && e2.c >= 3) maxStep = Math.max(maxStep, Math.abs(e1.s / e1.c - e2.s / e2.c))
       }
-      expect(maxStep).toBeGreaterThan(6)
+      expect(maxStep).toBeGreaterThan(10)
     }
     const lowAcc = simSession(mkOpts({ dirt: { lowMagAccRate: 1 } })).lines.slice(1).map(l => JSON.parse(l))
     for (const p of lowAcc) expect(p.mag.accuracy).toBeLessThanOrEqual(1)
