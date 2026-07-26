@@ -134,3 +134,122 @@ export function mergeAnchors(members: { bssid: string; ssid: string }[]): Map<st
   }
   return new Map(list.map(m => [m.bssid, find(m.bssid)]))
 }
+
+// ---- Stage 2 建庫 ----
+
+export const TOP_K = 15            // 每 RP 錨點數上限(detectRate×強度排序,spec 2.1)
+export const MAG_AXIS_STD_MAX = 1.5 // 三軸 mean 僅收 std 低於此的樣本(spec 2.2)
+
+export interface FpDbRp {
+  id: string; x: number; y: number
+  aps: Record<string, [number, number, number, number]> // [mean, std, rate, n]
+  mag: { magMean: number; axes?: [number, number, number] } | null
+}
+export interface FpDb {
+  schema: 'fp-db@1'; station: string; generated: string; sourceSessions: string[]
+  magNorthOffsetDeg: null // 磁北→模型北偏角:現場量一次的常數,佔位
+  anchors: Record<string, { bssids: string[]; ssid: string }>
+  excluded: Record<string, string>
+  floors: Record<string, { rps: FpDbRp[] }>
+}
+
+const r1 = (v: number) => Math.round(v * 10) / 10
+const r2 = (v: number) => Math.round(v * 100) / 100
+
+export function buildDb(texts: string[], opts: { station: string; generated: string }): FpDb {
+  const { samples, sessions } = parseSessions(texts)
+  const { kept } = cleanSamples(samples)
+  const excluded = filterHotspots(kept)
+  // 合併名單:全庫非熱點 BSSID
+  const members = new Map<string, string>() // bssid → 首見 ssid
+  for (const { rec } of kept) for (const s of rec.scans) for (const ap of s.aps) {
+    if (!excluded.has(ap.bssid) && !members.has(ap.bssid)) members.set(ap.bssid, ap.ssid)
+  }
+  const anchorOf = mergeAnchors([...members].map(([bssid, ssid]) => ({ bssid, ssid })))
+
+  // RP 聚合:pointId → 樓層/座標＋各錨點的加權統計(跨 slot 聚合,heading-agnostic)
+  interface Acc { vals: { v: number; w: number }[]; wPresent: number; n: number }
+  const rps = new Map<string, { floor: string; x: number; y: number; aps: Map<string, Acc>; wScan: number
+    magW: number; magSum: number; axW: number; axSum: [number, number, number] }>()
+  for (const { rec, w, magOk } of kept) {
+    let rp = rps.get(rec.pointId)
+    if (!rp) rps.set(rec.pointId, rp = { floor: rec.floor, x: rec.x, y: rec.y, aps: new Map(), wScan: 0, magW: 0, magSum: 0, axW: 0, axSum: [0, 0, 0] })
+    rp.wScan += w * rec.scans.length
+    for (const scan of rec.scans) {
+      const best = new Map<string, number>() // 同批同錨點取 max
+      for (const ap of scan.aps) {
+        const anchor = anchorOf.get(ap.bssid)
+        if (!anchor) continue // 已排除的熱點
+        best.set(anchor, Math.max(best.get(anchor) ?? -Infinity, ap.rssi))
+      }
+      for (const [anchor, v] of best) {
+        let a = rp.aps.get(anchor)
+        if (!a) rp.aps.set(anchor, a = { vals: [], wPresent: 0, n: 0 })
+        a.vals.push({ v, w }); a.wPresent += w; a.n++
+      }
+    }
+    if (magOk) {
+      rp.magW += w; rp.magSum += w * rec.mag.magMean
+      if (Math.max(...rec.mag.std) < MAG_AXIS_STD_MAX) {
+        rp.axW += w
+        rp.axSum[0] += w * rec.mag.mean[0]; rp.axSum[1] += w * rec.mag.mean[1]; rp.axSum[2] += w * rec.mag.mean[2]
+      }
+    }
+  }
+
+  const floors: Record<string, { rps: FpDbRp[] }> = {}
+  const usedAnchors = new Set<string>()
+  for (const [id, rp] of rps) {
+    const entries: [string, [number, number, number, number]][] = []
+    for (const [anchor, a] of rp.aps) {
+      const wSum = a.vals.reduce((s, x) => s + x.w, 0)
+      const mean = a.vals.reduce((s, x) => s + x.w * x.v, 0) / wSum
+      const std = Math.sqrt(a.vals.reduce((s, x) => s + x.w * (x.v - mean) ** 2, 0) / wSum)
+      entries.push([anchor, [r1(mean), r1(std), r2(a.wPresent / rp.wScan), a.n]])
+    }
+    entries.sort((a, b) => b[1][2] * (b[1][0] + 100) - a[1][2] * (a[1][0] + 100)) // detectRate×強度
+    const top = entries.slice(0, TOP_K)
+    for (const [anchor] of top) usedAnchors.add(anchor)
+    const mag = rp.magW > 0
+      ? { magMean: r1(rp.magSum / rp.magW), ...(rp.axW > 0 ? { axes: rp.axSum.map(v => r1(v / rp.axW)) as [number, number, number] } : {}) }
+      : null
+    ;(floors[rp.floor] ??= { rps: [] }).rps.push({ id, x: rp.x, y: rp.y, aps: Object.fromEntries(top), mag })
+  }
+
+  // anchors 表:只留被任一 RP 引用的
+  const anchorMembers = new Map<string, string[]>()
+  for (const [bssid, anchor] of anchorOf) (anchorMembers.get(anchor) ?? anchorMembers.set(anchor, []).get(anchor)!).push(bssid)
+  const anchors: Record<string, { bssids: string[]; ssid: string }> = {}
+  for (const anchor of usedAnchors) {
+    const bssids = anchorMembers.get(anchor) ?? [anchor]
+    const ssid = bssids.map(b => members.get(b) ?? '').find(s => s !== '') ?? ''
+    anchors[anchor] = { bssids: bssids.sort(), ssid }
+  }
+
+  return {
+    schema: 'fp-db@1', station: opts.station, generated: opts.generated, sourceSessions: sessions,
+    magNorthOffsetDeg: null, anchors, excluded: Object.fromEntries(excluded), floors,
+  }
+}
+
+// ---- CLI ----
+function argOf(name: string, def: string): string {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
+}
+
+function main() {
+  const files = process.argv.filter(a => a.endsWith('.jsonl'))
+  if (files.length === 0) { console.error('用法:npm run build:fp -- <session.jsonl> [more.jsonl] [--station id] [--out path]'); process.exit(1) }
+  const station = argOf('station', 'taipei-main-station')
+  const out = argOf('out', join('public', 'fp', `${station}.json`))
+  const db = buildDb(files.map(f => readFileSync(f, 'utf8')), { station, generated: new Date().toISOString() })
+  const json = JSON.stringify(db)
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(out, json)
+  const nRp = Object.values(db.floors).reduce((s, f) => s + f.rps.length, 0)
+  console.log(`RP ${nRp} 點 · 錨點 ${Object.keys(db.anchors).length} · 排除 ${Object.keys(db.excluded).length} BSSID`)
+  console.log(`${(json.length / 1024).toFixed(0)} KB(gzip ${(gzipSync(json).length / 1024).toFixed(0)} KB)→ ${out}`)
+}
+
+if (process.env.npm_lifecycle_event === 'build:fp' || process.argv[1]?.replace(/\\/g, '/').endsWith('fp-build.ts')) main()

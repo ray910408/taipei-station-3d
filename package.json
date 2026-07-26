@@ -15,6 +15,7 @@
     "gen:rp": "vite-node tools/gen-rp-points.ts",
     "analyze:spacing": "vite-node tools/analyze-spacing.ts",
     "sim:fp": "vite-node tools/fp-sim.ts",
+    "build:fp": "vite-node tools/fp-build.ts",
     "validate:glb": "node tools/validate-glb.mjs"
   },
   "dependencies": {

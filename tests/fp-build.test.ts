@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanSamples, filterHotspots, HOTSPOT_MIN_RP, mergeAnchors, parseSessions } from '../tools/fp-build'
+import { buildDb, cleanSamples, filterHotspots, HOTSPOT_MIN_RP, mergeAnchors, parseSessions, TOP_K } from '../tools/fp-build'
 
 const SESSION = JSON.stringify({ type: 'session', schema: 'wifi-fp@1', session: 's1', device: 'sim', android: 0, app: 'x', mode: 'single', scansPerPoint: 10, rpList: 'x', rpGenerated: 't', startedAt: 't' })
 const MAG_OK = { n: 100, mean: [18, 18, -35], std: [0.4, 0.4, 0.4], magMean: 45, magStd: 0.6, accuracy: 3 }
@@ -184,5 +184,81 @@ describe('mergeAnchors(spec 1.3:OUI 同＋尾 3 bytes 同或差 1 bit)', () => {
     ])
     const ids = new Set([m.get('a4:97:33:e9:c6:7e'), m.get('a4:97:33:e9:c6:7f'), m.get('a4:97:33:e9:c6:7c')])
     expect(ids.size).toBe(1)
+  })
+})
+
+describe('buildDb(Stage 2)', () => {
+  /** 兩樣本同點:w=1 全勤(2 批皆 -50/-60),w=0.5 半勤(-70 出現 1/2 批) */
+  const twoSampleText = () => {
+    const mk = (scans: object[], o: object) => pt({ scans, ...o })
+    const ap = (rssi: number) => ({ bssid: 'a4:97:33:e9:c6:7f', ssid: 'AP1', rssi, freq: 2437 })
+    // 湊滿 rare 門檻:AP1 也出現在 P2/P3(數值不影響 P1 斷言)
+    const bg = (id: string, x: number) => mk(
+      [{ t: 't', fresh: true, aps: [ap(-80)] }, { t: 't', fresh: true, aps: [ap(-80)] }],
+      { pointId: id, x, actualScans: 2 })
+    return [SESSION.replace('"scansPerPoint":10', '"scansPerPoint":2'),
+      mk([{ t: 't', fresh: true, aps: [ap(-50)] }, { t: 't', fresh: true, aps: [ap(-60)] }], { actualScans: 2 }),
+      // 同點重採(last-line-wins 已在 parse 測過)→ 這裡改用另一個 slot 當第二樣本,兩樣本都算
+      mk([{ t: 't', fresh: true, aps: [ap(-70)] }], { headingSlot: 90, actualScans: 1 }), // 半勤(1 < 0.6×2)→ w=0.5;scans.length 恆等 actualScans
+      bg('P2', 5), bg('P3', 10),
+    ].join('\n')
+  }
+
+  it('加權聚合數學:mean/rate/n 精確;跨 slot 聚合(heading-agnostic)', () => {
+    const db = buildDb([twoSampleText()], { station: 'test', generated: 'g' })
+    const rp = db.floors['f0'].rps.find(r => r.id === 'P1')!
+    const [mean, , rate, n] = rp.aps['a4:97:33:e9:c6:7e'] ?? rp.aps['a4:97:33:e9:c6:7f']
+    // 樣本1 w=1:批值 -50,-60(2 批全到);樣本2 w=0.5:批值 -70(1/1 批)
+    // mean = (1·(-50)+1·(-60)+0.5·(-70)) / (1+1+0.5) = -145/2.5 = -58
+    expect(mean).toBeCloseTo(-58, 1)
+    // rate = (1·2 + 0.5·1) / (1·2 + 0.5·1) …分母=實掃批數加權 (1·2+0.5·1)=2.5 → 1.0(全到)
+    expect(rate).toBeCloseTo(1.0, 2)
+    expect(n).toBe(3) // 原始出現批數
+  })
+
+  it('Top-K:超過 15 顆錨點只留 detectRate×強度前 15', () => {
+    // 造 20 顆全勤錨點,RSSI -40..-78(每顆差 2):rate 同 → 弱的被切
+    // OUI 第三 byte 隔開(0a:00:i)——否則尾 bytes 差 1 bit 會被同源合併吃掉
+    const aps20 = Array.from({ length: 20 }, (_, i) => ({ bssid: `0a:00:${i.toString(16).padStart(2, '0')}:00:00:01`, ssid: `S${i}`, rssi: -40 - 2 * i, freq: 2437 }))
+    const mkPt = (id: string, x: number) => pt({ pointId: id, x, scans: [{ t: 't', fresh: true, aps: aps20 }, { t: 't', fresh: true, aps: aps20 }], actualScans: 2 })
+    const text = [SESSION.replace('"scansPerPoint":10', '"scansPerPoint":2'), mkPt('P1', 0), mkPt('P2', 5), mkPt('P3', 10)].join('\n')
+    const db = buildDb([text], { station: 'test', generated: 'g' })
+    const rp = db.floors['f0'].rps.find(r => r.id === 'P1')!
+    expect(Object.keys(rp.aps).length).toBe(TOP_K)
+    expect(Object.values(rp.aps).every(([m]) => m <= -40 && m >= -68 - 1)).toBe(true) // 最弱 5 顆(-70..-78)被切
+  })
+
+  it('同批同錨點多成員取 max;anchors 表記成員與 ssid', () => {
+    const batch = { t: 't', fresh: true, aps: [
+      { bssid: 'a4:97:33:e9:c6:7e', ssid: 'AP1', rssi: -55, freq: 2437 },
+      { bssid: 'a4:97:33:e9:c6:7f', ssid: 'AP1_5G', rssi: -50, freq: 5745 },
+    ] }
+    const mkPt = (id: string, x: number) => pt({ pointId: id, x, scans: [batch, batch], actualScans: 2 })
+    const text = [SESSION.replace('"scansPerPoint":10', '"scansPerPoint":2'), mkPt('P1', 0), mkPt('P2', 5), mkPt('P3', 10)].join('\n')
+    const db = buildDb([text], { station: 'test', generated: 'g' })
+    const rp = db.floors['f0'].rps.find(r => r.id === 'P1')!
+    expect(rp.aps['a4:97:33:e9:c6:7e'][0]).toBeCloseTo(-50, 1) // max(-55,-50)
+    expect(db.anchors['a4:97:33:e9:c6:7e'].bssids.sort()).toEqual(['a4:97:33:e9:c6:7e', 'a4:97:33:e9:c6:7f'])
+    expect(db.anchors['a4:97:33:e9:c6:7e'].ssid).toBe('AP1')
+  })
+
+  it('磁力:magOk 樣本加權 magMean;三軸僅低 std 樣本;excluded 序列化', () => {
+    const A: [string, string, number] = ['aa:00:00:00:00:01', 'OK', -60]
+    const mk = (o: object, aps: [string, string, number][]) => pt({
+      scans: [{ t: 't', fresh: true, aps: aps.map(([bssid, ssid, rssi]) => ({ bssid, ssid, rssi, freq: 2437 })) }],
+      actualScans: 1, ...o,
+    })
+    const text = [SESSION.replace('"scansPerPoint":10', '"scansPerPoint":1'),
+      mk({ mag: { ...MAG_OK, magMean: 40 } }, [A, ['dd:00:00:00:00:09', 'iPhone', -50]]),
+      mk({ headingSlot: 90, headingDeg: 90, mag: { ...MAG_OK, magMean: 50, std: [2, 2, 2] } }, [A]), // 同點另一 slot → 兩樣本都算(跨 slot 聚合)
+      mk({ pointId: 'P2', x: 5 }, [A]), mk({ pointId: 'P3', x: 10 }, [A]), // 湊 rare 門檻
+    ].join('\n')
+    const db = buildDb([text], { station: 'test', generated: 'g' })
+    const rp = db.floors['f0'].rps.find(r => r.id === 'P1')!
+    expect(rp.mag!.magMean).toBeCloseTo(45, 1) // 兩樣本 w=1 等權:(40+50)/2
+    expect(rp.mag!.axes).toEqual([18, 18, -35]) // 只有 std 低的樣本(第一筆 0.4)進三軸;第二筆 std 2 ≥ 1.5 擋掉
+    expect(db.excluded['dd:00:00:00:00:09']).toBe('ssid-pattern')
+    expect(db.schema).toBe('fp-db@1')
+    expect(db.magNorthOffsetDeg).toBeNull() // 現場量的佔位
   })
 })
