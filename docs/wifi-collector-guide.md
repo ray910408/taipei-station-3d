@@ -1,7 +1,7 @@
 # 北車 WiFi 指紋採集操作手冊
 
 工具:`tools/wifi-collector`(Android APK)+ `npm run gen:rp`(產點腳本)。
-資料流:產點 → 手機採集 → 匯出 JSONL → 離線 pipeline(另案)。
+資料流:產點 → 手機採集 → 匯出 JSONL → 離線 pipeline(`npm run build:fp`)→ 指紋庫 JSON。
 
 ## 一、出發前(電腦)
 
@@ -64,7 +64,7 @@ setup 選「四朝向」:每點要面向磁北 0°/東 90°/南 180°/西 270° 
 | 「成功掃描 <60%」 | WiFi 晶片忙/系統卡,原地重採一次;連續發生就重開 WiFi |
 | 羅盤顯示 -- 或亂跳、磁力校正「未校正」 | 畫 8 字直到顯示「中」以上;梯廳/閘門邊本來就會亂,記錄照常(accuracy 有入檔) |
 | 「磁場擾動大(列車/電梯?)」 | 月台層列車進站時磁場會亂——等列車離站再重採該點 |
-| 「手機有轉動/晃動」 | 掃描 ~26 秒全程手機要**維持同一姿勢**別轉;轉了磁力三軸資料就作廢(WiFi 不受影響),重採該點 |
+| 「手機有轉動/晃動」 | 掃描全程手機要**維持同一姿勢**別轉;轉動時磁力三軸作廢,**WiFi 也一起被污染**(實測同一顆 AP 前後半批可差 13 dB),離線會把該點 WiFi 降權——請重採該點 |
 | 選不到 rp-points.json | 檔案 app 找 Download 資料夾;副檔名必須 .json |
 | MIUI 裝不了 APK | 首次安裝要在彈窗允許「安裝未知應用程式」;若被 MIUI 純淨模式擋下,關閉純淨模式再裝 |
 
@@ -75,8 +75,11 @@ setup 選「四朝向」:每點要面向磁北 0°/東 90°/南 180°/西 270° 
 - `point` 含:模型座標 x/y、樓層、磁方位 headingDeg、N 批 `scans[].aps[]`(bssid/ssid/rssi/freq)、磁力統計 `mag`。
 - 同一 (pointId, headingSlot) 出現多行 = 有重採,**離線一律取最後一行**。
 - 重採請一次做完再離開 app(中途殺 app 會讓續採把舊資料當已完成)。
-- 磁北 vs 模型北的固定偏角:現場找一條已知軸向走廊(如臺鐵站體長軸,模型 +X)面向走廊方向記下羅盤讀數一次,交給離線 pipeline。
+- 磁北 vs 模型北的固定偏角:現場找一條已知軸向走廊(如臺鐵站體長軸,模型 +X)面向走廊方向記下羅盤讀數一次;
+  它會填進指紋庫的 `magNorthOffsetDeg`(目前是 null 佔位),APK 不處理。
 
 ## 七、Schema 對照
 
-詳見 `docs/superpowers/specs/2026-07-24-wifi-fingerprint-collector-design.md` 的資料 schema 章節。
+- 採集檔 `wifi-fp@1`:欄位總覽見上一節;逐欄型別見 `tools/fp-build.ts` 的 `PointRecord`。
+- 指紋庫 `fp-db@1`(pipeline 產物):形狀見 `docs/data-conventions.md` 的「WiFi 指紋增補慣例」。
+- 設計 spec 草稿在 `docs/superpowers/specs/`(本機工作區,未入 git)。

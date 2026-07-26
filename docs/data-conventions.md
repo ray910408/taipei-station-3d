@@ -54,3 +54,21 @@
   圖示由 `icons.ts` 以 canvas 繪製官方站內設施圖例語言（深色圓角方塊＋白 pictogram、
   出口為白底藍圈），零外部資產——新增 kind 要同步補 `PoiKind` 與 `drawIcon` 分支。
   現況為每層 3 筆示範集（confidence 2），非完整盤點。
+
+## WiFi 指紋增補慣例
+
+- **資料流**：`gen:rp` 產參考點 → APK 現場採集（`wifi-fp@1` JSONL）→ `build:fp` 清洗建庫
+  （`fp-db@1` JSON）→ 定位引擎載入。每段吃前一段的 schema，中間不改格式；
+  原始 JSONL **永不修改**，所有清洗都在 pipeline 內做。
+- **`fp-db@1` 形狀**：每站一個靜態 JSON，前端整包載入、不建後端（702 點實測 393 KB／gzip 64 KB）。
+  頂層 `{ schema, station, generated, sourceSessions[], magNorthOffsetDeg, anchors, excluded, floors }`；
+  `floors[樓層].rps[]` 每點帶 `aps{ 錨點id → [mean, std, detectRate, n] }` 與 `mag`，每點取 Top-15。
+  預設輸出 `public/fp/<station>.json`（gitignored 建置產物，比照 `public/models/`）。
+- **錨點（anchor）**：定義見 `CONTEXT.md`，為什麼這樣定義見 `docs/adr/0001`。
+  合併判準是**代理指標而非定義**，且已知不完整——`tests/fp-real.test.ts` 有標記【已知缺口】的
+  特徵測試主動追蹤，看到它斷言「目前未合併」時不要當 bug 順手修掉。
+- **清洗門檻全部 exported**：`tools/fp-build.ts` 的 `SHORT_SCAN_RATIO`／`ROT_AXIS_STD`／
+  `ROT_AXIS_RATIO`／`MAGSTD_SPLIT`／`MIN_MAG_ACCURACY`／`TOP_K` 等常數是真機資料進來後的調參旋鈕，
+  調參改常數、不改邏輯。其中轉動判別與 APK 的 `magQuality()` 是同一條判別式，兩邊要一起改。
+- **模擬器只驗程式**：`sim:fp` 產的合成資料用來證明「pipeline 正確、演算法收斂」，
+  **不預測北車真實誤差**（合成誤差必偏樂觀）。真機回歸靠 `tests/fixtures/real-home/`。
