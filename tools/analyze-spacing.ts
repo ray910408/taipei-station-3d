@@ -18,6 +18,7 @@ interface PointRec {
   x: number
   y: number
   headingSlot: number | null
+  startedAt: string
   scans: { aps: { bssid: string; rssi: number }[] }[]
 }
 
@@ -83,8 +84,45 @@ console.log(`可用 AP(出現率 ≥${MIN_DETECT_RATE * 100}%):平均每點 ${(a
 console.log(`\n=== 雜訊底線(同點分半比對)===`)
 console.log(`平均 ${noiseFloor.toFixed(2)} dB   範圍 ${Math.min(...noises).toFixed(2)} ~ ${Math.max(...noises).toFixed(2)} dB`)
 
-// —— 2. 兩兩比對:實體距離 vs 指紋距離 ——
+// —— 2. 兩兩比對 ——
 const fps = points.map(p => ({ p, fp: fingerprint(p.scans) }))
+
+// 原地時間序列:座標全同(清單本身就同點),或使用者以 --fixed 宣告「名目座標不同但人沒移動」
+const allSameSpot = fps.every(f => f.p.x === fps[0].p.x && f.p.y === fps[0].p.y)
+if (allSameSpot || process.argv.includes('--fixed')) {
+  console.log(`\n=== 原地時間序列${allSameSpot ? '(座標全同)' : '(--fixed 宣告)'} ===`)
+  const rows: { gap: number; d: number }[] = []
+  for (let i = 0; i < fps.length; i++) {
+    for (let j = i + 1; j < fps.length; j++) {
+      const gap = (Date.parse(fps[j].p.startedAt) - Date.parse(fps[i].p.startedAt)) / 1000
+      rows.push({ gap: Math.abs(gap), d: fpDistance(fps[i].fp, fps[j].fp) })
+    }
+  }
+  const drift = rows.reduce((a, r) => a + r.d, 0) / rows.length
+  console.log(`跨度 ${(Math.max(...rows.map(r => r.gap)) / 60).toFixed(1)} 分鐘 · ${rows.length} 對`)
+  console.log(`\n間隔(分)  對數  平均漂移(dB)`)
+  const tb = new Map<number, number[]>()
+  for (const r of rows) {
+    const b = Math.max(1, Math.round(r.gap / 60))
+    const arr = tb.get(b); if (arr) arr.push(r.d); else tb.set(b, [r.d])
+  }
+  for (const b of [...tb.keys()].sort((a, c) => a - c)) {
+    const arr = tb.get(b)!
+    console.log(`${String(b).padStart(6)}${String(arr.length).padStart(6)}${(arr.reduce((a, c) => a + c, 0) / arr.length).toFixed(2).padStart(14)}`)
+  }
+  // 窗內 vs 跨窗:決定「每點掃幾次」的關鍵。跨窗遠大於窗內 → 加掃次數效益很低
+  const nEff = points[0].scans.length
+  const tot = (n: number) => Math.sqrt(drift ** 2 + (noiseFloor * Math.sqrt(nEff / n)) ** 2)
+  console.log(`\n窗內雜訊 ${noiseFloor.toFixed(2)} dB · 跨窗漂移 ${drift.toFixed(2)} dB(比 ${(drift / noiseFloor).toFixed(1)}×)`)
+  console.log(`總雜訊推估:N=${nEff} → ${tot(nEff).toFixed(2)} dB;N=${Math.ceil(nEff / 2)} → ${tot(Math.ceil(nEff / 2)).toFixed(2)} dB`)
+  if (drift > noiseFloor * 3) {
+    console.log(`→ 主雜訊在跨窗尺度,加掃次數幾乎沒用;N 可減半換取採集時間`)
+  }
+  console.log(`\n指紋要能分辨兩個位置,空間差異需 > ${(drift * 2).toFixed(1)} dB(漂移的 2 倍)`)
+  console.log(`→ 空間鑑別力要靠「真的走開」的樣線才量得出來,本檔無法回答間距問題\n`)
+  process.exit(0)
+}
+
 const bins = new Map<number, number[]>()
 const repeats: { a: string; b: string; d: number }[] = []
 
@@ -154,6 +192,8 @@ if (corr < 0.3) {
   console.log(`  2. 可用 AP 太少(本批平均 ${(apCounts.reduce((a, b) => a + b, 0) / apCounts.length).toFixed(1)} 顆),不足以分辨位置`)
   console.log(`  3. 時間漂移(${baseline.toFixed(2)} dB)蓋過空間差異`)
   console.log(`  → 要在 AP 密度足夠的真實場域(北車)重做,並確認有走足間距。`)
+  console.log(`\n  若這批其實是「原地連測」(人沒移動,座標只是清單給的名目值):`)
+  console.log(`  加 --fixed 重跑,會改測時間穩定性並推估每點該掃幾次。`)
 } else if (recommend > 0) {
   console.log(`指紋差達基準 2 倍的最小距離:${recommend} m`)
   console.log(`→ 建議 RP 間距 ≥ ${recommend} m(再密只是重複採同一份資訊)`)
