@@ -34,12 +34,18 @@ const val MAG_AXIS_NOISY_STD = 3.0
 
 enum class MagQuality { OK, AMBIENT_NOISY, DEVICE_MOVED }
 
-/** 先判合力(磁場真的變了),再判單軸(合力穩=純轉動) */
-fun magQuality(mag: MagSummary?): MagQuality = when {
-  mag == null -> MagQuality.OK
-  mag.magStd > MAG_NOISY_STD -> MagQuality.AMBIENT_NOISY
-  (mag.std.maxOrNull() ?: 0.0) > MAG_AXIS_NOISY_STD -> MagQuality.DEVICE_MOVED
-  else -> MagQuality.OK
+/** 轉動的特徵是「軸向擾動遠大於合力擾動」——環境磁場變化則兩者同步漲。
+ *  不可只看 magStd 門檻:殘留硬鐵偏移會讓合力也隨轉動變化(實測轉動時 magStd 也超標),
+ *  單看門檻會把轉動誤判成環境擾動。 */
+fun magQuality(mag: MagSummary?): MagQuality {
+  if (mag == null) return MagQuality.OK
+  val axisMax = mag.std.maxOrNull() ?: 0.0
+  return when {
+    axisMax > MAG_AXIS_NOISY_STD && axisMax > mag.magStd * 2 -> MagQuality.DEVICE_MOVED
+    mag.magStd > MAG_NOISY_STD -> MagQuality.AMBIENT_NOISY
+    axisMax > MAG_AXIS_NOISY_STD -> MagQuality.AMBIENT_NOISY // 兩者同幅度漲＝環境
+    else -> MagQuality.OK
+  }
 }
 
 fun magAccLabel(acc: Int): String = when (acc) {
