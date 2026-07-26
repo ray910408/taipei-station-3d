@@ -289,6 +289,22 @@ describe('simSession:wifi-fp@1 輸出', () => {
       expect(p.mag.magStd).toBeLessThan(2)
       // WiFi 中途階梯跳變:前後半批朝向差 180 → 有 AP 前後半均值差得開
       expect(p.scans.length).toBe(10)
+      // 階梯訊號釘測:對齊朝向的 AP 前後半均值差 >6 dB(來源 bodyShadow ±12,jitter SEM ~3.2)
+      const half = (ss: { aps: { bssid: string; rssi: number }[] }[]) => {
+        const m = new Map<string, { s: number; c: number }>()
+        for (const s of ss) for (const a of s.aps) {
+          const e = m.get(a.bssid) ?? { s: 0, c: 0 }
+          e.s += a.rssi; e.c++; m.set(a.bssid, e)
+        }
+        return m
+      }
+      const h1 = half(p.scans.slice(0, 5)), h2 = half(p.scans.slice(5))
+      let maxStep = 0
+      for (const [b, e1] of h1) {
+        const e2 = h2.get(b)
+        if (e1.c >= 3 && e2 && e2.c >= 3) maxStep = Math.max(maxStep, Math.abs(e1.s / e1.c - e2.s / e2.c))
+      }
+      expect(maxStep).toBeGreaterThan(6)
     }
     const lowAcc = simSession(mkOpts({ dirt: { lowMagAccRate: 1 } })).lines.slice(1).map(l => JSON.parse(l))
     for (const p of lowAcc) expect(p.mag.accuracy).toBeLessThanOrEqual(1)
@@ -299,5 +315,6 @@ describe('simSession:wifi-fp@1 輸出', () => {
     const ids = lines.slice(1).map(l => JSON.parse(l)).map(p => `${p.pointId}|${p.headingSlot}`)
     expect(ids.length).toBe(6) // 3 點 × 2
     expect(new Set(ids).size).toBe(3)
+    expect(ids.slice(3)).toEqual(ids.slice(0, 3)) // 重採行附加在檔尾,非交錯——last-line-wins 的前提
   })
 })
