@@ -131,6 +131,16 @@ describe('filterHotspots(spec 1.2 三規則)', () => {
     expect(ex.has('cc:00:00:00:00:01')).toBe(false)
   })
 
+  it('規則2 跨樓層不比:同 BSSID 兩層皆強不觸發 drift(垂直穿透是常態)', () => {
+    const kept = [
+      ...sampleAt('A', 0, 0, [['bb:00:00:00:00:02', 'X', -50]], 'f0'),
+      ...sampleAt('B', 40, 0, [['bb:00:00:00:00:02', 'X', -52]], 'f1'), // 40m 但不同層 → 跳過不比
+      ...sampleAt('C', 5, 0, [['bb:00:00:00:00:02', 'X', -55]], 'f0'), // 同層近距 → 不觸發;湊滿 3 RP 免 rare
+    ]
+    const ex = filterHotspots(kept)
+    expect(ex.has('bb:00:00:00:00:02')).toBe(false)
+  })
+
   it('規則3 極低出現率:出現 RP 數 < 3 → rare', () => {
     const kept = [
       ...goodBase('aa:00:00:00:00:01', 'OK'),
