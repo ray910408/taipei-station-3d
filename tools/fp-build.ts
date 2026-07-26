@@ -66,3 +66,71 @@ export function cleanSamples(samples: RawSample[]): { kept: CleanSample[]; dropp
   }
   return { kept, dropped }
 }
+
+// ---- Stage 1.2 行動熱點濾除(BSSID 是主 key;三條規則任一命中即排除) ----
+
+/** 裝置型號/隨身熱點 SSID 樣式。注意:` 5G`(含空白)是型號型;`_5G` 是正牌 AP 命名,不殺。 */
+export const HOTSPOT_SSID_PATTERNS: RegExp[] = [
+  /iphone/i, /^androidap/i, /^oppo\b/i, /smartphone_connect/i,
+  /^xiaomi\b/i, /^redmi\b/i, /^huawei\b/i, /^samsung\b/i, /^pixel\b/i, /^vivo\b/i, / 5g$/i,
+]
+export const HOTSPOT_MIN_RP = 3   // 全庫出現 RP 數低於此 → rare
+export const DRIFT_DIST = 30      // 相距 >30m 的 RP 皆不弱 → 在移動
+export const DRIFT_STRONG = -75   // 「不弱」門檻(dBm)
+
+export function filterHotspots(kept: CleanSample[]): Map<string, string> {
+  // 每 BSSID:出現過的 RP(座標/樓層/每 RP 平均 RSSI)與看過的 ssid
+  const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number }> }>()
+  for (const { rec } of kept) {
+    for (const scan of rec.scans) for (const ap of scan.aps) {
+      let s = stat.get(ap.bssid)
+      if (!s) stat.set(ap.bssid, s = { ssids: new Set(), rps: new Map() })
+      if (ap.ssid) s.ssids.add(ap.ssid)
+      let r = s.rps.get(rec.pointId)
+      if (!r) s.rps.set(rec.pointId, r = { floor: rec.floor, x: rec.x, y: rec.y, sum: 0, n: 0 })
+      r.sum += ap.rssi; r.n++
+    }
+  }
+  const excluded = new Map<string, string>()
+  for (const [bssid, s] of stat) {
+    if ([...s.ssids].some(ss => HOTSPOT_SSID_PATTERNS.some(p => p.test(ss)))) { excluded.set(bssid, 'ssid-pattern'); continue }
+    // 規則2:同層兩 RP 相距 >30m 且兩處平均皆不弱
+    const strong = [...s.rps.values()].filter(r => r.sum / r.n > DRIFT_STRONG)
+    let drift = false
+    for (let i = 0; i < strong.length && !drift; i++) for (let j = i + 1; j < strong.length; j++) {
+      if (strong[i].floor !== strong[j].floor) continue
+      if (Math.hypot(strong[i].x - strong[j].x, strong[i].y - strong[j].y) > DRIFT_DIST) { drift = true; break }
+    }
+    if (drift) { excluded.set(bssid, 'drift'); continue }
+    if (s.rps.size < HOTSPOT_MIN_RP) excluded.set(bssid, 'rare')
+  }
+  return excluded
+}
+
+// ---- Stage 1.3 多 BSSID 同源合併 ----
+
+export function popcount(x: number): number {
+  let n = 0
+  while (x) { n += x & 1; x >>>= 1 }
+  return n
+}
+
+const macBytes = (bssid: string) => bssid.split(':').map(b => parseInt(b, 16))
+const ouiOf = (bssid: string) => bssid.slice(0, 8)
+const tailOf = (bssid: string) => { const b = macBytes(bssid); return (b[3] << 16) | (b[4] << 8) | b[5] }
+
+/** OUI 相同＋尾 3 bytes xor popcount ≤1 → 同實體 AP;anchor id = 組內最小 bssid。回傳 bssid→anchorId。 */
+export function mergeAnchors(members: { bssid: string; ssid: string }[]): Map<string, string> {
+  const list = [...new Map(members.map(m => [m.bssid, m])).values()] // 去重
+  const parent = new Map<string, string>(list.map(m => [m.bssid, m.bssid]))
+  const find = (x: string): string => { const p = parent.get(x)!; if (p === x) return x; const r = find(p); parent.set(x, r); return r }
+  const union = (a: string, b: string) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra < rb ? rb : ra, ra < rb ? ra : rb) }
+  const byOui = new Map<string, typeof list>()
+  for (const m of list) { const g = byOui.get(ouiOf(m.bssid)); if (g) g.push(m); else byOui.set(ouiOf(m.bssid), [m]) }
+  for (const group of byOui.values()) {
+    for (let i = 0; i < group.length; i++) for (let j = i + 1; j < group.length; j++) {
+      if (popcount(tailOf(group[i].bssid) ^ tailOf(group[j].bssid)) <= 1) union(group[i].bssid, group[j].bssid)
+    }
+  }
+  return new Map(list.map(m => [m.bssid, find(m.bssid)]))
+}
