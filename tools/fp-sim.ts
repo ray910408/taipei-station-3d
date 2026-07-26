@@ -136,3 +136,55 @@ export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = 
 
   return { seed, floors: simFloors, aps, hotspots, mag }
 }
+
+// ---- RSSI 物理 ----
+
+export const FLOOR_SEP = 5 // 樓層垂直間隔(m):d3D 與跨層數用
+export const CROSS_FLOOR_DB = 20 // 每跨一層衰減
+const PATH_LOSS_N = 3
+const JITTER_STD = 5 // 每批 N(0,5) → 10 批 span ≈16 dB(對齊實測)
+const SHADOW_STD = 4
+
+/** 持久 per-pair shadowing:seeded hash → N(0,4)。0.5m 格量化 → 同點重測同 shadow。 */
+export function pairShadow(world: SimWorld, apId: string, x: number, y: number): number {
+  const key = `${world.seed}|${apId}|${Math.round(x * 2)}|${Math.round(y * 2)}`
+  return gauss(mulberry32(hash32(key)), 0, SHADOW_STD)
+}
+
+/** 人體遮擋:AP 在背後衰減峰值 12 dB(對齊實測 11.9) */
+export function bodyShadow(headingDeg: number, apBearingDeg: number): number {
+  return 6 * (1 - Math.cos(((headingDeg - apBearingDeg) * Math.PI) / 180))
+}
+
+/** 偵測機率:sigmoid((rssi+90)/3) → 弱 AP 自然閃爍 */
+export function detectProb(rssi: number): number {
+  return 1 / (1 + Math.exp(-(rssi + 90) / 3))
+}
+
+export interface ScanAp { bssid: string; ssid: string; rssi: number; freq: number }
+
+/** 單批掃描——下包引擎的即時觀測源;simSession 內部就是重複呼叫它 */
+export function scanAt(world: SimWorld, floorId: string, x: number, y: number, headingDeg: number, rng: Rng): ScanAp[] {
+  const level = world.floors.find(f => f.id === floorId)?.level
+  if (level === undefined) throw new Error(`未知樓層:${floorId}`)
+  const out: ScanAp[] = []
+  for (const ap of world.aps) {
+    const dx = ap.x - x, dy = ap.y - y
+    const dLevel = Math.abs(ap.level - level)
+    const d3 = Math.max(1, Math.hypot(dx, dy, FLOOR_SEP * dLevel))
+    const bearing = (Math.atan2(dx, dy) * 180) / Math.PI // 模型 +Y 朝北 → 方位角 atan2(dx,dy)
+    const base = ap.tx - 10 * PATH_LOSS_N * Math.log10(d3) - CROSS_FLOOR_DB * dLevel
+      - pairShadow(world, ap.id, x, y) - bodyShadow(headingDeg, bearing)
+    for (const m of ap.bssids) {
+      const rssi = Math.round(base + m.offset + gauss(rng, 0, JITTER_STD))
+      if (rng() < detectProb(rssi)) out.push({ bssid: m.bssid, ssid: m.ssid, rssi, freq: m.freq })
+    }
+  }
+  for (const h of world.hotspots) { // 位置逐批漂移:永遠在採集者附近 3–15m
+    if (rng() >= h.activeProb) continue
+    const d = 3 + rng() * 12
+    const rssi = Math.round(h.tx - 10 * PATH_LOSS_N * Math.log10(d) + gauss(rng, 0, JITTER_STD))
+    if (rng() < detectProb(rssi)) out.push({ bssid: h.bssid, ssid: h.ssid, rssi, freq: h.freq })
+  }
+  return out
+}
