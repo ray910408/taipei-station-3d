@@ -163,7 +163,7 @@ describe('scanAt 物理校準(對齊 spec 實測表)', () => {
     expect(noise).toBeGreaterThan(1.5); expect(noise).toBeLessThan(8)
   })
 
-  it('跨層衰減:樓下同座標點看同一 AP 弱 ≥15 dB', () => {
+  it('跨層衰減:樓下同座標點看同一 AP 弱 ≥30 dB', () => {
     const w = oneApWorld()
     w.floors.push({ id: 'f1', level: 1, outline: w.floors[0].outline })
     const rng = mulberry32(41)
@@ -171,6 +171,6 @@ describe('scanAt 物理校準(對齊 spec 實測表)', () => {
       const rs = batches(w, fl, 0, 10, 0, 30, rng).flatMap(b => b.aps.map(a => a.rssi))
       return rs.reduce((a, b) => a + b, 0) / Math.max(1, rs.length)
     }
-    expect(at('f0') - at('f1')).toBeGreaterThan(15) // 20 dB 跨層 + d3D 拉長,偵測截斷會吃掉一點
+    expect(at('f0') - at('f1')).toBeGreaterThan(30) // 解析 ~41 dB(20 dB 跨層 + d3D 拉長 ~21 dB),偵測截斷吃掉一點;門檻 30 釘住 CROSS_FLOOR_DB 量級
   })
 })
