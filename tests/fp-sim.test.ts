@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FloorJson } from '../tools/gen-rp-points'
 import { pointInPolygon } from '../tools/rp-geometry'
-import { HOTSPOT_SSIDS, buildWorld, gauss, hash32, mulberry32, scanAt, type SimWorld } from '../tools/fp-sim'
+import { HOTSPOT_SSIDS, buildWorld, gauss, hash32, magTrueAt, mulberry32, sampleMag, scanAt, type SimWorld } from '../tools/fp-sim'
 import { fingerprint, fpDistance } from '../src/fp/core'
 
 const loadMini = (): FloorJson[] => ['hall-b1', 'plat-b2']
@@ -172,5 +172,52 @@ describe('scanAt 物理校準(對齊 spec 實測表)', () => {
       return rs.reduce((a, b) => a + b, 0) / Math.max(1, rs.length)
     }
     expect(at('f0') - at('f1')).toBeGreaterThan(30) // 解析 ~41 dB(20 dB 跨層 + d3D 拉長 ~21 dB),偵測截斷吃掉一點;門檻 30 釘住 CROSS_FLOOR_DB 量級
+  })
+})
+
+describe('磁力模型', () => {
+  const w = () => buildWorld(loadMini(), 7, { apsPerFloor: 4 })
+  const IRON0: [number, number, number] = [0, 0, 0]
+
+  it('magTrueAt:決定性、空間有梯度、合力量級 ~45 µT', () => {
+    const world = w()
+    expect(magTrueAt(world, 'hall-b1', 3, 1)).toEqual(magTrueAt(world, 'hall-b1', 3, 1))
+    const a = magTrueAt(world, 'hall-b1', -8, -3), b = magTrueAt(world, 'hall-b1', 8, 3)
+    expect(a).not.toEqual(b) // 弦波空間梯度
+    const mag = Math.hypot(...a)
+    expect(mag).toBeGreaterThan(25); expect(mag).toBeLessThan(65)
+  })
+
+  it('乾淨取樣:低 std、accuracy 3、magMean ≈ |真場|', () => {
+    const world = w()
+    const s = sampleMag(world, 'hall-b1', 3, 1, 0, IRON0, mulberry32(1))
+    expect(s.n).toBe(100)
+    expect(s.accuracy).toBe(3)
+    expect(Math.max(...s.std)).toBeLessThan(1)
+    expect(s.magStd).toBeLessThan(1)
+    expect(Math.abs(s.magMean - Math.hypot(...magTrueAt(world, 'hall-b1', 3, 1)))).toBeLessThan(1)
+  })
+
+  it('硬鐵旋鈕:未校正手機 magMean 明顯偏移(對齊實測 14.7 µT 現象)', () => {
+    const world = w()
+    const clean = sampleMag(world, 'hall-b1', 3, 1, 0, IRON0, mulberry32(1))
+    const iron = sampleMag(world, 'hall-b1', 3, 1, 0, [12, 6, 0], mulberry32(1))
+    expect(Math.abs(iron.magMean - clean.magMean)).toBeGreaterThan(3)
+  })
+
+  it('轉動污染:三軸 std 大、magStd 仍小(對齊實測 s1649:std~16、magStd 1.75)', () => {
+    const s = sampleMag(w(), 'hall-b1', 3, 1, 0, IRON0, mulberry32(2), { rotating: true })
+    expect(Math.max(...s.std)).toBeGreaterThan(8)
+    expect(s.magStd).toBeLessThan(2)
+  })
+
+  it('環境擾動(列車):magStd > 2', () => {
+    const s = sampleMag(w(), 'plat-b2', 0, 0, 0, IRON0, mulberry32(3), { disturbed: true })
+    expect(s.magStd).toBeGreaterThan(2)
+  })
+
+  it('低 accuracy 旋鈕', () => {
+    const s = sampleMag(w(), 'hall-b1', 3, 1, 0, IRON0, mulberry32(4), { lowAccuracy: true })
+    expect(s.accuracy).toBeLessThanOrEqual(1)
   })
 })

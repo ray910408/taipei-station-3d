@@ -188,3 +188,64 @@ export function scanAt(world: SimWorld, floorId: string, x: number, y: number, h
   }
   return out
 }
+
+// ---- 磁力模型 ----
+
+export interface MagStats {
+  n: number
+  mean: [number, number, number]
+  std: [number, number, number]
+  magMean: number
+  magStd: number
+  accuracy: number
+}
+export interface MagDirt { rotating?: boolean; disturbed?: boolean; lowAccuracy?: boolean }
+
+/** 該層基準向量 + 弦波空間梯度 → 世界座標真場 */
+export function magTrueAt(world: SimWorld, floorId: string, x: number, y: number): [number, number, number] {
+  const f = world.mag[floorId]
+  if (!f) throw new Error(`未知樓層磁場:${floorId}`)
+  const v: [number, number, number] = [...f.base]
+  for (const wv of f.waves) {
+    const s = Math.sin(wv.kx * x + wv.ky * y + wv.phase)
+    v[0] += wv.amp[0] * s; v[1] += wv.amp[1] * s; v[2] += wv.amp[2] * s
+  }
+  return v
+}
+
+const MAG_SAMPLES = 100 // 模擬 ~100 樣本算統計(spec:掃描時窗 50Hz 累積)
+
+/** 掃描時窗的磁力取樣統計。rotating=手機轉一圈(三軸亂、合力穩);disturbed=列車擾動(合力也亂)。 */
+export function sampleMag(
+  world: SimWorld, floorId: string, x: number, y: number, headingDeg: number,
+  hardIron: [number, number, number], rng: Rng, dirt: MagDirt = {},
+): MagStats {
+  const truth = magTrueAt(world, floorId, x, y)
+  const xs: number[] = [], ys: number[] = [], zs: number[] = [], mags: number[] = []
+  for (let i = 0; i < MAG_SAMPLES; i++) {
+    const hdg = dirt.rotating ? headingDeg + (360 * i) / MAG_SAMPLES : headingDeg // 時窗內轉整圈
+    const rad = (hdg * Math.PI) / 180
+    // 列車慢漂移旋鈕:magStd ≈ |B| × 振幅 × std(sin over [0,π)) = |B| × 振幅 × 0.308。
+    // 本世界 plat-b2 |B|≈40 µT,取 0.25 → magStd≈3.1(0.15 只有 1.86,連 spec 的 >2 都不到)
+    const disturb = dirt.disturbed ? 1 + 0.25 * Math.sin((Math.PI * i) / MAG_SAMPLES) : 1
+    // 裝置座標 = 世界向量依 heading 旋轉(x,y 平面),z 不變;硬鐵固定在裝置座標
+    const wx = truth[0] * disturb, wy = truth[1] * disturb, wz = truth[2] * disturb
+    const dxv = wx * Math.cos(rad) - wy * Math.sin(rad) + hardIron[0] + gauss(rng, 0, 0.3)
+    const dyv = wx * Math.sin(rad) + wy * Math.cos(rad) + hardIron[1] + gauss(rng, 0, 0.3)
+    const dzv = wz + hardIron[2] + gauss(rng, 0, 0.3)
+    xs.push(dxv); ys.push(dyv); zs.push(dzv)
+    mags.push(Math.hypot(dxv, dyv, dzv))
+  }
+  const stat = (a: number[]): [number, number] => {
+    const m = a.reduce((s, v) => s + v, 0) / a.length
+    return [m, Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length)]
+  }
+  const [mx, sx] = stat(xs), [my, sy] = stat(ys), [mz, sz] = stat(zs), [mm, ms] = stat(mags)
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  return {
+    n: MAG_SAMPLES,
+    mean: [r1(mx), r1(my), r1(mz)], std: [r1(sx), r1(sy), r1(sz)],
+    magMean: r1(mm), magStd: r1(ms),
+    accuracy: dirt.lowAccuracy ? 1 : 3,
+  }
+}
