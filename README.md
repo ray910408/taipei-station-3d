@@ -65,6 +65,7 @@ npm run dev
 - `rp/`——參考點清單與找點圖（`rp/sim/` 合成資料與 `public/fp/` 指紋庫為建置產物，gitignored）
 - `tests/`——vitest 單元/整合測試（含 GLB parity、theme/CSS 同步防線、真機採集 fixture）
 - 慣例：`docs/data-conventions.md`；描圖工具說明：`docs/tracer.md`；架構決策：`docs/adr/`
+- 版本變更：`CHANGELOG.md`（自 0.2.0 起逐版記錄）
 - 領域詞彙：`CONTEXT.md`。實作計畫與 spec 草稿放在 `docs/superpowers/`（本機工作區，未入 git）
 
 ## 資料信心
