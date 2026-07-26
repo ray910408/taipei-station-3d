@@ -35,6 +35,15 @@ describe('parseSessions', () => {
   it('point 行出現在 session header 前 → 報行號錯', () => {
     expect(() => parseSessions([pt()])).toThrow(/1/)
   })
+
+  it('截斷行(斷電中斷)→ 報行號而非裸 SyntaxError', () => {
+    expect(() => parseSessions([[SESSION, '{"type":"point","poi'].join('\n')])).toThrow(/2/)
+  })
+
+  it('session header 缺 scansPerPoint → 報行號(否則短掃描規則靜默失效)', () => {
+    const bad = SESSION.replace('"scansPerPoint":10,', '')
+    expect(() => parseSessions([[bad, pt()].join('\n')])).toThrow(/1/)
+  })
 })
 
 describe('cleanSamples(spec 1.1 逐條)', () => {
@@ -70,5 +79,10 @@ describe('cleanSamples(spec 1.1 逐條)', () => {
   it('複合:短掃描＋轉動 → 權重相乘 0.25', () => {
     const { kept } = cleanSamples(parse([pt({ actualScans: 5, mag: { ...MAG_OK, std: [16, 15, 2], magStd: 1.7 } })]))
     expect(kept[0].w).toBe(0.25)
+  })
+
+  it('accuracy≤1 優先於轉動:磁力已不可信不再看 std 特徵,WiFi 不降權', () => {
+    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, accuracy: 1, std: [16, 15, 2], magStd: 1.7 } })]))
+    expect(kept[0]).toMatchObject({ w: 1, magOk: false })
   })
 })
