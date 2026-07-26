@@ -37,7 +37,10 @@ export function hash32(s: string): number {
 
 // ---- 世界模型 ----
 
-export interface SimApBssid { bssid: string; ssid: string; freq: number; offset: number }
+export interface SimApBssid {
+  bssid: string; ssid: string; freq: number
+  offset: number // 相對 tx 的 dB 修正(5G 頻段 −4)
+}
 export interface SimAp {
   id: string // = 最小 bssid(同 fp-build 錨點 id 慣例)
   floor: string; level: number; x: number; y: number
@@ -78,9 +81,10 @@ function randInPoly(outline: Pt[], rng: Rng): Pt {
     const p: Pt = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)]
     if (pointInPolygon(p, outline)) return p
   }
-  return [(minX + maxX) / 2, (minY + maxY) / 2] // 退而求其次:形心附近
+  return [(minX + maxX) / 2, (minY + maxY) / 2] // 退而求其次:bbox 中心(凹多邊形可能在外,僅備援)
 }
 
+/** 產生 seeded 世界。floors 需依垂直順序傳入——level 取陣列索引(非樓層編號),跨層衰減靠它算層差。 */
 export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = {}): SimWorld {
   const { txMean = -40, txStd = 4, hotspotCount = 3 } = opts
   const rng = mulberry32(hash32(`world|${seed}`))
@@ -88,7 +92,7 @@ export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = 
 
   const aps: SimAp[] = []
   for (const [level, f] of floors.entries()) {
-    // 預設密度:每 400 m²(bbox 概算)一顆,至少 4 顆
+    // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆
     let area = 0
     const o = f.slab.outline
     for (let i = 0, j = o.length - 1; i < o.length; j = i++) area += o[j][0] * o[i][1] - o[i][0] * o[j][1]
@@ -102,7 +106,7 @@ export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = 
       const nBssid = 1 + Math.floor(rng() * 3) // 1–3 個
       const name = `AP-${f.id}-${k + 1}`
       const bssids: SimApBssid[] = [{ bssid: base, ssid: name, freq: 2437, offset: 0 }]
-      // 同胞:尾 byte 翻第 m 個 bit(同 OUI、尾 3 bytes 差 1 bit → Stage 1.3 可抓)
+      // 同胞:對基底尾 byte 各翻 1 個 bit(^1、^2)——與基底差 1 bit、同胞彼此差 2 bit,Stage 1.3 需靠 union-find 遞移合併
       if (nBssid >= 2) bssids.push({ bssid: macOf([...bytes.slice(0, 5), bytes[5] ^ 1]), ssid: `${name}_5G`, freq: 5745, offset: -4 })
       if (nBssid >= 3) bssids.push({ bssid: macOf([...bytes.slice(0, 5), bytes[5] ^ 2]), ssid: '', freq: 5180, offset: -4 })
       aps.push({ id: [...bssids.map(b => b.bssid)].sort()[0], floor: f.id, level, x, y, tx: gauss(rng, txMean, txStd), bssids })
