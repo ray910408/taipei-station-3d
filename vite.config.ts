@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { configDefaults } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { applySave } from './tools/save-handler.mjs';
+import { applySave } from './tools/save-handler';
 
 // 描圖工具 dev-only 存檔端點：POST /__tracer/save {files:[{file,doc}]} → 全站驗證通過才寫檔
 function tracerSavePlugin(): Plugin {

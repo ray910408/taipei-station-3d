@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { applySave } from '../tools/save-handler.mjs';
-import { formatDataJson } from '../tools/format-data.mjs';
+import { applySave } from '../tools/save-handler';
+import { formatDataJson } from '../tools/format-data';
 
 let root: string;
 const read = (rel: string) => readFileSync(path.join(root, rel), 'utf8');

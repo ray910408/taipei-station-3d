@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import station from '../data/station.json';
-import { formatDataJson } from '../tools/format-data.mjs';
+import { formatDataJson } from '../tools/format-data';
 
 describe('formatDataJson', () => {
   it('純數字陣列單行、物件多行縮排', () => {
