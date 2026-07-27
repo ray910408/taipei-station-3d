@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { N8AOPass } from 'n8ao';
 import { assembleModel, LoaderError } from './loader';
-import { buildStationGroup, buildConnectorsGroup, toWorld, applyShadowFlags } from './builder';
+import { buildStationGroup, buildConnectorsGroup, toWorld } from './builder';
 import { THEME, applyUITheme } from './theme';
 import {
   buildGraph, findPath, routeSteps, routeStats, formatStats,
@@ -95,26 +94,9 @@ async function boot(): Promise<void> {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // 幾何雙軌：預設 runtime extrude；?geom=glb 載入離線匯出檔
-  const geomMode = new URLSearchParams(location.search).get('geom') === 'glb' ? 'glb' : 'json';
-  let stationGroup: THREE.Group;
-  if (geomMode === 'glb') {
-    const gltf = await new GLTFLoader().loadAsync('models/station.glb').catch(() => {
-      throw new Error('載入 models/station.glb 失敗——請先執行 npm run export:glb');
-    });
-    const found = gltf.scene.getObjectByName('station');
-    if (!found) throw new Error('station.glb 內找不到名為 station 的節點');
-    stationGroup = found as THREE.Group;
-    applyShadowFlags(stationGroup);
-  } else {
-    stationGroup = buildStationGroup(model);
-  }
+  const stationGroup = buildStationGroup(model);
   scene.add(stationGroup);
-  attachPoiIcons(stationGroup, model); // json/glb 兩軌通用（GLB 不含 Sprite，一律 runtime 附掛）
-
-  document.querySelector<HTMLDivElement>('#geom-mode')!.innerHTML = geomMode === 'glb'
-    ? '幾何：GLB <a href="./">切回 runtime</a>'
-    : '幾何：runtime <a href="?geom=glb">切至 GLB</a>';
+  attachPoiIcons(stationGroup, model); // Sprite 不入幾何，一律 runtime 附掛
 
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
   camera.position.set(220, 140, 260);

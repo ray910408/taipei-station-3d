@@ -37,13 +37,12 @@ npm run dev
 - `npm run dev`——viewer（`/`）與描圖工具（`/tracer.html`），資料熱重載
 - `npm run dev:lan`——同上但綁定區網位址，供手機真機驗收
 - `npm run build`——產出 `dist/`
-- `npm test`——單元/整合/GLB parity 測試；`npm run typecheck`——TS 檢查
+- `npm test`——單元/整合測試；`npm run typecheck`——TS 檢查
 
 **資料**
 
 - `npm run validate`——資料驗證（schema/參照/幾何/語意/校準一致性）
 - `npm run format:data`——資料檔 canonical 排版（`-- --check` 為檢查模式）
-- `npm run export:glb`——離線匯出 `public/models/station.glb`；`npm run validate:glb`——Khronos 驗證
 
 **WiFi 指紋定位（離線工具鏈，不影響 viewer）**
 
@@ -52,12 +51,12 @@ npm run dev
 - `npm run build:fp`——離線 pipeline：採集檔（真的或合成的）→ 指紋庫 `public/fp/<站>.json`
 - `npm run analyze:spacing`——由採集檔估算「兩點要隔多遠才分得出來」
 
-網址參數：`?geom=glb` 切換 GLB 幾何軌、`?fps=1` 開啟效能 overlay（FPS／frame ms／draw calls）。
+網址參數：`?fps=1` 開啟效能 overlay（FPS／frame ms／draw calls）、`?ao=off` 關閉 SSAO。
 
 ## 目錄
 
 - `data/`——樓層 JSON（唯一真相）：station 索引、floors/ 每樓一檔、connectors 垂直設施
-- `schemas/`——JSON Schema；`tools/`——validate / format-data / save-handler / export-glb
+- `schemas/`——JSON Schema；`tools/`——validate / format-data / save-handler
 - `refs/`——參考圖與來源清單（含描圖校準）；`docs/floor-notes/`——各層判讀筆記
 - `src/`——viewer（three.js）；`src/theme.ts` 視覺單一真源；`src/tracer/`——描圖工具
 - `src/fp/`——指紋數學（viewer 與 CLI 共用）；`tools/fp-sim.ts` 模擬器、`tools/fp-build.ts` 離線 pipeline

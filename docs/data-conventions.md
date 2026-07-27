@@ -30,10 +30,9 @@
   `px_per_m` 為推導值（validator 檢查 2% 一致性）、`status` 一律 estimated、`basis` 寫控制點錨到什麼。
 - **序列化**：資料檔唯一格式＝`npm run format:data`（純數字陣列單行）；改資料後必跑，
   QA 用 `npm run format:data -- --check`。
-- **GLB 雙軌**：`npm run export:glb` 產 `public/models/station.glb`（gitignored 建置產物），
-  `npm run validate:glb` 跑 Khronos 驗證；viewer `?geom=glb` 載入。雙軌契約＝group name（樓層開關）
-  與 userData.kind（透明度）經 extras 保留，由 tests/glb-roundtrip.test.ts 守住。
-  資料改動後記得重新 export，GLB 不會自動更新。
+- **幾何單軌**：viewer 一律 runtime extrude（`buildStationGroup`），資料改動即時反映。
+  舊有的 GLB 離線匯出軌（`?geom=glb`）已移除——產物 gitignored、CI 從不匯出，
+  部署站上必然載入失敗，代價卻是 GLTFLoader 常駐 bundle。
 
 ## Phase 3 增補慣例
 

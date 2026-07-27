@@ -11,12 +11,10 @@
     "test": "vitest run",
     "validate": "node tools/validate.mjs",
     "format:data": "node tools/format-data.mjs",
-    "export:glb": "vite-node tools/export-glb.ts",
     "gen:rp": "vite-node tools/gen-rp-points.ts",
     "analyze:spacing": "vite-node tools/analyze-spacing.ts",
     "sim:fp": "vite-node tools/fp-sim.ts",
-    "build:fp": "vite-node tools/fp-build.ts",
-    "validate:glb": "node tools/validate-glb.mjs"
+    "build:fp": "vite-node tools/fp-build.ts"
   },
   "dependencies": {
     "ajv": "^8.17.0",
@@ -27,7 +25,6 @@
     "@types/node": "^26.1.1",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "gltf-validator": "^2.0.0-dev.3.10",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vite-node": "^3.2.4",
