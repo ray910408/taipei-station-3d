@@ -1,4 +1,5 @@
 import type { FloorDoc, Vec2 } from '../types';
+import { distPointSeg, pointInPolygon, ringArea } from '../geometry';
 
 /** tracer 幾何目標參照：指向樓層檔內某段座標序列 */
 export type GeomRef =
@@ -21,39 +22,10 @@ export function refKey(ref: GeomRef): string {
 export const round1 = (v: number): number => Math.round(v * 10) / 10;
 export const roundPt = (p: Vec2): Vec2 => [round1(p[0]), round1(p[1])];
 
-export function ringArea(ring: Vec2[]): number {
-  let s = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[(i + 1) % ring.length];
-    s += x1 * y2 - x2 * y1;
-  }
-  return s / 2;
-}
-
 export function ensureWinding(ring: Vec2[], wind: 'ccw' | 'cw'): Vec2[] {
   const a = ringArea(ring);
   const ok = wind === 'ccw' ? a > 0 : a < 0;
   return ok ? ring : [...ring].reverse();
-}
-
-export function pointInRing(pt: Vec2, ring: Vec2[]): boolean {
-  const [px, py] = pt;
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
-    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
-export function distPointSeg(p: Vec2, a: Vec2, b: Vec2): number {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const l2 = dx * dx + dy * dy;
-  const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2));
-  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
 }
 
 /** ref 的座標序列（活引用；poi/nav-node 包成單點陣列）；找不到回 null */
@@ -151,7 +123,7 @@ export function hitGeom(doc: FloorDoc, refs: GeomRef[], pt: Vec2, tolM: number):
     } else if (ref.kind === 'slab-outline') {
       for (let i = 0; i < ring.length; i++)
         if (distPointSeg(pt, ring[i], ring[(i + 1) % ring.length]) <= tolM) return ref;
-    } else if (pointInRing(pt, ring)) {
+    } else if (pointInPolygon(pt, ring)) {
       return ref;
     }
   }
@@ -159,5 +131,5 @@ export function hitGeom(doc: FloorDoc, refs: GeomRef[], pt: Vec2, tolM: number):
 }
 
 export function findArea(doc: FloorDoc, pt: Vec2): string | undefined {
-  return (doc.areas ?? []).find((a) => pointInRing(pt, a.polygon))?.id;
+  return (doc.areas ?? []).find((a) => pointInPolygon(pt, a.polygon))?.id;
 }

@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { distPointToSegment, distToPolygonEdge, pointInPolygon, serpentineOrder, type Pt } from './rp-geometry'
+import { distPointSeg, pointInPolygon } from '../src/geometry'
+import { distToPolygonEdge, serpentineOrder, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
 const AREA_FILL: Record<string, string> = {
@@ -23,7 +24,7 @@ export interface RpPoint { id: string; floor: string; x: number; y: number; note
 function nearWall(p: Pt, host: Pt[], areas: FloorArea[], clearance: number): boolean {
   for (let i = 0, j = host.length - 1; i < host.length; j = i++) {
     const a = host[j], b = host[i]
-    if (distPointToSegment(p, a, b) >= clearance) continue
+    if (distPointSeg(p, a, b) >= clearance) continue
     const dx = b[0] - a[0], dy = b[1] - a[1]
     const len2 = dx * dx + dy * dy
     let t = len2 === 0 ? 0 : ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2

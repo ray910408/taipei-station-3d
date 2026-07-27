@@ -7,7 +7,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import type { FloorJson, RpPoint } from './gen-rp-points'
-import { pointInPolygon, type Pt } from './rp-geometry'
+import { pointInPolygon, ringArea } from '../src/geometry'
+import { type Pt } from './rp-geometry'
 
 export type Rng = () => number
 
@@ -93,11 +94,9 @@ export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = 
 
   const aps: SimAp[] = []
   for (const [level, f] of floors.entries()) {
-    // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆
-    let area = 0
+    // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆。只要面積大小,取絕對值不管繞向
     const o = f.slab.outline
-    for (let i = 0, j = o.length - 1; i < o.length; j = i++) area += o[j][0] * o[i][1] - o[i][0] * o[j][1]
-    area = Math.abs(area) / 2
+    const area = Math.abs(ringArea(o))
     const count = opts.apsPerFloor ?? Math.max(4, Math.round(area / 400))
     for (let k = 0; k < count; k++) {
       const [x, y] = randInPoly(o, rng)

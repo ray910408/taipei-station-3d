@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { FloorDoc } from '../src/types';
+import { pointInPolygon, ringArea } from '../src/geometry';
 import {
-  allRefs, ensureWinding, findArea, getRing, hitGeom, hitVertex, pointInRing, ringArea, roundPt, setRing,
+  allRefs, ensureWinding, findArea, getRing, hitGeom, hitVertex, roundPt, setRing,
 } from '../src/tracer/geom';
 
 const LAYERS = { areas: true, units: true, walls: true, gates: true, pois: true, nav: true };
@@ -28,9 +29,9 @@ describe('geom 基礎', () => {
     expect(ringArea(ensureWinding(ccw, 'cw'))).toBeLessThan(0);
   });
 
-  it('pointInRing / roundPt', () => {
-    expect(pointInRing([2, 2], [[0, 0], [4, 0], [4, 4], [0, 4]])).toBe(true);
-    expect(pointInRing([5, 5], [[0, 0], [4, 0], [4, 4], [0, 4]])).toBe(false);
+  it('pointInPolygon / roundPt', () => {
+    expect(pointInPolygon([2, 2], [[0, 0], [4, 0], [4, 4], [0, 4]])).toBe(true);
+    expect(pointInPolygon([5, 5], [[0, 0], [4, 0], [4, 4], [0, 4]])).toBe(false);
     expect(roundPt([1.234, -5.678])).toEqual([1.2, -5.7]);
   });
 });

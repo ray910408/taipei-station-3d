@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { pointInPolygon, distToPolygonEdge, serpentineOrder, type Pt } from '../tools/rp-geometry'
+import { pointInPolygon } from '../src/geometry'
+import { distToPolygonEdge, serpentineOrder, type Pt } from '../tools/rp-geometry'
 import { generateFloorPoints } from '../tools/gen-rp-points'
 
 const square: Pt[] = [[0, 0], [10, 0], [10, 10], [0, 10]]

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import AjvModule from 'ajv/dist/2020.js';
 import type { ValidateFunction } from 'ajv';
 import type { ConnectorsDoc, FloorDoc, Provenance, SourcesDoc, StationDoc, Vec2 } from '../src/types';
+import { pointInPolygon, ringArea } from '../src/geometry';
 
 // ajv 2020 進入點在 CJS/ESM 互通下可能包一層 default
 const Ajv2020 = (AjvModule as unknown as { default?: typeof AjvModule }).default ?? AjvModule;
@@ -33,28 +34,6 @@ export function loadRepoDocs(rootDir: string): RepoDocs {
   const connectors = readJson<ConnectorsDoc>(path.join(rootDir, 'data', 'connectors.json'));
   const sources = readJson<SourcesDoc>(path.join(rootDir, 'refs', 'sources.json'));
   return { station, floors, connectors, sources };
-}
-
-// ---- 幾何工具 ----
-function ringArea(ring: Vec2[]): number {
-  let s = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[(i + 1) % ring.length];
-    s += x1 * y2 - x2 * y1;
-  }
-  return s / 2;
-}
-
-function pointInRing(pt: Vec2, ring: Vec2[]): boolean {
-  const [px, py] = pt;
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
-    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
 }
 
 type Winding = 'ccw' | 'cw';
@@ -165,8 +144,8 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
       nodeById.set(n.id, n);
       const m = /^n-([a-z]{2})-/.exec(n.id);
       if (!m || m[1] !== short) errors.push(`[id] ${where} ${n.id} 前綴應為 n-${short}-`);
-      const inOutline = pointInRing(n.xy, floor.slab.outline);
-      const inHole = (floor.slab.holes ?? []).some((h) => pointInRing(n.xy, h));
+      const inOutline = pointInPolygon(n.xy, floor.slab.outline);
+      const inHole = (floor.slab.holes ?? []).some((h) => pointInPolygon(n.xy, h));
       if (!inOutline || inHole) errors.push(`[geom] ${where} ${n.id} 不在 slab 範圍內`);
     }
     for (const e of floor.nav?.edges ?? []) {
@@ -182,10 +161,10 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
         const paidRing = areaById.get(g.connects[0])?.polygon;
         const unpaidRing = areaById.get(g.connects[1])?.polygon;
         if (fromN && toN && paidRing && unpaidRing) {
-          const fromPaid = pointInRing(fromN.xy, paidRing);
-          const toUnpaid = pointInRing(toN.xy, unpaidRing);
-          const fromUnpaid = pointInRing(fromN.xy, unpaidRing);
-          const toPaid = pointInRing(toN.xy, paidRing);
+          const fromPaid = pointInPolygon(fromN.xy, paidRing);
+          const toUnpaid = pointInPolygon(toN.xy, unpaidRing);
+          const fromUnpaid = pointInPolygon(fromN.xy, unpaidRing);
+          const toPaid = pointInPolygon(toN.xy, paidRing);
           const outDir = fromPaid && toUnpaid;
           const inDir = fromUnpaid && toPaid;
           if (!outDir && !inDir)
