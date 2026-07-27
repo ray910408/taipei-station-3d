@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FloorJson } from '../tools/gen-rp-points'
-import { pointInPolygon } from '../tools/rp-geometry'
+import { pointInPolygon } from '../src/geometry'
 import { HOTSPOT_SSIDS, buildWorld, gauss, hash32, magTrueAt, mulberry32, sampleMag, scanAt, simSession, type SimWorld } from '../tools/fp-sim'
 import { fingerprint, fpDistance } from '../src/fp/core'
 

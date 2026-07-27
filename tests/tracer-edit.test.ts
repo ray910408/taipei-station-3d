@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FloorDoc } from '../src/types';
-import { ringArea } from '../src/tracer/geom';
+import { ringArea } from '../src/geometry';
 import {
   addArea, addGate, addNavNode, addSlabHole, deleteNavNode, deleteVertex, insertVertex,
   moveVertex, nextNodeId, replaceGeom, segIndexNear,

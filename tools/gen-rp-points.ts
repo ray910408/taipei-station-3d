@@ -1,6 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { distPointToSegment, distToPolygonEdge, pointInPolygon, serpentineOrder, type Pt } from './rp-geometry'
+import { parseArgs } from 'node:util'
+import { distPointSeg, pointInPolygon } from '../src/geometry'
+import { distToPolygonEdge, serpentineOrder, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
 const AREA_FILL: Record<string, string> = {
@@ -22,7 +24,7 @@ export interface RpPoint { id: string; floor: string; x: number; y: number; note
 function nearWall(p: Pt, host: Pt[], areas: FloorArea[], clearance: number): boolean {
   for (let i = 0, j = host.length - 1; i < host.length; j = i++) {
     const a = host[j], b = host[i]
-    if (distPointToSegment(p, a, b) >= clearance) continue
+    if (distPointSeg(p, a, b) >= clearance) continue
     const dx = b[0] - a[0], dy = b[1] - a[1]
     const len2 = dx * dx + dy * dy
     let t = len2 === 0 ? 0 : ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2
@@ -84,19 +86,18 @@ export function floorSvg(floor: FloorJson, points: RpPoint[]): string {
 }
 
 // ---- CLI ----
-function arg(name: string, def: string): string {
-  const i = process.argv.indexOf(`--${name}`)
-  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
-}
-function flag(name: string): boolean { return process.argv.includes(`--${name}`) }
-
 function main() {
-  const spacing = Number(arg('spacing', '6'))
-  const clearance = Number(arg('clearance', '0.8'))
-  const outDir = arg('out', 'rp')
-  const n = Number(arg('n', '10')) // 工時估算用的每點掃描次數
+  // parseArgs 為 strict:預設擋下未知選項(打錯 --spacng 不再靜默走預設值)
+  const { values } = parseArgs({ options: {
+    spacing: { type: 'string' }, clearance: { type: 'string' }, out: { type: 'string' },
+    n: { type: 'string' }, floors: { type: 'string' }, svg: { type: 'boolean' },
+  } })
+  const spacing = Number(values.spacing ?? 6)
+  const clearance = Number(values.clearance ?? 0.8)
+  const outDir = values.out ?? 'rp'
+  const n = Number(values.n ?? 10) // 工時估算用的每點掃描次數
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
-  const wanted = arg('floors', '').split(',').filter(Boolean)
+  const wanted = (values.floors ?? '').split(',').filter(Boolean)
   const floors = station.floors.filter((f: { id: string }) => wanted.length === 0 || wanted.includes(f.id))
 
   const all: RpPoint[] = []
@@ -107,7 +108,7 @@ function main() {
     all.push(...pts)
     const hours = (pts.length * (n * 4.5 + 15)) / 3600
     console.log(`${f.labels.complex} ${floor.id}: ${pts.length} 點 · 預估 ${hours.toFixed(1)} h (N=${n})`)
-    if (flag('svg')) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
+    if (values.svg) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
   }
   if (all.length === 0) { console.error('產出 0 點——檢查 --floors 或樓層資料'); process.exit(1) }
   writeFileSync(join(outDir, 'rp-points.json'), JSON.stringify({
@@ -117,4 +118,5 @@ function main() {
   console.log(`共 ${all.length} 點 → ${join(outDir, 'rp-points.json')}`)
 }
 
-if (process.env.npm_lifecycle_event === 'gen:rp' || process.argv[1]?.replace(/\\/g, '/').endsWith('gen-rp-points.ts')) main()
+// 見 fp-sim.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準
+if (!process.env.VITEST) main()

@@ -1,71 +1,64 @@
 // 樓層 JSON 資料驗證：schema、參照完整性、ID 慣例、幾何 sanity、語意規則。
-// 用法：node tools/validate.mjs [rootDir]（rootDir 需含 data/ 與 refs/sources.json）
+// 純函式庫，零頂層副作用——vite.config.ts 會經 save-handler 間接載入本檔，
+// 任何頂層動作都會在每次 vite dev/build 載入設定檔時觸發。CLI 進入點在 validate-cli.ts。
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AjvModule from 'ajv/dist/2020.js';
+import type { ValidateFunction } from 'ajv';
+import type { ConnectorsDoc, FloorDoc, Provenance, SourcesDoc, StationDoc, Vec2 } from '../src/types';
+import { pointInPolygon, ringArea } from '../src/geometry';
 
-const Ajv2020 = AjvModule.default ?? AjvModule;
+// ajv 2020 進入點在 CJS/ESM 互通下可能包一層 default
+const Ajv2020 = (AjvModule as unknown as { default?: typeof AjvModule }).default ?? AjvModule;
 const SCHEMA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'schemas');
 
-function readJson(p) {
-  return JSON.parse(readFileSync(p, 'utf8'));
+/** 磁碟上的資料是待驗對象——先以宣告型別承接，正確性由本檔的 schema 檢查負責。 */
+export interface RepoDocs {
+  station: StationDoc;
+  floors: Map<string, FloorDoc>;
+  connectors: ConnectorsDoc;
+  sources: SourcesDoc;
 }
 
-export function loadRepoDocs(rootDir) {
-  const station = readJson(path.join(rootDir, 'data', 'station.json'));
-  const floors = new Map();
+function readJson<T>(p: string): T {
+  return JSON.parse(readFileSync(p, 'utf8')) as T;
+}
+
+export function loadRepoDocs(rootDir: string): RepoDocs {
+  const station = readJson<StationDoc>(path.join(rootDir, 'data', 'station.json'));
+  const floors = new Map<string, FloorDoc>();
   for (const f of station.floors ?? []) {
-    floors.set(f.id, readJson(path.join(rootDir, 'data', f.file)));
+    floors.set(f.id, readJson<FloorDoc>(path.join(rootDir, 'data', f.file)));
   }
-  const connectors = readJson(path.join(rootDir, 'data', 'connectors.json'));
-  const sources = readJson(path.join(rootDir, 'refs', 'sources.json'));
+  const connectors = readJson<ConnectorsDoc>(path.join(rootDir, 'data', 'connectors.json'));
+  const sources = readJson<SourcesDoc>(path.join(rootDir, 'refs', 'sources.json'));
   return { station, floors, connectors, sources };
 }
 
-// ---- 幾何工具 ----
-function ringArea(ring) {
-  let s = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[(i + 1) % ring.length];
-    s += x1 * y2 - x2 * y1;
-  }
-  return s / 2;
-}
+type Winding = 'ccw' | 'cw';
 
-function pointInRing(pt, ring) {
-  const [px, py] = pt;
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
-    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
-function* iterRings(floor) {
+function* iterRings(floor: FloorDoc): Generator<[string, Vec2[], Winding]> {
   yield ['slab.outline', floor.slab.outline, 'ccw'];
   for (const [hi, h] of (floor.slab.holes ?? []).entries()) yield [`slab.holes[${hi}]`, h, 'cw'];
   for (const a of floor.areas ?? []) yield [`area ${a.id}`, a.polygon, 'ccw'];
   for (const u of floor.units ?? []) yield [`unit ${u.id}`, u.polygon, 'ccw'];
 }
 
-export function validateDocs(docs) {
-  const errors = [];
-  const warnings = [];
+export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: string[] } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
   const { station, floors, connectors, sources } = docs;
 
   // 1. Schema 驗證
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   const schemas = {
-    station: ajv.compile(readJson(path.join(SCHEMA_DIR, 'station.schema.json'))),
-    floor: ajv.compile(readJson(path.join(SCHEMA_DIR, 'floor.schema.json'))),
-    connectors: ajv.compile(readJson(path.join(SCHEMA_DIR, 'connectors.schema.json'))),
-    sources: ajv.compile(readJson(path.join(SCHEMA_DIR, 'sources.schema.json'))),
+    station: ajv.compile(readJson<object>(path.join(SCHEMA_DIR, 'station.schema.json'))),
+    floor: ajv.compile(readJson<object>(path.join(SCHEMA_DIR, 'floor.schema.json'))),
+    connectors: ajv.compile(readJson<object>(path.join(SCHEMA_DIR, 'connectors.schema.json'))),
+    sources: ajv.compile(readJson<object>(path.join(SCHEMA_DIR, 'sources.schema.json'))),
   };
-  const schemaCheck = (validate, doc, label) => {
+  const schemaCheck = (validate: ValidateFunction, doc: unknown, label: string): void => {
     if (!validate(doc)) {
       for (const e of validate.errors ?? []) errors.push(`[schema] ${label}${e.instancePath} ${e.message}`);
     }
@@ -80,14 +73,14 @@ export function validateDocs(docs) {
   const sourceHasCalib = new Set(sources.sources.filter((s) => s.calibration).map((s) => s.id));
   const systemIds = new Set([...Object.keys(station.systems), 'shared']);
   const floorMeta = new Map(station.floors.map((f) => [f.id, f]));
-  const allIds = new Map(); // id -> 所在描述，全域唯一檢查
+  const allIds = new Map<string, string>(); // id -> 所在描述，全域唯一檢查
 
-  const claimId = (id, where) => {
+  const claimId = (id: string, where: string): void => {
     if (allIds.has(id)) errors.push(`[id] ${id} 重複（${allIds.get(id)} 與 ${where}）`);
     else allIds.set(id, where);
   };
 
-  const checkProv = (obj, where) => {
+  const checkProv = (obj: Provenance, where: string): void => {
     if (!sourceIds.has(obj.source)) errors.push(`[ref] ${where} source "${obj.source}" 不存在於 refs/sources.json`);
     else if (obj.status === 'traced' && !sourceHasCalib.has(obj.source))
       warnings.push(`[sem] ${where} status=traced 但來源 "${obj.source}" 無 calibration`);
@@ -111,8 +104,10 @@ export function validateDocs(docs) {
       checkProv(el, `${where} ${el.id}`);
       const m = /^[a-z]+-([a-z]{2})-/.exec(el.id);
       if (!m || m[1] !== short) errors.push(`[id] ${where} ${el.id} 前綴應為 -${short}-`);
-      if (el.system !== undefined && !systemIds.has(el.system))
-        errors.push(`[ref] ${where} ${el.id} system "${el.system}" 不在 station.systems`);
+      // walls/units 的 schema 無 system 欄位——'in' 收斂後對它們恆為 undefined，與原本行為相同
+      const system = 'system' in el ? el.system : undefined;
+      if (system !== undefined && !systemIds.has(system))
+        errors.push(`[ref] ${where} ${el.id} system "${system}" 不在 station.systems`);
     }
 
     // 幾何 sanity
@@ -149,8 +144,8 @@ export function validateDocs(docs) {
       nodeById.set(n.id, n);
       const m = /^n-([a-z]{2})-/.exec(n.id);
       if (!m || m[1] !== short) errors.push(`[id] ${where} ${n.id} 前綴應為 n-${short}-`);
-      const inOutline = pointInRing(n.xy, floor.slab.outline);
-      const inHole = (floor.slab.holes ?? []).some((h) => pointInRing(n.xy, h));
+      const inOutline = pointInPolygon(n.xy, floor.slab.outline);
+      const inHole = (floor.slab.holes ?? []).some((h) => pointInPolygon(n.xy, h));
       if (!inOutline || inHole) errors.push(`[geom] ${where} ${n.id} 不在 slab 範圍內`);
     }
     for (const e of floor.nav?.edges ?? []) {
@@ -166,10 +161,10 @@ export function validateDocs(docs) {
         const paidRing = areaById.get(g.connects[0])?.polygon;
         const unpaidRing = areaById.get(g.connects[1])?.polygon;
         if (fromN && toN && paidRing && unpaidRing) {
-          const fromPaid = pointInRing(fromN.xy, paidRing);
-          const toUnpaid = pointInRing(toN.xy, unpaidRing);
-          const fromUnpaid = pointInRing(fromN.xy, unpaidRing);
-          const toPaid = pointInRing(toN.xy, paidRing);
+          const fromPaid = pointInPolygon(fromN.xy, paidRing);
+          const toUnpaid = pointInPolygon(toN.xy, unpaidRing);
+          const fromUnpaid = pointInPolygon(fromN.xy, unpaidRing);
+          const toPaid = pointInPolygon(toN.xy, paidRing);
           const outDir = fromPaid && toUnpaid;
           const inDir = fromUnpaid && toPaid;
           if (!outDir && !inDir)
@@ -219,20 +214,3 @@ export function validateDocs(docs) {
   return { errors, warnings };
 }
 
-// ---- CLI ----
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) {
-  const root = process.argv[2] ?? '.';
-  let docs;
-  try {
-    docs = loadRepoDocs(root);
-  } catch (e) {
-    console.error(`讀取資料失敗：${e.message}`);
-    process.exit(1);
-  }
-  const { errors, warnings } = validateDocs(docs);
-  for (const w of warnings) console.warn(`WARN  ${w}`);
-  for (const e of errors) console.error(`ERROR ${e}`);
-  console.log(`validate: ${errors.length} errors, ${warnings.length} warnings`);
-  process.exit(errors.length ? 1 : 0);
-}

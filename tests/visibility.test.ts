@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { pointInPolygon, segmentClear } from '../src/visibility';
+import { pointInPolygon } from '../src/geometry';
+import { segmentClear } from '../src/visibility';
 import type { Vec2 } from '../src/types';
 
 const square: Vec2[] = [[0, 0], [10, 0], [10, 10], [0, 10]];

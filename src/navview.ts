@@ -70,7 +70,7 @@ export function swapFactors(sw: FloorSwap, now: number, dim: number, ms = THEME.
 /** 對整層佈 opacity 係數；null＝還原並清快照（顯式 sentinel——from 側起始 factor=1/dim>1
  *  屬正常補償，不得以 ≥1 觸發還原）。數值套用 opacity = min(1, fadeBase×factor)。
  *  快照鍵（fadeBase）獨立於 setFloorEmphasis（baseOpacity）——nav 換層與 overview 聚焦不互踩；
- *  共用 material（GLB 軌/POI sprite）沿用 matCloned 旗標先 clone，防跨層洩漏。 */
+ *  共用 material（POI sprite 每 kind 一份）沿用 matCloned 旗標先 clone，防跨層洩漏。 */
 export function applyFloorFade(floorGroup: THREE.Object3D, factor: number | null): void {
   floorGroup.traverse((obj) => {
     const mesh = obj as THREE.Mesh;

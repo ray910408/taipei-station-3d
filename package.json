@@ -9,22 +9,22 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate": "node tools/validate.mjs",
-    "format:data": "node tools/format-data.mjs",
+    "validate": "vite-node tools/validate-cli.ts",
+    "format:data": "vite-node tools/format-data-cli.ts",
     "export:glb": "vite-node tools/export-glb.ts",
+    "validate:glb": "node tools/validate-glb.mjs",
     "gen:rp": "vite-node tools/gen-rp-points.ts",
     "analyze:spacing": "vite-node tools/analyze-spacing.ts",
     "sim:fp": "vite-node tools/fp-sim.ts",
-    "build:fp": "vite-node tools/fp-build.ts",
-    "validate:glb": "node tools/validate-glb.mjs"
+    "build:fp": "vite-node tools/fp-build.ts"
   },
   "dependencies": {
-    "ajv": "^8.17.0",
     "n8ao": "^2.0.0",
     "three": "^0.180.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "ajv": "^8.17.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "gltf-validator": "^2.0.0-dev.3.10",

@@ -1,10 +1,4 @@
-import AjvModule from 'ajv/dist/2020.js';
-import stationSchema from '../schemas/station.schema.json';
-import floorSchema from '../schemas/floor.schema.json';
-import connectorsSchema from '../schemas/connectors.schema.json';
 import type { ConnectorsDoc, FloorDoc, StationDoc, StationModel } from './types';
-
-const Ajv2020 = (AjvModule as any).default ?? AjvModule;
 
 export class LoaderError extends Error {
   constructor(message: string, public details: string[]) {
@@ -13,27 +7,15 @@ export class LoaderError extends Error {
   }
 }
 
+/** data/*.json 由 import.meta.glob 於 build 時靜態內嵌——schema 正確性在 CI 由
+ *  `npm run validate` 於 build 前把關（同一份 schemas/，另含參照/幾何/語意檢查），
+ *  tracer 寫入路徑則由 dev server 的 applySave → validateDocs 把關。
+ *  瀏覽器端不再重驗一次建置常數（省下 ajv ~107 KB）；此處只保留組裝期的參照完整性。 */
 export function assembleModel(
   stationDoc: unknown,
   floorDocsByFile: Record<string, unknown>,
   connectorsDoc: unknown,
-  opts: { validate?: boolean } = {},
 ): StationModel {
-  const details: string[] = [];
-  if (opts.validate !== false) {
-    const ajv = new Ajv2020({ allErrors: true, strict: false });
-    const check = (schema: object, doc: unknown, label: string) => {
-      const validate = ajv.compile(schema);
-      if (!validate(doc)) {
-        for (const e of validate.errors ?? []) details.push(`${label}${e.instancePath} ${e.message}`);
-      }
-    };
-    check(stationSchema, stationDoc, 'data/station.json');
-    for (const [file, doc] of Object.entries(floorDocsByFile)) check(floorSchema, doc, `data/${file}`);
-    check(connectorsSchema, connectorsDoc, 'data/connectors.json');
-    if (details.length) throw new LoaderError('資料 schema 驗證失敗', details);
-  }
-
   const station = stationDoc as StationDoc;
   const floors = new Map<string, FloorDoc>();
   for (const meta of station.floors) {

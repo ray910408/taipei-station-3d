@@ -1,32 +1,14 @@
-export type Pt = [number, number]
+import type { Vec2 } from '../src/types'
+import { distPointSeg } from '../src/geometry'
 
-/** Ray casting;邊上點不保證,格點取樣用途足夠 */
-export function pointInPolygon(p: Pt, poly: Pt[]): boolean {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i]
-    const [xj, yj] = poly[j]
-    if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) {
-      inside = !inside
-    }
-  }
-  return inside
-}
-
-export function distPointToSegment(p: Pt, a: Pt, b: Pt): number {
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  const len2 = dx * dx + dy * dy
-  let t = len2 === 0 ? 0 : ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2
-  t = Math.max(0, Math.min(1, t))
-  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy))
-}
+/** 參考點座標。與 src 的 Vec2 同構——保留別名讓產點工具的語彙維持 Pt。 */
+export type Pt = Vec2
 
 /** 點到多邊形邊界(所有邊)最短距離;內外點皆可用 */
 export function distToPolygonEdge(p: Pt, poly: Pt[]): number {
   let min = Infinity
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    min = Math.min(min, distPointToSegment(p, poly[j], poly[i]))
+    min = Math.min(min, distPointSeg(p, poly[j], poly[i]))
   }
   return min
 }

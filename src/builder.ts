@@ -297,7 +297,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
   return root;
 }
 
-/** 依 userData.kind 佈 shadow 旗標——json/glb 兩軌與每幀重建的 connectors 共用。 */
+/** 依 userData.kind 佈 shadow 旗標——buildStationGroup 與每幀重建的 connectors 共用。
+ *  kind 不在自己身上就往 parent 找：export:glb 會把雙材質 mesh 拆成子 primitive，
+ *  kind 因此落在 parent（見 tests/glb-roundtrip.test.ts）。 */
 export function applyShadowFlags(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;

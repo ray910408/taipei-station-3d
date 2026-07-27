@@ -1,16 +1,5 @@
 import type { Vec2 } from './types';
-
-/** Ray-cast 點在多邊形內（polygon 開環）。邊界上的點結果未定義——呼叫端以取樣容忍。 */
-export function pointInPolygon(pt: Vec2, poly: Vec2[]): boolean {
-  const [x, y] = pt;
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
+import { pointInPolygon } from './geometry';
 
 const STEP = 0.5; // 取樣間距（公尺）
 

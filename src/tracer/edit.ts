@@ -1,6 +1,7 @@
 import type { Area, FloorDoc, Gate, NavNode, Poi, Unit, Vec2 } from '../types';
+import { distPointSeg } from '../geometry';
 import {
-  distPointSeg, ensureWinding, findArea, geomKind, getRing, minPoints, roundPt, setRing,
+  ensureWinding, findArea, geomKind, getRing, minPoints, roundPt, setRing,
   type GeomRef, type VertexRef,
 } from './geom';
 

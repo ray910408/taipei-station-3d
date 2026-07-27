@@ -5,8 +5,10 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import type { FloorJson, RpPoint } from './gen-rp-points'
-import { pointInPolygon, type Pt } from './rp-geometry'
+import { pointInPolygon, ringArea } from '../src/geometry'
+import { type Pt } from './rp-geometry'
 
 export type Rng = () => number
 
@@ -92,11 +94,9 @@ export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = 
 
   const aps: SimAp[] = []
   for (const [level, f] of floors.entries()) {
-    // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆
-    let area = 0
+    // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆。只要面積大小,取絕對值不管繞向
     const o = f.slab.outline
-    for (let i = 0, j = o.length - 1; i < o.length; j = i++) area += o[j][0] * o[i][1] - o[i][0] * o[j][1]
-    area = Math.abs(area) / 2
+    const area = Math.abs(ringArea(o))
     const count = opts.apsPerFloor ?? Math.max(4, Math.round(area / 400))
     for (let k = 0; k < count; k++) {
       const [x, y] = randInPoly(o, rng)
@@ -330,17 +330,17 @@ export function simSession(opts: SimSessionOpts): SimResult {
 }
 
 // ---- CLI ----
-function arg(name: string, def: string): string {
-  const i = process.argv.indexOf(`--${name}`)
-  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
-}
-
 function main() {
-  const seed = Number(arg('seed', '1'))
-  const rpFile = arg('rp', 'rp/rp-points.json')
-  const outDir = arg('out', 'rp/sim')
-  const mode = arg('mode', 'single') as 'single' | 'quad'
-  const N = Number(arg('n', '10'))
+  // parseArgs 為 strict:預設擋下未知選項(打錯 --sed 不再靜默走預設值)
+  const { values } = parseArgs({ options: {
+    seed: { type: 'string' }, rp: { type: 'string' }, out: { type: 'string' },
+    mode: { type: 'string' }, n: { type: 'string' },
+  } })
+  const seed = Number(values.seed ?? 1)
+  const rpFile = values.rp ?? 'rp/rp-points.json'
+  const outDir = values.out ?? 'rp/sim'
+  const mode = (values.mode ?? 'single') as 'single' | 'quad'
+  const N = Number(values.n ?? 10)
   const rpList = JSON.parse(readFileSync(rpFile, 'utf8')) as { points: RpPoint[] }
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
   const wanted = new Set(rpList.points.map(p => p.floor))
@@ -360,4 +360,6 @@ function main() {
   console.log(`→ ${out}`)
 }
 
-if (process.env.npm_lifecycle_event === 'sim:fp' || process.argv[1]?.replace(/\\/g, '/').endsWith('fp-sim.ts')) main()
+// vite-node 不透露進入點（process.argv[1] 恆為 vite-node.mjs、env 也無此資訊），
+// 因此無法判斷「我是不是被直接執行」。反過來判斷即可：唯一會 import 本檔的是測試。
+if (!process.env.VITEST) main()

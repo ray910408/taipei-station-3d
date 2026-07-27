@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { loadRepoDocs, validateDocs } from '../tools/validate.mjs';
+import { loadRepoDocs, validateDocs } from '../tools/validate';
 
 const FIXTURE = 'tests/fixtures/mini';
 

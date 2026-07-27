@@ -30,18 +30,25 @@
   `px_per_m` 為推導值（validator 檢查 2% 一致性）、`status` 一律 estimated、`basis` 寫控制點錨到什麼。
 - **序列化**：資料檔唯一格式＝`npm run format:data`（純數字陣列單行）；改資料後必跑，
   QA 用 `npm run format:data -- --check`。
-- **GLB 雙軌**：`npm run export:glb` 產 `public/models/station.glb`（gitignored 建置產物），
-  `npm run validate:glb` 跑 Khronos 驗證；viewer `?geom=glb` 載入。雙軌契約＝group name（樓層開關）
-  與 userData.kind（透明度）經 extras 保留，由 tests/glb-roundtrip.test.ts 守住。
-  資料改動後記得重新 export，GLB 不會自動更新。
+- **viewer 幾何單軌**：viewer 一律 runtime extrude（`buildStationGroup`），資料改動即時反映。
+  原本另有 `?geom=glb` 載入軌，已移除——產物 gitignored、CI 從不匯出，部署站上必然
+  載入失敗，代價卻是 GLTFLoader 常駐 bundle（約 84 kB raw / 23 kB gzip）。
+- **GLB 匯出（單向，給外部工具用）**：`npm run export:glb` 產 `public/models/station.glb`
+  （gitignored 建置產物），`npm run validate:glb` 跑 Khronos 規格檢查。用途是把站體幾何
+  帶進 Blender 等外部工具當底模，**不會被 viewer 載回**。匯出保真度（樓層節點名、材質槽數、
+  bounding box、userData）由 `tests/glb-roundtrip.test.ts` 守住。資料改動後記得重新匯出，
+  GLB 不會自動更新。
+  註：邊線用的 `LineBasicMaterial`／`LineDashedMaterial` 在 glTF 沒有對應，匯出時
+  GLTFExporter 會出提示；帶進 Blender 後那些描邊不會保留原樣。
 
 ## Phase 3 增補慣例
 
 - **nav node `name`**：選用欄位 `{ zh, en? }`——起訖選擇清單只列具名節點（`listLandmarks`），
   命名格式「地點（限定語）」如「臺鐵第4月台（候車）」。
 - **跟隨模式**：位置推進唯一入口＝`follow.ts` 的 `advance()`；之後的定位技術（PDR 等）掛同一介面，
-  不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material（GLB 軌 material 可能共用），
-  由 tests/follow-emphasis.test.ts 守住不洩漏。
+  不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material——material 可能跨 mesh
+  共用（POI sprite 每 kind 一份，見 `icons.ts` 的 `matCache`），不 clone 就會把調暗洩漏到其他樓層；
+  由 tests/follow-emphasis.test.ts 守住。
 
 ## Phase 4／5 增補慣例
 

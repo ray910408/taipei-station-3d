@@ -133,7 +133,8 @@ function dimSubtree(root: THREE.Object3D, dim: boolean | null, dimFactor: number
       return;
     }
     if (!mesh.userData.matCloned) {
-      // GLB 軌 material 可能跨 mesh 共用——調整前 clone 一次（跨會話不重複），避免調暗洩漏
+      // material 可能跨 mesh 共用（POI sprite 每 kind 一份，見 icons.ts matCache）——
+      // 調整前 clone 一次（跨會話不重複），避免調暗洩漏到其他樓層
       mesh.material = Array.isArray(mesh.material)
         ? mesh.material.map((m) => m.clone())
         : (mesh.material as THREE.Material).clone();
