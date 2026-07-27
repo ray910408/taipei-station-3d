@@ -16,19 +16,15 @@ describe('assembleModel', () => {
     expect(model.connectors.length).toBe(2);
   });
 
-  it('schema 違規 throw LoaderError 且 details 指出檔案', () => {
-    const bad = structuredClone(stationDoc) as any;
-    bad.schema = 'station@9';
-    expect(() => assembleModel(bad, floorDocs, connectorsDoc)).toThrowError(LoaderError);
+  // schema 違規不在此把關：資料為 build 時內嵌常數，schema 由 CI 的 npm run validate
+  // 於 build 前驗過（見 tests/validate.test.ts）。此處只守組裝期的參照完整性。
+  it('缺少樓層檔 throw LoaderError 且 details 指出檔案', () => {
+    const call = () => assembleModel(stationDoc, { 'floors/hall-b1.json': hall }, connectorsDoc);
+    expect(call).toThrowError(LoaderError);
     try {
-      assembleModel(bad, floorDocs, connectorsDoc);
+      call();
     } catch (e) {
-      expect((e as LoaderError).details.some((d) => d.includes('station'))).toBe(true);
+      expect((e as LoaderError).details.some((d) => d.includes('plat-b2.json'))).toBe(true);
     }
-  });
-
-  it('缺少樓層檔 throw LoaderError', () => {
-    expect(() => assembleModel(stationDoc, { 'floors/hall-b1.json': hall }, connectorsDoc))
-      .toThrowError(LoaderError);
   });
 });

@@ -17,12 +17,12 @@
     "build:fp": "vite-node tools/fp-build.ts"
   },
   "dependencies": {
-    "ajv": "^8.17.0",
     "n8ao": "^2.0.0",
     "three": "^0.180.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "ajv": "^8.17.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "typescript": "^5.7.0",
