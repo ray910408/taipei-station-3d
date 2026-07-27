@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assembleModel } from '../src/loader';
-import { buildStationGroup } from '../src/builder';
+import { applyShadowFlags, buildStationGroup } from '../src/builder';
 import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
@@ -52,7 +52,6 @@ function drawUnits(o: THREE.Object3D): number {
 
 // 守 export:glb 的匯出保真度：把站體幾何帶進 Blender 等外部工具前，
 // 樓層節點、材質槽、尺寸與 userData 都不能在匯出時靜默掉。
-// （viewer 不再有 GLB 載入軌，故不含 applyShadowFlags 那類 viewer 專屬案例。）
 describe('GLB round-trip 匯出保真度', () => {
   let built: THREE.Group;
   let loaded: THREE.Object3D;
@@ -102,5 +101,30 @@ describe('GLB round-trip 匯出保真度', () => {
     });
     expect(slab).toBe(1);
     expect(shell).toBeGreaterThan(0);
+  });
+
+  // GLB 把雙材質 mesh 拆成多個子 primitive，userData.kind 因此落在 parent 上。
+  // applyShadowFlags 的 parent fallback（builder.ts）就是為此存在——viewer 雖已無
+  // GLB 載入軌，但只要 export:glb 還在，任何吃這份 GLB 的消費端都會遇到這個形狀。
+  // 這是該分支目前唯一的覆蓋，刪掉它 fallback 就沒人守了。
+  it('雙材質拆 primitive 後 applyShadowFlags 仍佈 slab 旗標（parent fallback）', () => {
+    const floor = loaded.children.find((c) => c.name === 'mrt-r-platform-b4')!;
+    // 先確認這份 GLB 真的觸發了 fallback：存在 kind 只在 parent 上的 mesh
+    let splitPrimitive = false;
+    floor.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && typeof mesh.userData.kind !== 'string'
+        && typeof mesh.parent?.userData.kind === 'string') splitPrimitive = true;
+    });
+    expect(splitPrimitive, '此 GLB 未出現拆 primitive，本測試將驗不到 fallback').toBe(true);
+
+    applyShadowFlags(loaded);
+    let ok = false;
+    floor.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      const kind = o.userData.kind ?? o.parent?.userData.kind;
+      if (mesh.isMesh && kind === 'slab' && mesh.castShadow && mesh.receiveShadow) ok = true;
+    });
+    expect(ok).toBe(true);
   });
 });

@@ -116,9 +116,9 @@ async function boot(): Promise<void> {
   scene.environmentIntensity = THEME.render.envIntensity;
   pmrem.dispose();
 
-  // 地磚微紋理：runtime 附掛（json/glb 兩軌通用；去塑膠 T4）
+  // 地磚微紋理：runtime 附掛（去塑膠 T4）
   attachFloorTextures(stationGroup, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
-  // AO 管線：?ao=off 走原始路徑（降級開關，比照 ?geom=glb 慣例）
+  // AO 管線：?ao=off 走原始路徑（效能降級開關）
   const aoOff = new URLSearchParams(location.search).get('ao') === 'off';
   let composer: EffectComposer | null = null;
   if (!aoOff) {

@@ -33,8 +33,11 @@ export function floorTileTexture(): THREE.CanvasTexture | null {
 
 const TEXTURED_KINDS = new Set(['slab', 'platform', 'paid', 'unpaid', 'corridor', 'restricted']);
 
-/** runtime 附掛地磚紋理（json/glb 兩軌通用——attachPoiIcons 慣例）。
- *  ExtrudeGeometry UV＝shape 公尺座標，repeat 即公尺磚格；glb 拆 primitive 後 kind 在 parent（fallback 同 applyShadowFlags）。 */
+/** runtime 附掛地磚紋理（比照 attachPoiIcons 慣例）。
+ *  ExtrudeGeometry UV＝shape 公尺座標，repeat 即公尺磚格。
+ *  kind 不在自己身上就往 parent 找，理由同 applyShadowFlags：export:glb 拆 primitive 後
+ *  kind 落在 parent。註：此 fallback 目前無測試覆蓋——本函式在 node 環境會因無 document
+ *  提前返回，要驗得先 stub document，代價高於這一行的風險。 */
 export function attachFloorTextures(root: THREE.Object3D, anisotropy = 1): void {
   const tex = floorTileTexture();
   if (!tex) return;

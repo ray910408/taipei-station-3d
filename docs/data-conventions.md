@@ -46,8 +46,9 @@
 - **nav node `name`**：選用欄位 `{ zh, en? }`——起訖選擇清單只列具名節點（`listLandmarks`），
   命名格式「地點（限定語）」如「臺鐵第4月台（候車）」。
 - **跟隨模式**：位置推進唯一入口＝`follow.ts` 的 `advance()`；之後的定位技術（PDR 等）掛同一介面，
-  不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material（GLB 軌 material 可能共用），
-  由 tests/follow-emphasis.test.ts 守住不洩漏。
+  不另開推進路徑。樓層聚焦 `setFloorEmphasis` 首次調整前 clone material——material 可能跨 mesh
+  共用（POI sprite 每 kind 一份，見 `icons.ts` 的 `matCache`），不 clone 就會把調暗洩漏到其他樓層；
+  由 tests/follow-emphasis.test.ts 守住。
 
 ## Phase 4／5 增補慣例
 

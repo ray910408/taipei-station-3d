@@ -107,7 +107,7 @@ function poiMaterial(kind: PoiKind): THREE.SpriteMaterial {
   return m;
 }
 
-/** POI billboard 圖示：runtime 附掛進樓層 group（隨爆炸位移；json/glb 兩軌通用，GLB 不烘焙 Sprite）。
+/** POI billboard 圖示：runtime 附掛進樓層 group（隨爆炸位移；Sprite 不入幾何，一律 runtime 生成）。
  *  共用 material 跨樓層無 dim 洩漏——setFloorEmphasis 首次調整前會 per-sprite clone（follow.ts 既有防護）。 */
 export function attachPoiIcons(stationGroup: THREE.Group, model: StationModel): void {
   for (const meta of model.station.floors) {
