@@ -5,6 +5,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { parseArgs } from 'node:util'
 import { gzipSync } from 'node:zlib'
 
 export interface ScanApRec { bssid: string; ssid: string; rssi: number; freq: number }
@@ -238,16 +239,16 @@ export function buildDb(texts: string[], opts: { station: string; generated: str
 }
 
 // ---- CLI ----
-function argOf(name: string, def: string): string {
-  const i = process.argv.indexOf(`--${name}`)
-  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
-}
-
 function main() {
-  const files = process.argv.filter(a => a.endsWith('.jsonl'))
+  // parseArgs 為 strict:預設擋下未知選項;檔名走 positionals,不再誤收 --out 的值
+  const { values, positionals } = parseArgs({
+    options: { station: { type: 'string' }, out: { type: 'string' } },
+    allowPositionals: true,
+  })
+  const files = positionals.filter(a => a.endsWith('.jsonl'))
   if (files.length === 0) { console.error('用法:npm run build:fp -- <session.jsonl> [more.jsonl] [--station id] [--out path]'); process.exit(1) }
-  const station = argOf('station', 'taipei-main-station')
-  const out = argOf('out', join('public', 'fp', `${station}.json`))
+  const station = values.station ?? 'taipei-main-station'
+  const out = values.out ?? join('public', 'fp', `${station}.json`)
   const db = buildDb(files.map(f => readFileSync(f, 'utf8')), { station, generated: new Date().toISOString() })
   const json = JSON.stringify(db)
   mkdirSync(dirname(out), { recursive: true })

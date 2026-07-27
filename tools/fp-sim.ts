@@ -5,6 +5,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import type { FloorJson, RpPoint } from './gen-rp-points'
 import { pointInPolygon, type Pt } from './rp-geometry'
 
@@ -330,17 +331,17 @@ export function simSession(opts: SimSessionOpts): SimResult {
 }
 
 // ---- CLI ----
-function arg(name: string, def: string): string {
-  const i = process.argv.indexOf(`--${name}`)
-  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
-}
-
 function main() {
-  const seed = Number(arg('seed', '1'))
-  const rpFile = arg('rp', 'rp/rp-points.json')
-  const outDir = arg('out', 'rp/sim')
-  const mode = arg('mode', 'single') as 'single' | 'quad'
-  const N = Number(arg('n', '10'))
+  // parseArgs 為 strict:預設擋下未知選項(打錯 --sed 不再靜默走預設值)
+  const { values } = parseArgs({ options: {
+    seed: { type: 'string' }, rp: { type: 'string' }, out: { type: 'string' },
+    mode: { type: 'string' }, n: { type: 'string' },
+  } })
+  const seed = Number(values.seed ?? 1)
+  const rpFile = values.rp ?? 'rp/rp-points.json'
+  const outDir = values.out ?? 'rp/sim'
+  const mode = (values.mode ?? 'single') as 'single' | 'quad'
+  const N = Number(values.n ?? 10)
   const rpList = JSON.parse(readFileSync(rpFile, 'utf8')) as { points: RpPoint[] }
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
   const wanted = new Set(rpList.points.map(p => p.floor))

@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import { distPointToSegment, distToPolygonEdge, pointInPolygon, serpentineOrder, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
@@ -84,19 +85,18 @@ export function floorSvg(floor: FloorJson, points: RpPoint[]): string {
 }
 
 // ---- CLI ----
-function arg(name: string, def: string): string {
-  const i = process.argv.indexOf(`--${name}`)
-  return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : def
-}
-function flag(name: string): boolean { return process.argv.includes(`--${name}`) }
-
 function main() {
-  const spacing = Number(arg('spacing', '6'))
-  const clearance = Number(arg('clearance', '0.8'))
-  const outDir = arg('out', 'rp')
-  const n = Number(arg('n', '10')) // 工時估算用的每點掃描次數
+  // parseArgs 為 strict:預設擋下未知選項(打錯 --spacng 不再靜默走預設值)
+  const { values } = parseArgs({ options: {
+    spacing: { type: 'string' }, clearance: { type: 'string' }, out: { type: 'string' },
+    n: { type: 'string' }, floors: { type: 'string' }, svg: { type: 'boolean' },
+  } })
+  const spacing = Number(values.spacing ?? 6)
+  const clearance = Number(values.clearance ?? 0.8)
+  const outDir = values.out ?? 'rp'
+  const n = Number(values.n ?? 10) // 工時估算用的每點掃描次數
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
-  const wanted = arg('floors', '').split(',').filter(Boolean)
+  const wanted = (values.floors ?? '').split(',').filter(Boolean)
   const floors = station.floors.filter((f: { id: string }) => wanted.length === 0 || wanted.includes(f.id))
 
   const all: RpPoint[] = []
@@ -107,7 +107,7 @@ function main() {
     all.push(...pts)
     const hours = (pts.length * (n * 4.5 + 15)) / 3600
     console.log(`${f.labels.complex} ${floor.id}: ${pts.length} 點 · 預估 ${hours.toFixed(1)} h (N=${n})`)
-    if (flag('svg')) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
+    if (values.svg) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
   }
   if (all.length === 0) { console.error('產出 0 點——檢查 --floors 或樓層資料'); process.exit(1) }
   writeFileSync(join(outDir, 'rp-points.json'), JSON.stringify({
