@@ -117,4 +117,5 @@ function main() {
   console.log(`共 ${all.length} 點 → ${join(outDir, 'rp-points.json')}`)
 }
 
-if (process.env.npm_lifecycle_event === 'gen:rp' || process.argv[1]?.replace(/\\/g, '/').endsWith('gen-rp-points.ts')) main()
+// 見 fp-sim.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準
+if (!process.env.VITEST) main()

@@ -257,4 +257,5 @@ function main() {
   console.log(`${(json.length / 1024).toFixed(0)} KB(gzip ${(gzipSync(json).length / 1024).toFixed(0)} KB)→ ${out}`)
 }
 
-if (process.env.npm_lifecycle_event === 'build:fp' || process.argv[1]?.replace(/\\/g, '/').endsWith('fp-build.ts')) main()
+// 見 fp-sim.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準
+if (!process.env.VITEST) main()

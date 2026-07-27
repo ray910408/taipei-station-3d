@@ -360,4 +360,6 @@ function main() {
   console.log(`→ ${out}`)
 }
 
-if (process.env.npm_lifecycle_event === 'sim:fp' || process.argv[1]?.replace(/\\/g, '/').endsWith('fp-sim.ts')) main()
+// vite-node 不透露進入點（process.argv[1] 恆為 vite-node.mjs、env 也無此資訊），
+// 因此無法判斷「我是不是被直接執行」。反過來判斷即可：唯一會 import 本檔的是測試。
+if (!process.env.VITEST) main()
