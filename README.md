@@ -37,12 +37,14 @@ npm run dev
 - `npm run dev`——viewer（`/`）與描圖工具（`/tracer.html`），資料熱重載
 - `npm run dev:lan`——同上但綁定區網位址，供手機真機驗收
 - `npm run build`——產出 `dist/`
-- `npm test`——單元/整合測試；`npm run typecheck`——TS 檢查
+- `npm test`——單元/整合/GLB 匯出保真度測試；`npm run typecheck`——TS 檢查
 
 **資料**
 
 - `npm run validate`——資料驗證（schema/參照/幾何/語意/校準一致性）
 - `npm run format:data`——資料檔 canonical 排版（`-- --check` 為檢查模式）
+- `npm run export:glb`——把站體幾何匯出成 `public/models/station.glb`，供 Blender 等外部
+  工具當底模（單向；viewer 不載入）；`npm run validate:glb`——Khronos 規格檢查
 
 **WiFi 指紋定位（離線工具鏈，不影響 viewer）**
 
@@ -56,7 +58,7 @@ npm run dev
 ## 目錄
 
 - `data/`——樓層 JSON（唯一真相）：station 索引、floors/ 每樓一檔、connectors 垂直設施
-- `schemas/`——JSON Schema；`tools/`——validate / format-data / save-handler
+- `schemas/`——JSON Schema；`tools/`——validate / format-data / save-handler / export-glb
 - `refs/`——參考圖與來源清單（含描圖校準）；`docs/floor-notes/`——各層判讀筆記
 - `src/`——viewer（three.js）；`src/theme.ts` 視覺單一真源；`src/tracer/`——描圖工具
 - `src/fp/`——指紋數學（viewer 與 CLI 共用）；`tools/fp-sim.ts` 模擬器、`tools/fp-build.ts` 離線 pipeline

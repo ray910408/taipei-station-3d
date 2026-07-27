@@ -30,9 +30,16 @@
   `px_per_m` 為推導值（validator 檢查 2% 一致性）、`status` 一律 estimated、`basis` 寫控制點錨到什麼。
 - **序列化**：資料檔唯一格式＝`npm run format:data`（純數字陣列單行）；改資料後必跑，
   QA 用 `npm run format:data -- --check`。
-- **幾何單軌**：viewer 一律 runtime extrude（`buildStationGroup`），資料改動即時反映。
-  舊有的 GLB 離線匯出軌（`?geom=glb`）已移除——產物 gitignored、CI 從不匯出，
-  部署站上必然載入失敗，代價卻是 GLTFLoader 常駐 bundle。
+- **viewer 幾何單軌**：viewer 一律 runtime extrude（`buildStationGroup`），資料改動即時反映。
+  原本另有 `?geom=glb` 載入軌，已移除——產物 gitignored、CI 從不匯出，部署站上必然
+  載入失敗，代價卻是 GLTFLoader 常駐 bundle（約 84 kB raw / 23 kB gzip）。
+- **GLB 匯出（單向，給外部工具用）**：`npm run export:glb` 產 `public/models/station.glb`
+  （gitignored 建置產物），`npm run validate:glb` 跑 Khronos 規格檢查。用途是把站體幾何
+  帶進 Blender 等外部工具當底模，**不會被 viewer 載回**。匯出保真度（樓層節點名、材質槽數、
+  bounding box、userData）由 `tests/glb-roundtrip.test.ts` 守住。資料改動後記得重新匯出，
+  GLB 不會自動更新。
+  註：邊線用的 `LineBasicMaterial`／`LineDashedMaterial` 在 glTF 沒有對應，匯出時
+  GLTFExporter 會出提示；帶進 Blender 後那些描邊不會保留原樣。
 
 ## Phase 3 增補慣例
 
