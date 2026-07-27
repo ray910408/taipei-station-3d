@@ -180,8 +180,10 @@ async function boot(): Promise<void> {
   const storedStep = Number(localStorage.getItem('pdr-step-length'));
   const pdrParams: PdrParams = {
     ...PDR_DEFAULTS,
+    // 步偵測門檻無 UI 入口，保留 URL 旋鈕供真機現場調參；
+    // 步長的唯一真源是設定選單的 slider（寫 localStorage），不再受 URL 覆寫。
     peakThreshold: Number(pdrQuery.get('pdrPeak')) || PDR_DEFAULTS.peakThreshold,
-    stepLength: Number(pdrQuery.get('pdrStep')) || storedStep || PDR_DEFAULTS.stepLength,
+    stepLength: storedStep || PDR_DEFAULTS.stepLength,
     minStepMs: Number(pdrQuery.get('pdrMinMs')) || PDR_DEFAULTS.minStepMs,
   };
   let stopMotion: (() => void) | null = null;
