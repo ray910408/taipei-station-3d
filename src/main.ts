@@ -378,7 +378,7 @@ async function boot(): Promise<void> {
       session = startNavSession({
         model, graph, edges: routeEdges, nodeWorld,
         aspect: () => camera.aspect,
-        topInset: () => ui.navBannerBottomPx() / innerHeight,
+        insets: () => ui.navBannerInsets(),
         stepLength: () => pdrParams.stepLength,
         reducedMotion: REDUCED_MOTION, pdrSim,
       }, performance.now());

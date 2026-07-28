@@ -10,7 +10,7 @@ import {
 import { verticalStep, transitionLabel } from './mode';
 import { walkStep, crossedNodeIds, type WalkState } from './pdr';
 import type { CameraGoal } from './camera';
-import { chaseGoal, frameGoal } from './camera';
+import { chaseGoal, frameGoal, type ScreenInsets } from './camera';
 import {
   makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget, swapFactors,
   type FloorSwap, planStepPath,
@@ -60,7 +60,7 @@ export interface NavSessionDeps {
   edges: GraphEdge[];        // preview 產物：入會話即凍結，呼叫端不得再變異
   nodeWorld(id: string): THREE.Vector3; // 幾何 seam：世界座標（含呼叫當下 explode 係數）
   aspect(): number;          // frameGoal 用（梯前全景/抵達框景）
-  topInset(): number;        // 畫面頂部被導航橫幅佔掉的比例——梯前全景讓位用（QA ISSUE-009）
+  insets(): ScreenInsets;    // 畫面上/下被導航橫幅佔掉的比例——梯前全景讓位用（QA ISSUE-009）
   stepLength(): number;      // PDR 步長——UI 旋鈕可於會話中調整，故用 getter
   reducedMotion: boolean;    // 免滑行分支（與原 advanceOnce 一致）
   pdrSim: boolean;           // ?pdr=sim：假步鍵，PDR 視為常時啟用
@@ -222,10 +222,10 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
     const holdEdge = tween === null ? verticalStep(edges, follow) : null;
     if (holdEdge) {
       // 梯前全景（QA0723-3）：框 connector 兩端；每幀重算——爆炸收合期間跟著 nodeWorld 收斂。
-      // topInset 讓開導航橫幅：marker 只在 connector 一端，往下的梯會落在畫面中心上方，
-      // 不讓位就整個被橫幅蓋住（QA ISSUE-009）。
+      // insets 讓開導航橫幅：marker 只在 connector 一端，往下的梯會落在畫面中心上方，
+      // 不讓位就整個被橫幅蓋住（QA ISSUE-009）。橫幅在手機是底部 sheet，故上下都要讓。
       return frameGoal(
-        [nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], deps.aspect(), 55, deps.topInset(),
+        [nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], deps.aspect(), 55, deps.insets(),
       );
     }
     if (atEnd(follow) && tween === null) {
