@@ -58,6 +58,22 @@ export function displayLabel(label: string, floorLabel: string): string {
   return label.startsWith(`${code} `) ? label.slice(code.length + 1) : label;
 }
 
+/** 由導航橫幅矩形與視窗高算出相機讓位用的 inset（見 camera.frameGoal）。
+ *
+ *  版型判定用「貼哪一邊」而非硬編 600px breakpoint——桌機是頂部置中卡片，
+ *  index.html 的 max-width:600px 區塊把它改成底部 sheet，版型 CSS 改了這裡不會失準。
+ *
+ *  回傳的是**比例**，分母是當下視窗高：只拖視窗下緣時橫幅自身尺寸不變、
+ *  ResizeObserver 不觸發，但分母變了，所以呼叫端必須在 resize 時重算（PR #5 review）。 */
+export function bannerInsetsFrom(
+  rect: { top: number; bottom: number }, viewportH: number,
+): ScreenInsets {
+  if (viewportH <= 0) return {};
+  return rect.top <= viewportH - rect.bottom
+    ? { top: rect.bottom / viewportH }
+    : { bottom: (viewportH - rect.top) / viewportH };
+}
+
 /** 終點列文案：label＋樓層——applyEnd 與交換起訖共用單一來源（QA0723-5）。 */
 export const destText = (lm: Landmark | null): string =>
   lm ? `終點：${lm.label}（${lm.floorLabel}）` : '';
@@ -134,15 +150,14 @@ export function setupUI(opts: {
   // hidden 切換與內容變高（垂直設施步驟多一張 transition 卡）都會觸發 observer。
   let bannerInsets: ScreenInsets = {};
   const syncNavBannerInsets = (): void => {
-    if (navBanner.hidden) { bannerInsets = {}; return; }
-    const r = navBanner.getBoundingClientRect();
-    // 桌機是頂部卡片，max-width:600px 時變成底部 sheet。用「貼哪一邊」判定而非硬編
-    // breakpoint——版型 CSS 改了這裡也不會失準（PR #5 review：只做 top inset 會在手機推反）。
-    bannerInsets = r.top <= innerHeight - r.bottom
-      ? { top: r.bottom / innerHeight }
-      : { bottom: (innerHeight - r.top) / innerHeight };
+    bannerInsets = navBanner.hidden
+      ? {}
+      : bannerInsetsFrom(navBanner.getBoundingClientRect(), innerHeight);
   };
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncNavBannerInsets).observe(navBanner);
+  // 只拖視窗下緣時橫幅自身尺寸不變 → ResizeObserver 不觸發，但 inset 是比例、分母變了。
+  // 不補這條，視窗變矮會低估遮擋，marker 又會回到橫幅底下（PR #5 review）。
+  addEventListener('resize', syncNavBannerInsets);
   const transitionBanner = $('#transition-banner');
   const arriveCard = $('#arrive-card');
   const floorButtons = $('#floor-buttons');
