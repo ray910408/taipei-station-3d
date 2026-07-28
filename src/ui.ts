@@ -11,6 +11,8 @@ export interface UIHandles {
   showPickCard(lm: Landmark | null): void;
   setPdrHint(on: boolean): void;
   setPdrToggle(on: boolean): void;
+  /** 導航橫幅佔掉的畫面頂部高度（px，隱藏時 0）——相機讓位用，見 camera.frameGoal 的 topInset。 */
+  navBannerBottomPx(): number;
 }
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
@@ -127,6 +129,13 @@ export function setupUI(opts: {
   const searchbar = $('#searchbar');
   const routeCard = $('#route-card');
   const navBanner = $('#nav-banner');
+  // 相機讓位用的量測值。快取＋ResizeObserver：cameraGoal 每幀都問，直接量會每幀強制 layout。
+  // hidden 切換與內容變高（垂直設施步驟多一張 transition 卡）都會觸發 observer。
+  let navBannerBottom = 0;
+  const syncNavBannerBottom = (): void => {
+    navBannerBottom = navBanner.hidden ? 0 : navBanner.getBoundingClientRect().bottom;
+  };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncNavBannerBottom).observe(navBanner);
   const transitionBanner = $('#transition-banner');
   const arriveCard = $('#arrive-card');
   const floorButtons = $('#floor-buttons');
@@ -328,6 +337,7 @@ export function setupUI(opts: {
     floorButtons.hidden = mode !== 'overview';
     routeCard.hidden = mode !== 'preview';
     navBanner.hidden = mode !== 'nav';
+    syncNavBannerBottom(); // hidden 切換不保證觸發 ResizeObserver（display:none 的元素不被觀察）
     if (mode !== 'nav') { transitionBanner.hidden = true; arriveCard.hidden = true; }
     if (mode !== 'overview') resetFloorFocus();
     if (mode === 'overview') resetEndpoints();
@@ -354,10 +364,14 @@ export function setupUI(opts: {
     arriveCard.hidden = !on;
     if (on) navBanner.hidden = true; // 抵達＝單一 CTA，收起 nav 按鈕列
     else if (document.body.dataset.mode === 'nav') navBanner.hidden = false; // overview 收尾時不得誤開
+    syncNavBannerBottom();
   }
   function setPdrHint(on: boolean): void {
     $('#pdr-hint').hidden = !on;
   }
 
-  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint, setPdrToggle };
+  return {
+    setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint, setPdrToggle,
+    navBannerBottomPx: () => navBannerBottom,
+  };
 }

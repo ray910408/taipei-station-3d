@@ -75,6 +75,9 @@ export const THEME = {
   ui: {
     '--bg': '#1b1e26f2', '--line': '#2f343d', '--fg': '#e7ebf2',
     '--muted': '#9aa4b4', '--primary': '#4f86f4',
+    // --muted 在半透明的 #nav-banner 底下（淺色樓板時合成底色約 #3c3e45）只剩 3.9:1，
+    // 低於 WCAG AA。這個較亮的次要色在同樣底色上是 6.6:1，且仍明顯暗於 --fg。
+    '--fg-dim': '#c3ccda',
   },
 };
 // 注意：不用 `as const`——與 satisfies 併用會撞 TS const-assertion 限制；

@@ -27,6 +27,7 @@ function makeSession(startId: string, endId: string,
   const session = startNavSession({
     model, graph, edges, nodeWorld,
     aspect: () => 16 / 9,
+    topInset: () => 0, // 預設無遮擋；讓位行為另在 camera.test.ts 直接測 frameGoal
     stepLength: () => 0.7,
     reducedMotion: false,
     pdrSim: false,
@@ -39,7 +40,8 @@ describe('建構與初始狀態', () => {
   it('空路線建構即 throw（沿 startFollow 行為）', () => {
     expect(() => startNavSession({
       model, graph, edges: [], nodeWorld,
-      aspect: () => 16 / 9, stepLength: () => 0.7, reducedMotion: false, pdrSim: false,
+      aspect: () => 16 / 9, topInset: () => 0,
+      stepLength: () => 0.7, reducedMotion: false, pdrSim: false,
     }, 0)).toThrow('空路線無法導航');
   });
 
