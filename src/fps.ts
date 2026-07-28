@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 
 /** ?fps=1 開發用效能 overlay：FPS／frame ms／draw calls。每 500ms 更新一次。
- *  回傳 tick 需在 renderer.render 之後呼叫（info.render.calls 為當幀值）。 */
+ *  回傳 tick 需在該幀**所有** render 之後呼叫（composer 與 labelLayer 都跑完）。 */
 export function attachFpsOverlay(renderer: THREE.WebGLRenderer): (() => void) | null {
   if (typeof document === 'undefined') return null; // node 環境保底（constraint 一致性）
   if (new URLSearchParams(location.search).get('fps') !== '1') return null;
@@ -10,6 +10,11 @@ export function attachFpsOverlay(renderer: THREE.WebGLRenderer): (() => void) | 
     + 'color:#0f0;font:12px monospace;padding:6px 8px;border-radius:6px;'
     + 'pointer-events:none;white-space:pre';
   document.body.append(el);
+  // three 預設每次 renderer.render() 起手就 info.reset()。AO 開啟時 EffectComposer 一幀要跑
+  // 多個 pass，計數於是被洗成「最後一道全螢幕合成 quad」＝1，比實際少兩個數量級——
+  // 預設顯示 draws 1，?ao=off 才顯示 213，拿它做效能診斷會得到相反結論（QA ISSUE-005）。
+  // 改由本模組每幀歸零一次，讓計數涵蓋整幀所有 pass。
+  renderer.info.autoReset = false;
   let frames = 0;
   let last = performance.now();
   return () => {
@@ -22,5 +27,6 @@ export function attachFpsOverlay(renderer: THREE.WebGLRenderer): (() => void) | 
       frames = 0;
       last = now;
     }
+    renderer.info.reset(); // autoReset 已關；歸零必須每幀做，否則跨幀累加成無意義的大數
   };
 }
