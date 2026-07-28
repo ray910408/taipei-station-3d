@@ -58,20 +58,24 @@ export function displayLabel(label: string, floorLabel: string): string {
   return label.startsWith(`${code} `) ? label.slice(code.length + 1) : label;
 }
 
-/** 由導航橫幅矩形與視窗高算出相機讓位用的 inset（見 camera.frameGoal）。
+/** 由導航橫幅矩形、視窗高與它宣告的錨定邊，算出相機讓位用的 inset（見 camera.frameGoal）。
  *
- *  版型判定用「貼哪一邊」而非硬編 600px breakpoint——桌機是頂部置中卡片，
- *  index.html 的 max-width:600px 區塊把它改成底部 sheet，版型 CSS 改了這裡不會失準。
+ *  anchor 來自 CSS 自訂屬性 `--anchor`（index.html 兩處版型各自宣告），不在此推測：
+ *  用「哪一邊比較近」猜的話，矮視窗下橫幅幾乎佔滿高度時會判反——例如 {top:12,bottom:255}
+ *  配 viewportH=260，猜法得到 bottom 而實際仍是 top 錨定，於是把 marker 往橫幅裡推
+ *  而非推向剩餘可見區（PR #5 review）。
  *
  *  回傳的是**比例**，分母是當下視窗高：只拖視窗下緣時橫幅自身尺寸不變、
  *  ResizeObserver 不觸發，但分母變了，所以呼叫端必須在 resize 時重算（PR #5 review）。 */
 export function bannerInsetsFrom(
-  rect: { top: number; bottom: number }, viewportH: number,
+  rect: { top: number; bottom: number }, viewportH: number, anchor: 'top' | 'bottom',
 ): ScreenInsets {
   if (viewportH <= 0) return {};
-  return rect.top <= viewportH - rect.bottom
-    ? { top: rect.bottom / viewportH }
-    : { bottom: (viewportH - rect.top) / viewportH };
+  // 夾 0～1：橫幅高於視窗時比例會 >1；總和上限由 frameGoal 的 MAX_INSET 負責
+  const clamp = (v: number): number => Math.min(Math.max(v, 0), 1);
+  return anchor === 'bottom'
+    ? { bottom: clamp((viewportH - rect.top) / viewportH) }
+    : { top: clamp(rect.bottom / viewportH) };
 }
 
 /** 終點列文案：label＋樓層——applyEnd 與交換起訖共用單一來源（QA0723-5）。 */
@@ -150,9 +154,12 @@ export function setupUI(opts: {
   // hidden 切換與內容變高（垂直設施步驟多一張 transition 卡）都會觸發 observer。
   let bannerInsets: ScreenInsets = {};
   const syncNavBannerInsets = (): void => {
-    bannerInsets = navBanner.hidden
-      ? {}
-      : bannerInsetsFrom(navBanner.getBoundingClientRect(), innerHeight);
+    if (navBanner.hidden) { bannerInsets = {}; return; }
+    // --anchor 由 CSS 依版型宣告（見 index.html）；讀不到時退回 top＝桌機預設版型
+    const anchor = getComputedStyle(navBanner).getPropertyValue('--anchor').trim();
+    bannerInsets = bannerInsetsFrom(
+      navBanner.getBoundingClientRect(), innerHeight, anchor === 'bottom' ? 'bottom' : 'top',
+    );
   };
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncNavBannerInsets).observe(navBanner);
   // 只拖視窗下緣時橫幅自身尺寸不變 → ResizeObserver 不觸發，但 inset 是比例、分母變了。

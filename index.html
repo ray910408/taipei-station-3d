@@ -50,8 +50,11 @@
      * 「我現在在哪」的時刻失去它，故讓它透出來。
      * blur 由 .card 的 8px 降到 3px——否則透出來的 marker 只是一團糊斑，看不出是什麼。
      * 代價：底下是淺色樓板時文字對比下降，故 --muted 的兩行在此改用較亮的 --fg-dim。 */
+    /* --anchor：貼哪一邊，供相機讓位讀（ui.bannerInsetsFrom）。用 CSS 自訂屬性宣告而非
+     * 在 JS 猜「哪一邊比較近」——矮視窗下橫幅幾乎佔滿高度時猜法會判反，把 marker 往
+     * 橫幅裡推（PR #5 review）；也不必在 JS 複製 600px breakpoint，版型改這裡就跟著改。 */
     #nav-banner { top: 12px; left: 50%; transform: translateX(-50%); min-width: 340px; text-align: center;
-      background: #1b1e26d9; backdrop-filter: blur(3px); }
+      background: #1b1e26d9; backdrop-filter: blur(3px); --anchor: top; }
     /* id 特異性(1-0-0)高於 body.high-contrast .card(0-2-1)，不補這條會把高對比的純黑底改壞 */
     body.high-contrast #nav-banner { background: #000; backdrop-filter: none; }
     #nav-next { font-size: 18px; font-weight: 700; }
@@ -117,7 +120,8 @@
     @media (max-width: 600px) {
       #searchbar { left: 12px; right: 12px; width: auto; }
       #route-card, #nav-banner { top: auto; bottom: 0; left: 0; right: 0; width: auto;
-        min-width: 0; transform: none; border-radius: 12px 12px 0 0; max-height: 55vh; overflow-y: auto; }
+        min-width: 0; transform: none; border-radius: 12px 12px 0 0; max-height: 55vh; overflow-y: auto;
+        --anchor: bottom; } /* 底部 sheet——相機讓位方向隨之相反，見上方 --anchor 註解 */
       button { min-height: 44px; }
       .results button { min-height: 44px; }
       #route-card, #nav-banner { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }

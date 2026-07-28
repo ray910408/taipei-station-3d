@@ -14,10 +14,19 @@ export function attachFpsOverlay(renderer: THREE.WebGLRenderer): (() => void) | 
   // 多個 pass，計數於是被洗成「最後一道全螢幕合成 quad」＝1，比實際少兩個數量級——
   // 預設顯示 draws 1，?ao=off 才顯示 213，拿它做效能診斷會得到相反結論（QA ISSUE-005）。
   // 改由本模組每幀歸零一次，讓計數涵蓋整幀所有 pass。
-  renderer.info.autoReset = false;
   let frames = 0;
   let last = performance.now();
+  let started = false;
   return () => {
+    if (!started) {
+      // 接手時機在第一次 tick，不在掛載時：掛載點（main.ts）之後還有 PMREM 環境貼圖預濾
+      // 等 boot 期 render，提早關掉 autoReset 會把那些 draw call 累進第一次讀數——
+      // boot 超過 500ms 的裝置上，第一格數字會是開機統計而非首幀（PR #5 review）。
+      started = true;
+      renderer.info.autoReset = false;
+      renderer.info.reset(); // 丟掉 boot 與首幀，從下一幀開始才是乾淨的每幀計數
+      last = performance.now();
+    }
     frames++;
     const now = performance.now();
     const span = now - last;

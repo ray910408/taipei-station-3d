@@ -49,13 +49,42 @@ describe('attachFpsOverlay', () => {
     expect(r.info.autoReset).toBe(true);
   });
 
+  // PR #5 review：掛載點（main.ts:104）之後還有 PMREM 環境貼圖預濾等 boot 期 render。
+  // 提早關掉 autoReset 會把那些 draw call 累進第一次讀數——boot 超過 500ms 的裝置上，
+  // 第一格數字會是開機統計而不是首幀。
+  it('掛載時不接手 autoReset；第一次 tick 才接手並丟掉 boot 期統計', () => {
+    const el = stubDom('?fps=1');
+    const r = fakeRenderer();
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const tick = attachFpsOverlay(r as never)!;
+    expect(r.info.autoReset).toBe(true); // 掛載時不動它
+
+    r.pass(500);              // boot 期 render（PMREM 等）
+    now.mockReturnValue(900); // boot 花了 900ms，已跨過 500ms 門檻
+    tick();                   // 第一次 tick
+    expect(r.info.autoReset).toBe(false);
+    expect(el.textContent).toBe(''); // 不把開機統計當成首幀顯示出來
+
+    r.pass(200); r.pass(12); r.pass(1);
+    now.mockReturnValue(1500);
+    tick();
+    expect(el.textContent).toContain('draws 213');
+  });
+
+  /** 走完「第一次 tick 接手」的起手式，回傳可直接量測的 tick。 */
+  function started(r: ReturnType<typeof fakeRenderer>, now: { mockReturnValue: (v: number) => void }) {
+    const tick = attachFpsOverlay(r as never)!;
+    now.mockReturnValue(0);
+    tick();
+    return tick;
+  }
+
   // QA ISSUE-005：AO 一幀多 pass，autoReset 會把計數洗成最後一個 pass。
   it('draw call 涵蓋整幀所有 pass，不是只有最後一道合成 quad', () => {
     const el = stubDom('?fps=1');
     const r = fakeRenderer();
     const now = vi.spyOn(performance, 'now').mockReturnValue(0);
-    const tick = attachFpsOverlay(r as never)!;
-    expect(r.info.autoReset).toBe(false);
+    const tick = started(r, now);
 
     r.pass(200); r.pass(12); r.pass(1);
     now.mockReturnValue(600); // 跨過 500ms 更新門檻
@@ -67,7 +96,7 @@ describe('attachFpsOverlay', () => {
     const el = stubDom('?fps=1');
     const r = fakeRenderer();
     const now = vi.spyOn(performance, 'now').mockReturnValue(0);
-    const tick = attachFpsOverlay(r as never)!;
+    const tick = started(r, now);
 
     r.pass(200); r.pass(12); r.pass(1);
     now.mockReturnValue(600);
@@ -82,7 +111,7 @@ describe('attachFpsOverlay', () => {
     const el = stubDom('?fps=1');
     const r = fakeRenderer();
     const now = vi.spyOn(performance, 'now').mockReturnValue(0);
-    const tick = attachFpsOverlay(r as never)!;
+    const tick = started(r, now);
 
     r.pass(200); r.pass(12); r.pass(1);
     now.mockReturnValue(100); // 未達門檻：不更新文字，但仍須歸零
