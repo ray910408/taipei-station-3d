@@ -1,3 +1,4 @@
+import type { ScreenInsets } from './camera';
 import type { Landmark } from './nav';
 import type { Mode } from './mode';
 import type { StationModel } from './types';
@@ -11,6 +12,8 @@ export interface UIHandles {
   showPickCard(lm: Landmark | null): void;
   setPdrHint(on: boolean): void;
   setPdrToggle(on: boolean): void;
+  /** 導航橫幅佔掉的畫面邊緣比例（隱藏時空物件）——相機讓位用，見 camera.frameGoal 的 insets。 */
+  navBannerInsets(): ScreenInsets;
 }
 
 export interface LandmarkGroup { floorLabel: string; items: Landmark[] }
@@ -53,6 +56,26 @@ export function groupLandmarks(landmarks: Landmark[], query: string): LandmarkGr
 export function displayLabel(label: string, floorLabel: string): string {
   const code = floorLabel.split(' ')[0]; // 「B1 臺鐵穿堂層」→「B1」
   return label.startsWith(`${code} `) ? label.slice(code.length + 1) : label;
+}
+
+/** 由導航橫幅矩形、視窗高與它宣告的錨定邊，算出相機讓位用的 inset（見 camera.frameGoal）。
+ *
+ *  anchor 來自 CSS 自訂屬性 `--anchor`（index.html 兩處版型各自宣告），不在此推測：
+ *  用「哪一邊比較近」猜的話，矮視窗下橫幅幾乎佔滿高度時會判反——例如 {top:12,bottom:255}
+ *  配 viewportH=260，猜法得到 bottom 而實際仍是 top 錨定，於是把 marker 往橫幅裡推
+ *  而非推向剩餘可見區（PR #5 review）。
+ *
+ *  回傳的是**比例**，分母是當下視窗高：只拖視窗下緣時橫幅自身尺寸不變、
+ *  ResizeObserver 不觸發，但分母變了，所以呼叫端必須在 resize 時重算（PR #5 review）。 */
+export function bannerInsetsFrom(
+  rect: { top: number; bottom: number }, viewportH: number, anchor: 'top' | 'bottom',
+): ScreenInsets {
+  if (viewportH <= 0) return {};
+  // 夾 0～1：橫幅高於視窗時比例會 >1；總和上限由 frameGoal 的 MAX_INSET 負責
+  const clamp = (v: number): number => Math.min(Math.max(v, 0), 1);
+  return anchor === 'bottom'
+    ? { bottom: clamp((viewportH - rect.top) / viewportH) }
+    : { top: clamp(rect.bottom / viewportH) };
 }
 
 /** 終點列文案：label＋樓層——applyEnd 與交換起訖共用單一來源（QA0723-5）。 */
@@ -127,6 +150,21 @@ export function setupUI(opts: {
   const searchbar = $('#searchbar');
   const routeCard = $('#route-card');
   const navBanner = $('#nav-banner');
+  // 相機讓位用的量測值。快取＋ResizeObserver：cameraGoal 每幀都問，直接量會每幀強制 layout。
+  // hidden 切換與內容變高（垂直設施步驟多一張 transition 卡）都會觸發 observer。
+  let bannerInsets: ScreenInsets = {};
+  const syncNavBannerInsets = (): void => {
+    if (navBanner.hidden) { bannerInsets = {}; return; }
+    // --anchor 由 CSS 依版型宣告（見 index.html）；讀不到時退回 top＝桌機預設版型
+    const anchor = getComputedStyle(navBanner).getPropertyValue('--anchor').trim();
+    bannerInsets = bannerInsetsFrom(
+      navBanner.getBoundingClientRect(), innerHeight, anchor === 'bottom' ? 'bottom' : 'top',
+    );
+  };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncNavBannerInsets).observe(navBanner);
+  // 只拖視窗下緣時橫幅自身尺寸不變 → ResizeObserver 不觸發，但 inset 是比例、分母變了。
+  // 不補這條，視窗變矮會低估遮擋，marker 又會回到橫幅底下（PR #5 review）。
+  addEventListener('resize', syncNavBannerInsets);
   const transitionBanner = $('#transition-banner');
   const arriveCard = $('#arrive-card');
   const floorButtons = $('#floor-buttons');
@@ -328,6 +366,7 @@ export function setupUI(opts: {
     floorButtons.hidden = mode !== 'overview';
     routeCard.hidden = mode !== 'preview';
     navBanner.hidden = mode !== 'nav';
+    syncNavBannerInsets(); // hidden 切換不保證觸發 ResizeObserver（display:none 的元素不被觀察）
     if (mode !== 'nav') { transitionBanner.hidden = true; arriveCard.hidden = true; }
     if (mode !== 'overview') resetFloorFocus();
     if (mode === 'overview') resetEndpoints();
@@ -354,10 +393,14 @@ export function setupUI(opts: {
     arriveCard.hidden = !on;
     if (on) navBanner.hidden = true; // 抵達＝單一 CTA，收起 nav 按鈕列
     else if (document.body.dataset.mode === 'nav') navBanner.hidden = false; // overview 收尾時不得誤開
+    syncNavBannerInsets();
   }
   function setPdrHint(on: boolean): void {
     $('#pdr-hint').hidden = !on;
   }
 
-  return { setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint, setPdrToggle };
+  return {
+    setMode, setPreview, setNavInfo, setTransition, showArrive, showPickCard, setPdrHint, setPdrToggle,
+    navBannerInsets: () => bannerInsets,
+  };
 }
