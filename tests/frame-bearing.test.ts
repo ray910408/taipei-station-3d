@@ -196,4 +196,23 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(radialRms(taipei)).toBeCloseTo(129.4, 0);
     expect(radialRms(zhongshan)).toBeCloseTo(85.2, 0);
   });
+
+  it('推導鏈機器背書（模型側）：docs「方位角」段引用的模型軸數字釘住', () => {
+    // 上面「解析度內」那條測試容差 6°，a-rp-platform 轉個 2、3° 仍全綠——不足以護住
+    // docs 引用的 N17.5°E／差 0.35° 這幾個數字本身。這裡把模型軸換算成真方位角、
+    // 跟軌道平均方位角的差都釘住；紅了代表 docs 與 station.json 的 axis_note 要同步重算，
+    // 不是放寬這裡的期望值。
+    const platform = rp.areas.find((a) => a.id === 'a-rp-platform');
+    expect(platform).toBeDefined();
+    const platformAxis = axisFromPlusY(platform!.polygon);
+    expect(platformAxis).toBeCloseTo(17.51, 1); // docs：模型 a-rp-platform 主軸距 local +Y 為 N17.5°E
+
+    const bearingDeg = (stationDoc.frame as { bearing_deg?: number }).bearing_deg;
+    const modelBearing = bearingDeg! - 90 + platformAxis;
+
+    const trackBearing = (bearing(at('台大醫院站'), at('台北車站')) + bearing(at('台北車站'), at('中山站'))) / 2;
+    expect(trackBearing).toBeCloseTo(17.86, 1); // 兩半弦平均方位角
+
+    expect(Math.abs(modelBearing - trackBearing)).toBeCloseTo(0.35, 1); // docs 結論：差 0.35°
+  });
 });
