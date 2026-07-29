@@ -11,8 +11,9 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
  *
  *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，而重心不是
  *  軌道上的點。推導見 docs/data-conventions.md：出口離散度要先投影到弦的法向
- *  （方位角只吃垂直於弦的那半），再算進「兩條半弦共用台北車站端點」的共變異，
- *  得隨機項 ±1.6°；直接拿二維徑向 RMS 又當兩弦獨立，會高估成 ±4.3°。
+ *  （方位角只吃垂直於弦的那半），兩段半弦再按弦長加權內插（弦向＝弧中點切線，等權平均
+ *  估的不是站處切線），並算進「兩條半弦共用台北車站端點」的共變異，
+ *  得隨機項 ±1.65°；直接拿二維徑向 RMS 又當兩弦獨立，會高估成 ±4.3°。
  *  容差取 6°，餘裕留給那條式子涵蓋不到的系統性偏差：台北車站(BL12/R10)、中山(R11/G14)
  *  都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別可供拆分。
  *  所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
@@ -82,6 +83,15 @@ function bearing(a: [number, number], b: [number, number]): number {
   return deg(Math.atan2((b[0] - a[0]) * M_PER_LON, (b[1] - a[1]) * M_PER_LAT));
 }
 
+/** a→b→c 兩段半弦在 b（台北車站）處的切線方位角：弦向＝弧中點切線，等權平均估的是
+ *  偏離 b 點 (L2−L1)/4 處的切線，不是 b 點本身；等曲率下切線隨弧長線性變化，
+ *  b 點切線＝按弦長線性內插（弦短的那段權重大：w1=L2/(L1+L2)、w2=L1/(L1+L2)）。 */
+function weightedTrackBearing(a: [number, number], b: [number, number], c: [number, number]): number {
+  const L1 = distMeters(a, b);
+  const L2 = distMeters(b, c);
+  return (bearing(a, b) * L2 + bearing(b, c) * L1) / (L1 + L2);
+}
+
 /** 多邊形主軸與 local +Y 的夾角（度）——以邊長加權的二階矩取主軸 */
 function axisFromPlusY(polygon: number[][]): number {
   let cx = 0, cy = 0, len = 0;
@@ -121,16 +131,14 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
   });
 
   it('bearing_status 仍是 estimated——出口重心撐不起 surveyed', () => {
-    // schema 允許 surveyed，但這份開放資料只能給到隨機項 ±1.6°＋未量化的系統性偏差（見 docs/data-conventions.md）。
+    // schema 允許 surveyed，但這份開放資料只能給到隨機項 ±1.65°＋未量化的系統性偏差（見 docs/data-conventions.md）。
     // 要升級請先換掉參考來源（R 線軌道座標或實測月台端點），不是改這個字串。
     expect((stationDoc.frame as { bearing_status?: string }).bearing_status).toBe('estimated');
   });
 
   it('local +Y 與真北的差在參考值解析度內', () => {
-    // 實際 R 線在台北車站的切線方位角：南北兩段半弦的平均（整段弦有曲率）
-    const south = bearing(at('台大醫院站'), at('台北車站'));
-    const north = bearing(at('台北車站'), at('中山站'));
-    const trackBearing = (south + north) / 2;
+    // 實際 R 線在台北車站的切線方位角：兩段半弦按弦長加權內插（弦向＝弧中點切線，非端點）
+    const trackBearing = weightedTrackBearing(at('台大醫院站'), at('台北車站'), at('中山站'));
     expect(trackBearing).toBeGreaterThan(14);
     expect(trackBearing).toBeLessThan(22);
 
@@ -142,7 +150,7 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(platform).toBeDefined();
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
 
-    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項僅 ±1.6°，餘裕幾乎全是留給未量化的系統性偏差
+    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項僅 ±1.65°，餘裕幾乎全是留給未量化的系統性偏差
   });
 
   it('推導鏈機器背書：docs「方位角」段的每個數字都是這裡算出來的', () => {
@@ -180,13 +188,14 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(deg(se1Rad)).toBeCloseTo(3.278, 2);
     expect(deg(se2Rad)).toBeCloseTo(3.489, 2);
 
-    // 相關修正：兩條半弦共用台北車站端點，平均值的變異數要扣掉這項共變異
+    // 相關修正：兩條半弦共用台北車站端點，加權平均（權重同 weightedTrackBearing）的變異數要扣掉這項共變異
+    const w1 = L2 / (L1 + L2), w2 = L1 / (L1 + L2);
     const covTaipei = normalCrossCovarianceOfCentroid(taipei.cov, taipei.n, brg1, brg2);
-    const varCorrelated = (se1Rad ** 2 + se2Rad ** 2 - (2 * covTaipei) / (L1 * L2)) / 4;
-    const varIndependent = (se1Rad ** 2 + se2Rad ** 2) / 4;
+    const varCorrelated = w1 ** 2 * se1Rad ** 2 + w2 ** 2 * se2Rad ** 2 - (2 * w1 * w2 * covTaipei) / (L1 * L2);
+    const varIndependent = w1 ** 2 * se1Rad ** 2 + w2 ** 2 * se2Rad ** 2;
     const seCorrelated = deg(Math.sqrt(varCorrelated));
     const seIndependent = deg(Math.sqrt(varIndependent));
-    expect(seCorrelated).toBeCloseTo(1.64, 1);
+    expect(seCorrelated).toBeCloseTo(1.65, 1);
     expect(seIndependent).toBeCloseTo(2.39, 1);
     expect(seCorrelated).toBeLessThan(seIndependent); // 共變異項為負方向，相關修正後應該比獨立平均小
 
@@ -199,8 +208,8 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
 
   it('推導鏈機器背書（模型側）：docs「方位角」段引用的模型軸數字釘住', () => {
     // 上面「解析度內」那條測試容差 6°，a-rp-platform 轉個 2、3° 仍全綠——不足以護住
-    // docs 引用的 N17.5°E／差 0.35° 這幾個數字本身。這裡把模型軸換算成真方位角、
-    // 跟軌道平均方位角的差都釘住；紅了代表 docs 與 station.json 的 axis_note 要同步重算，
+    // docs 引用的 N17.5°E／差 0.02° 這幾個數字本身。這裡把模型軸換算成真方位角、
+    // 跟軌道加權切線方位角的差都釘住；紅了代表 docs 與 station.json 的 axis_note 要同步重算，
     // 不是放寬這裡的期望值。
     const platform = rp.areas.find((a) => a.id === 'a-rp-platform');
     expect(platform).toBeDefined();
@@ -210,9 +219,9 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     const bearingDeg = (stationDoc.frame as { bearing_deg?: number }).bearing_deg;
     const modelBearing = bearingDeg! - 90 + platformAxis;
 
-    const trackBearing = (bearing(at('台大醫院站'), at('台北車站')) + bearing(at('台北車站'), at('中山站'))) / 2;
-    expect(trackBearing).toBeCloseTo(17.86, 1); // 兩半弦平均方位角
+    const trackBearing = weightedTrackBearing(at('台大醫院站'), at('台北車站'), at('中山站'));
+    expect(trackBearing).toBeCloseTo(17.49, 1); // 兩半弦按弦長加權內插的站處切線方位角
 
-    expect(Math.abs(modelBearing - trackBearing)).toBeCloseTo(0.35, 1); // docs 結論：差 0.35°
+    expect(Math.abs(modelBearing - trackBearing)).toBeCloseTo(0.02, 1); // docs 結論：差 0.02°
   });
 });
