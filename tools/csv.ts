@@ -21,7 +21,7 @@ export interface CsvParseResult {
 export function parseCsv(text: string): CsvParseResult {
   const rows: string[][] = [];
   const malformed: string[] = [];
-  let field = '', row: string[] = [], quoted = false, line = 1;
+  let field = '', row: string[] = [], quoted = false, line = 1, sawQuote = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (quoted) {
@@ -36,13 +36,17 @@ export function parseCsv(text: string): CsvParseResult {
     } else if (c === '"') {
       if (field !== '') malformed.push(`第${line}行 引號從欄位中途開始（${JSON.stringify(field.slice(-8) + '"')}）`);
       quoted = true;
+      sawQuote = true;
     } else if (c === ',') { row.push(field); field = ''; }
-    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; line++; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; line++; sawQuote = false; }
     else if (c === '\r') {
       if (text[i + 1] !== '\n') malformed.push(`第${line}行 孤立的 \\r（非 CRLF）`);
     } else field += c;
   }
-  if (field || row.length) { row.push(field); rows.push(row); }
+  // sawQuote：檔尾是引號空記錄 `""`（field 收完是空字串、row 也是空的）時，field 和
+  // row.length 都是 falsy，不靠這個旗標的話這筆已開始的記錄會整筆消失，不進 rows、
+  // 也不會觸發任何以列數／欄數為準的檢查
+  if (field || row.length || sawQuote) { row.push(field); rows.push(row); }
   if (quoted) malformed.push('檔尾引號未收');
   return { rows, malformed };
 }

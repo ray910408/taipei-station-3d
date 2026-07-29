@@ -59,4 +59,22 @@ describe('parseCsv', () => {
     expect(rows).toEqual([['a\r\nb', 'c']]);
     expect(malformed).toEqual([]);
   });
+
+  it('CRLF 檔尾不產生幽靈列', () => {
+    const { rows, malformed } = parseCsv('a,b\r\nc,d\r\n');
+    expect(rows).toEqual([['a', 'b'], ['c', 'd']]);
+    expect(malformed).toEqual([]);
+  });
+
+  it('檔尾無換行的引號空記錄不會整筆消失', () => {
+    const { rows, malformed } = parseCsv('a,b\n""');
+    expect(rows).toEqual([['a', 'b'], ['']]);
+    expect(malformed).toEqual([]);
+  });
+
+  it('整份輸入只有一個引號空記錄、無結尾換行', () => {
+    const { rows, malformed } = parseCsv('""');
+    expect(rows).toEqual([['']]);
+    expect(malformed).toEqual([]);
+  });
 });

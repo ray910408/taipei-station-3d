@@ -187,10 +187,13 @@ function audit(): string[] {
   // 引號內孤立 \r：值尾貼著收尾引號的 \r，會被當成內容渲染或比對出岔子。
   // 用 (?!\n) 排除合法 CRLF——elevator-locations 有多格引號內是正常換行，
   // 用 includes('\r') 會把那些全部誤報
+  // 簽章要帶次數而非布林——同一格再塞第二個孤立 \r 時 test() 一樣是 true，簽章不變，
+  // 稽核照樣綠；帶 x次數 才看得見（同 typo幸褔 的教訓）
   for (const f of FILES) {
     for (const r of rowsOf(f)) {
       r.forEach((v, i) => {
-        if (/\r(?!\n)/.test(v)) found.add(`ctrlchar ${f} ${STATION_COL[f](r)} ${SCHEMA[f].header[i]}`);
+        const n = (v.match(/\r(?!\n)/g) ?? []).length;
+        if (n) found.add(`ctrlchar ${f} ${STATION_COL[f](r)} ${SCHEMA[f].header[i]} x${n}`);
       });
     }
   }
@@ -211,7 +214,7 @@ const EXPECTED = [
   'code 中山國中 elv=BF12 acc=BR12',            // elevator-locations 那邊錯，應為 BR12
   'code 七張 elv=G03A acc=G03',                // 同上，應為 G03
   'coord exit-elevator-ramp-gps.csv 圓山站出口無障礙坡道2 121.5201211,250717908', // 緯度掉小數點
-  'ctrlchar station-facilities.csv 景平 廁所',  // 值尾藏一個引號內孤立 \r，緊貼收尾引號
+  'ctrlchar station-facilities.csv 景平 廁所 x1', // 值尾藏一個引號內孤立 \r，緊貼收尾引號
   'dupcode G03A 七張,小碧潭',                  // 同上的後果：同編號對到兩站
   'exitkey 奇岩站出口無障礙坡道 單一出口',      // exit-coords 只有出口 1/2/3、無 0
   'exitkey 幸褔站出口電梯 出口1',               // 幸褔異體字的連帶後果：站名對不上就 join 不到
