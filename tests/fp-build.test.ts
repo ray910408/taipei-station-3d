@@ -44,6 +44,16 @@ describe('parseSessions', () => {
     const bad = SESSION.replace('"scansPerPoint":10,', '')
     expect(() => parseSessions([[bad, pt()].join('\n')])).toThrow(/1/)
   })
+
+  it('混不同清單版本的檔 → 擋下(否則產出摻兩套座標的庫且不報錯)', () => {
+    // 樣本只以 (pointId, headingSlot) 為鍵,而重產的清單會把同一個 id 指到不同座標。
+    // 合併時新檔覆蓋同名 id、舊清單獨有的 id 原封留下,結果無聲無息地混了兩套座標。
+    const f1 = [SESSION, pt()].join('\n')
+    const f2 = [SESSION.replace('"s1"', '"s2"').replace('"rpGenerated":"t"', '"rpGenerated":"t2"'), pt()].join('\n')
+    expect(() => parseSessions([f1, f2])).toThrow(/清單版本不一致/)
+    // 同版本照常合併
+    expect(parseSessions([f1, [SESSION.replace('"s1"', '"s3"'), pt()].join('\n')]).sessions).toEqual(['s1', 's3'])
+  })
 })
 
 describe('cleanSamples(spec 1.1 逐條)', () => {

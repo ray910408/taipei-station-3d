@@ -22,6 +22,10 @@ export interface RawSample extends PointRecord { session: string; scansPerPoint:
 export function parseSessions(texts: string[]): { samples: RawSample[]; sessions: string[] } {
   const byKey = new Map<string, RawSample>()
   const sessions: string[] = []
+  // 樣本只以 (pointId, headingSlot) 為鍵,而重產的清單會把同一個 id 指到不同座標。
+  // 混版合併的結果是:新檔覆蓋同名 id、舊清單獨有的 id 原封留下,產出一份摻了
+  // 兩套座標的庫,而且完全不會報錯。只能擋,不能靠鍵去分。
+  let listVer: string | null = null
   for (const text of texts) {
     let cur: { session: string; scansPerPoint: number } | null = null
     for (const [i, line] of text.split(/\r?\n/).entries()) {
@@ -30,6 +34,12 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
       try { rec = JSON.parse(line) } catch (e) { throw new Error(`第 ${i + 1} 行:JSON 解析失敗——${e}`) } // 截斷行(採集中斷)最常見
       if (rec.type === 'session') {
         if (typeof rec.scansPerPoint !== 'number') throw new Error(`第 ${i + 1} 行:session header 缺 scansPerPoint`) // 否則短掃描規則靜默比 NaN
+        const ver = typeof rec.rpGenerated === 'string' ? rec.rpGenerated : ''
+        if (listVer === null) listVer = ver
+        else if (ver !== listVer) {
+          throw new Error(`清單版本不一致:${sessions[0]} 用 rpGenerated=${listVer || '(缺)'},${rec.session} 用 ${ver || '(缺)'}。` +
+            `同一個 pointId 在兩份清單指向不同座標,合併會產出摻了兩套座標的庫——請分開建庫。`)
+        }
         cur = rec; sessions.push(rec.session); continue
       }
       if (rec.type === 'skip') continue

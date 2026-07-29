@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { distPointSeg, pointInPolygon } from '../src/geometry'
-import { distToPolygonEdge, serpentineOrder, type Pt } from './rp-geometry'
+import { chainRows, distToPolygonEdge, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
 const AREA_FILL: Record<string, string> = {
@@ -38,6 +38,29 @@ function nearWall(p: Pt, host: Pt[], areas: FloorArea[], clearance: number): boo
   return false
 }
 
+/** 最小面積有向包圍盒的方向。凸多邊形的最小 OBB 必有一邊與某條邊共線,故逐邊試投影取面積最小者。
+ *  軸對齊的區會回傳軸方向(輸出與未旋轉時相同);斜置的區(B4 月台)才需要這個——
+ *  直接對 AABB 的 X/Y 各自取格點時,斜長條上兩座標會同步前進,實際間隔變成 √2 倍。 */
+function principalAxis(poly: Pt[]): [number, number] {
+  let best: [number, number] = [1, 0]
+  let bestArea = Infinity
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const dx = poly[i][0] - poly[j][0], dy = poly[i][1] - poly[j][1]
+    const len = Math.hypot(dx, dy)
+    if (len < 1e-9) continue
+    const ux = dx / len, uy = dy / len
+    let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity
+    for (const [px, py] of poly) {
+      const u = px * ux + py * uy, v = -px * uy + py * ux
+      uMin = Math.min(uMin, u); uMax = Math.max(uMax, u)
+      vMin = Math.min(vMin, v); vMax = Math.max(vMax, v)
+    }
+    const area = (uMax - uMin) * (vMax - vMin)
+    if (area < bestArea) { bestArea = area; best = [ux, uy] }
+  }
+  return best
+}
+
 export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: number, clearance = 0.8): RpPoint[] {
   const areas = (floor.areas ?? []).filter(a => WALKABLE_KINDS.has(a.kind) && (a.polygon?.length ?? 0) >= 3)
   const units = (floor.units ?? []).filter(u => (u.polygon?.length ?? 0) >= 3)
@@ -52,23 +75,34 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
     return Array.from({ length: n }, (_, i) => min + step * (i + 0.5))
   }
 
-  const raw: { x: number; y: number; note?: string }[] = []
+  const allRows: { x: number; y: number; note?: string }[][] = []
   for (const area of areas) {
-    const axs = area.polygon.map(p => p[0]), ays = area.polygon.map(p => p[1])
-    for (const y of ticks(Math.min(...ays), Math.max(...ays))) {
-      for (const x of ticks(Math.min(...axs), Math.max(...axs))) {
-        const p: Pt = [x, y]
+    // 在該區自己的主軸座標系 (u,v) 裡佈點,再轉回世界座標
+    const [ux, uy] = principalAxis(area.polygon)
+    const toXY = (u: number, v: number): Pt => [u * ux - v * uy, u * uy + v * ux]
+    const us = area.polygon.map(([x, y]) => x * ux + y * uy)
+    const vs = area.polygon.map(([x, y]) => -x * uy + y * ux)
+
+    // 列在該區的主軸方向上成形;跨區的走訪順序交給 chainRows,不要丟進全域的
+    // round(y/spacing) 重新分列——各區相位不同會把不同區的列交錯在一起
+    // (B3 曾因此在第 37→38 點倒退 52 m)。
+    const uTicks = ticks(Math.min(...us), Math.max(...us))
+    for (const v of ticks(Math.min(...vs), Math.max(...vs))) {
+      const row: { x: number; y: number; note?: string }[] = []
+      for (const u of uTicks) {
+        const p = toXY(u, v)
         // 只收自己這一區的點:落在鄰區的交給該區自己的格線。相鄰區相位不同時,
         // 縫邊仍可能出現約 spacing/4 的點對(B3 有 5 對),屬冗餘而非錯誤——
         // 不做距離去重,否則會砍掉窄區唯一的那一排,把上面修的覆蓋問題換個形式帶回來。
         if (!pointInPolygon(p, area.polygon)) continue
         if (nearWall(p, area.polygon, areas, clearance)) continue // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
-        if (units.some(u => pointInPolygon(p, u.polygon!) || distToPolygonEdge(p, u.polygon!) < clearance)) continue
-        raw.push({ x, y, note: area.note })
+        if (units.some(u2 => pointInPolygon(p, u2.polygon!) || distToPolygonEdge(p, u2.polygon!) < clearance)) continue
+        row.push({ x: p[0], y: p[1], note: area.note })
       }
+      allRows.push(row)
     }
   }
-  return serpentineOrder(raw, spacing).map((p, i) => ({
+  return chainRows(allRows).map((p, i) => ({
     id: `${prefix}-${String(i + 1).padStart(3, '0')}`,
     floor: floor.id, x: p.x, y: p.y, ...(p.note ? { note: p.note } : {}),
   }))
