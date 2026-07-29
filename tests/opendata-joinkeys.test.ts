@@ -66,17 +66,13 @@ function audit(): string[] {
     }
     const bodyRows = body(f);
     const isBlank = (r: string[]) => r.length === 1 && r[0] === '';
-    const rows = bodyRows.filter((r) => !isBlank(r)); // 空白列（檔尾或內部）都不算列數
+    const rows = bodyRows.filter((r) => !isBlank(r)); // 空白列（不分位置）都不算列數
     if (rows.length !== want.rows) found.add(`rowcount ${f} ${rows.length}≠${want.rows}`);
-    // 空白列只豁免「檔尾連續」那段——原意是容忍檔尾空行。插在資料中間的空白列不能一樣
-    // 悄悄放過：rowcount 濾掉它、下面的欄數檢查也濾掉它，完全不會被任何檢查看見
-    let tailStart = bodyRows.length;
-    while (tailStart > 0 && isBlank(bodyRows[tailStart - 1])) tailStart--;
+    // 曾經豁免「檔尾連續」空白列，原意是容忍檔尾空行——但那是值判斷（r.length===1 && r[0]===''），
+    // 分不出「實體空行」與引號空記錄 `""`（parse 後兩者都是 ['']）。現掃現比五檔零筆命中，
+    // 豁免毫無收益，拆掉：任何 [''] 列一律報異常，不分位置、不分來源
     bodyRows.forEach((r, i) => {
-      if (isBlank(r)) {
-        if (i < tailStart) found.add(`blankrow ${f} 第${i + 2}列`);
-        return;
-      }
+      if (isBlank(r)) { found.add(`blankrow ${f} 第${i + 2}列`); return; }
       if (r.length !== want.header.length) found.add(`malformed ${f} 第${i + 2}列 欄數${r.length}≠${want.header.length}`);
     });
   }
@@ -188,9 +184,22 @@ function audit(): string[] {
       });
     }
   }
-  // 站名異體字
+  // 引號內孤立 \r：值尾貼著收尾引號的 \r，會被當成內容渲染或比對出岔子。
+  // 用 (?!\n) 排除合法 CRLF——elevator-locations 有多格引號內是正常換行，
+  // 用 includes('\r') 會把那些全部誤報
+  for (const f of FILES) {
+    for (const r of rowsOf(f)) {
+      r.forEach((v, i) => {
+        if (/\r(?!\n)/.test(v)) found.add(`ctrlchar ${f} ${STATION_COL[f](r)} ${SCHEMA[f].header[i]}`);
+      });
+    }
+  }
+  // 站名異體字：raw 計數而非布林——同檔第二次出現時 includes 不會變化，簽章要帶次數才看得見
   for (const f of ['accessibility-facilities.csv', 'elevator-locations.csv', 'exit-elevator-ramp-gps.csv',
-    'exit-coords.csv', 'station-facilities.csv']) if (read(f).includes('幸褔')) found.add(`typo幸褔 ${f}`);
+    'exit-coords.csv', 'station-facilities.csv']) {
+    const count = read(f).split('幸褔').length - 1;
+    if (count) found.add(`typo幸褔 ${f} x${count}`);
+  }
 
   return [...found].sort();
 }
@@ -202,13 +211,14 @@ const EXPECTED = [
   'code 中山國中 elv=BF12 acc=BR12',            // elevator-locations 那邊錯，應為 BR12
   'code 七張 elv=G03A acc=G03',                // 同上，應為 G03
   'coord exit-elevator-ramp-gps.csv 圓山站出口無障礙坡道2 121.5201211,250717908', // 緯度掉小數點
+  'ctrlchar station-facilities.csv 景平 廁所',  // 值尾藏一個引號內孤立 \r，緊貼收尾引號
   'dupcode G03A 七張,小碧潭',                  // 同上的後果：同編號對到兩站
   'exitkey 奇岩站出口無障礙坡道 單一出口',      // exit-coords 只有出口 1/2/3、無 0
   'exitkey 幸褔站出口電梯 出口1',               // 幸褔異體字的連帶後果：站名對不上就 join 不到
   'order 台北車站 淡水信義線/板南線|BL12/R10',  // 實際 淡水信義線=R10、板南線=BL12
-  'typo幸褔 accessibility-facilities.csv',
-  'typo幸褔 elevator-locations.csv',
-  'typo幸褔 exit-elevator-ramp-gps.csv',
+  'typo幸褔 accessibility-facilities.csv x1',
+  'typo幸褔 elevator-locations.csv x1',
+  'typo幸褔 exit-elevator-ramp-gps.csv x1',
 ].sort();
 
 describe('北捷開放資料 join key 稽核', () => {
