@@ -11,7 +11,7 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
  *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，而重心不是
  *  軌道上的點。推導見 docs/data-conventions.md：出口離散度要先投影到弦的法向
  *  （方位角只吃垂直於弦的那半），再算進「兩條半弦共用台北車站端點」的共變異，
- *  得隨機項 ±1.6°；直接拿二維徑向 RMS 又當兩弦獨立，會高估成 ±4.9°。
+ *  得隨機項 ±1.6°；直接拿二維徑向 RMS 又當兩弦獨立，會高估成 ±4.3°。
  *  容差取 6°，餘裕留給那條式子涵蓋不到的系統性偏差：台北車站(BL12/R10)、中山(R11/G14)
  *  都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別可供拆分。
  *  所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
@@ -22,23 +22,58 @@ const LAT0 = 25.0467;
 const M_PER_LAT = 111132.92 - 559.82 * Math.cos(rad(2 * LAT0)) + 1.175 * Math.cos(rad(4 * LAT0));
 const M_PER_LON = 111412.84 * Math.cos(rad(LAT0)) - 93.5 * Math.cos(rad(3 * LAT0));
 
-/** 各站出入口經緯度重心（refs/opendata/exit-coords.csv：項次,名稱,編號,經度,緯度,無障礙）。
+/** 各站出入口經緯度重心＋共變異矩陣（refs/opendata/exit-coords.csv：項次,名稱,編號,經度,緯度,無障礙）。
  *  用共用 parser 而不是 split(',')——出入口名稱若合法地帶引號含逗號，逐行切會整列錯位，
- *  那一筆出口就安靜地從重心裡消失，而 bearing 斷言仍然會過。 */
-function exitStats(): Map<string, { c: [number, number]; n: number }> {
+ *  那一筆出口就安靜地從重心裡消失，而 bearing 斷言仍然會過。
+ *  cov 是各出口對重心的母體共變異矩陣（÷n，公尺座標系，見 M_PER_LON/M_PER_LAT）——
+ *  給下面「推導鏈」測試把離散度投影到弦的法向用，不只是重心本身。 */
+function exitStats(): Map<string, { c: [number, number]; n: number; cov: [[number, number], [number, number]] }> {
   const csv = readFileSync(new URL('../refs/opendata/exit-coords.csv', import.meta.url), 'utf8');
   const { rows, malformed } = parseCsv(csv);
   if (malformed.length) throw new Error(`exit-coords.csv 語法有問題：${malformed.join('；')}`);
-  const acc = new Map<string, [number, number, number]>();
+  const pts = new Map<string, [number, number][]>();
   for (const c of rows.slice(1)) {
     if (c.length < 5) continue;
     const station = /^(台北車站|.+?站)/.exec(c[1])?.[1];
     const lon = Number(c[3]), lat = Number(c[4]);
     if (!station || !Number.isFinite(lon) || !Number.isFinite(lat)) continue;
-    const [x, y, n] = acc.get(station) ?? [0, 0, 0];
-    acc.set(station, [x + lon, y + lat, n + 1]);
+    const arr = pts.get(station) ?? [];
+    arr.push([lon, lat]);
+    pts.set(station, arr);
   }
-  return new Map([...acc].map(([k, [x, y, n]]) => [k, { c: [x / n, y / n] as [number, number], n }]));
+  return new Map([...pts].map(([station, arr]) => {
+    const n = arr.length;
+    const cx = arr.reduce((s, [lon]) => s + lon, 0) / n;
+    const cy = arr.reduce((s, [, lat]) => s + lat, 0) / n;
+    let sxx = 0, syy = 0, sxy = 0;
+    for (const [lon, lat] of arr) {
+      const dx = (lon - cx) * M_PER_LON, dy = (lat - cy) * M_PER_LAT;
+      sxx += dx * dx; syy += dy * dy; sxy += dx * dy;
+    }
+    const cov: [[number, number], [number, number]] = [[sxx / n, sxy / n], [sxy / n, syy / n]];
+    return [station, { c: [cx, cy] as [number, number], n, cov }];
+  }));
+}
+
+/** a→b 的距離（公尺） */
+function distMeters(a: [number, number], b: [number, number]): number {
+  return Math.hypot((b[0] - a[0]) * M_PER_LON, (b[1] - a[1]) * M_PER_LAT);
+}
+
+/** 共變異矩陣投影到方位角 bearingDeg 的法向、除以出口數——重心沿該法向的變異數（平方公尺） */
+function normalVarianceOfCentroid(cov: [[number, number], [number, number]], n: number, bearingDeg: number): number {
+  const t = rad(bearingDeg);
+  const nx = Math.cos(t), ny = -Math.sin(t); // 垂直於方位角 t 的單位向量
+  return (nx * nx * cov[0][0] + 2 * nx * ny * cov[0][1] + ny * ny * cov[1][1]) / n;
+}
+
+/** 同一站在兩個不同弦的法向分量之間的重心共變異（平方公尺）——兩條半弦共用端點時的相關修正項 */
+function normalCrossCovarianceOfCentroid(
+  cov: [[number, number], [number, number]], n: number, bearing1Deg: number, bearing2Deg: number,
+): number {
+  const t1 = rad(bearing1Deg), t2 = rad(bearing2Deg);
+  const n1 = [Math.cos(t1), -Math.sin(t1)], n2 = [Math.cos(t2), -Math.sin(t2)];
+  return (n1[0] * cov[0][0] * n2[0] + n1[0] * cov[0][1] * n2[1] + n1[1] * cov[1][0] * n2[0] + n1[1] * cov[1][1] * n2[1]) / n;
 }
 
 /** a→b 的真方位角（度，北為 0、順時針） */
@@ -107,5 +142,57 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
 
     expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項僅 ±1.6°，餘裕幾乎全是留給未量化的系統性偏差
+  });
+
+  it('推導鏈機器背書：docs「方位角」段的每個數字都是這裡算出來的', () => {
+    // 這條測試把 docs/data-conventions.md「方位角」段引用的每個中間數字都重算一遍並釘住。
+    // 兩個出口座標等量反向移動不會動到重心、出口數、鍵指紋、bearing 斷言，但會動到這裡的
+    // 共變異矩陣——docs 那串數字會無聲過期而沒有測試發現。紅了不是放寬容差，是回去照這條
+    // 推導鏈重推一次，把新數字同步進 docs，不是改這裡的期望值。
+    const taida = stats.get('台大醫院站')!;
+    const taipei = stats.get('台北車站')!;
+    const zhongshan = stats.get('中山站')!;
+
+    // 弦長與方位角
+    const L1 = distMeters(taida.c, taipei.c);
+    const L2 = distMeters(taipei.c, zhongshan.c);
+    const brg1 = bearing(taida.c, taipei.c);
+    const brg2 = bearing(taipei.c, zhongshan.c);
+    expect(L1).toBeCloseTo(552.5, 0);
+    expect(L2).toBeCloseTo(701.2, 0);
+    expect(brg1).toBeCloseTo(14.75, 1);
+    expect(brg2).toBeCloseTo(20.97, 1);
+
+    // 法向重心 SE：共變異矩陣投影到弦的法向、再除以出口數
+    const seTaidaChord1 = Math.sqrt(normalVarianceOfCentroid(taida.cov, taida.n, brg1));
+    const seTaipeiChord1 = Math.sqrt(normalVarianceOfCentroid(taipei.cov, taipei.n, brg1));
+    const seTaipeiChord2 = Math.sqrt(normalVarianceOfCentroid(taipei.cov, taipei.n, brg2));
+    const seZhongshanChord2 = Math.sqrt(normalVarianceOfCentroid(zhongshan.cov, zhongshan.n, brg2));
+    expect(seTaidaChord1).toBeCloseTo(15.43, 1);
+    expect(seTaipeiChord1).toBeCloseTo(27.59, 1);
+    expect(seTaipeiChord2).toBeCloseTo(26.19, 1);
+    expect(seZhongshanChord2).toBeCloseTo(33.73, 1);
+
+    // 半弦 SE（角度）：兩端法向 SE 均方根、除以弦長轉成角度
+    const se1Rad = Math.sqrt(seTaidaChord1 ** 2 + seTaipeiChord1 ** 2) / L1;
+    const se2Rad = Math.sqrt(seTaipeiChord2 ** 2 + seZhongshanChord2 ** 2) / L2;
+    expect(deg(se1Rad)).toBeCloseTo(3.278, 2);
+    expect(deg(se2Rad)).toBeCloseTo(3.489, 2);
+
+    // 相關修正：兩條半弦共用台北車站端點，平均值的變異數要扣掉這項共變異
+    const covTaipei = normalCrossCovarianceOfCentroid(taipei.cov, taipei.n, brg1, brg2);
+    const varCorrelated = (se1Rad ** 2 + se2Rad ** 2 - (2 * covTaipei) / (L1 * L2)) / 4;
+    const varIndependent = (se1Rad ** 2 + se2Rad ** 2) / 4;
+    const seCorrelated = deg(Math.sqrt(varCorrelated));
+    const seIndependent = deg(Math.sqrt(varIndependent));
+    expect(seCorrelated).toBeCloseTo(1.64, 1);
+    expect(seIndependent).toBeCloseTo(2.39, 1);
+    expect(seCorrelated).toBeLessThan(seIndependent); // 共變異項為負方向，相關修正後應該比獨立平均小
+
+    // 徑向版（不投影到法向，直接用二維離散度）：docs 用來說明為什麼不能直接拿它當法向誤差
+    const radialRms = (s: { cov: [[number, number], [number, number]] }) => Math.sqrt(s.cov[0][0] + s.cov[1][1]);
+    expect(radialRms(taida)).toBeCloseTo(105.5, 0);
+    expect(radialRms(taipei)).toBeCloseTo(129.4, 0);
+    expect(radialRms(zhongshan)).toBeCloseTo(85.2, 0);
   });
 });
