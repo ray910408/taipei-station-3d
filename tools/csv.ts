@@ -8,6 +8,9 @@
  *  - 檔尾引號未收（最後一欄會把剩下的內容整包吞進去）
  *  - 收尾引號後接了逗號／換行／檔尾以外的字元（`"月臺層"x`）
  *  - 引號從欄位中途才開始（`月臺"層"`）
+ *  - 未引號區出現孤立的 `\r`（非 CRLF，即 `\r` 後面不是 `\n`）
+ *
+ *  引號內的 `\r`（含引號內 CRLF）維持原樣當內容保留，不受上述規則影響。
  */
 export interface CsvParseResult {
   rows: string[][];
@@ -35,7 +38,9 @@ export function parseCsv(text: string): CsvParseResult {
       quoted = true;
     } else if (c === ',') { row.push(field); field = ''; }
     else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; line++; }
-    else if (c !== '\r') field += c;
+    else if (c === '\r') {
+      if (text[i + 1] !== '\n') malformed.push(`第${line}行 孤立的 \\r（非 CRLF）`);
+    } else field += c;
   }
   if (field || row.length) { row.push(field); rows.push(row); }
   if (quoted) malformed.push('檔尾引號未收');
