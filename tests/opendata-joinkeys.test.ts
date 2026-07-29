@@ -40,8 +40,28 @@ const bareName = (s: string) => (s === '台北車站' ? s : s.replace(/站$/, ''
 const exitKey = (s: string) => (s === '單一出口' ? '0' : s.replace(/^出口/, ''));
 const stationOf = (exitName: string) => /^(台北車站|.+?站)/.exec(exitName)?.[1] ?? '';
 
-const FILES = ['accessibility-facilities.csv', 'elevator-locations.csv', 'station-facilities.csv',
-  'exit-coords.csv', 'exit-elevator-ramp-gps.csv'] as const;
+/** 這份快照的形狀，凍結起來。**不能拿進來的檔案自己的標頭當 schema**——整份被截掉一欄
+ *  （標頭與每一列一起少）時那樣看是自洽的，一個欄位就這麼靜靜不見了。 */
+const SCHEMA: Record<string, { rows: number; header: string[] }> = {
+  'accessibility-facilities.csv': {
+    rows: 118,
+    header: ['Line', 'Station_Number', 'Station_Name', 'Station_Form', 'PAO', 'Elevator_and_Wheelchair_Ramps',
+      'Ticket_Gates_for_the_Disabled', 'Toilet_Facilities_for_Disabled', 'Reserved_Spaces_for_Wheelchairs',
+      'Doors_Open_Side', 'Elevator', 'Anti_slip_Strips', 'Train_Destination_Announcements', 'Public_Address_System',
+      'Priority_Seats_for_Visually_Impaired_Passengers', 'Tactile_Guide_Paths_quantity',
+      'Passenger_Information_Display_Systems_count', 'door_indicator_light_count',
+      'Train_Passenger_Information_Systems_quantity', '1999_Sign_Language_Service_quantity'],
+  },
+  'elevator-locations.csv': { rows: 135, header: ['路線別', '車站名稱', '車站編號', '電梯位置', '更新日期'] },
+  'station-facilities.csv': {
+    rows: 119, // 118 站＋板橋依線別拆兩列
+    header: ['序號/編號', '縣市別代碼', '地址-行政區域代碼', '車站名稱', '電梯', '電扶梯', '銀行ATM',
+      '哺集乳室', '嬰兒尿布台', '飲水機/飲水臺', '充電站', '自動售票機', '廁所'],
+  },
+  'exit-coords.csv': { rows: 388, header: ['項次', '出入口名稱', '出入口編號', '經度', '緯度', '是否為無障礙用'] },
+  'exit-elevator-ramp-gps.csv': { rows: 190, header: ['項次', '出入口電梯/無障礙坡道名稱', '出入口編號', '經度', '緯度'] },
+};
+const FILES = Object.keys(SCHEMA);
 /** 各檔的站名取法（正規化後應五檔一致） */
 const STATION_COL: Record<string, (r: string[]) => string> = {
   'accessibility-facilities.csv': (r) => bareName(r[2]),
@@ -54,15 +74,19 @@ const STATION_COL: Record<string, (r: string[]) => string> = {
 function audit(): string[] {
   const found = new Set<string>(); // 同一缺陷可能被多個索引命中，去重
 
-  // 欄數：截斷的列不能被安靜丟掉，否則它就從所有後續檢查裡消失了
+  // 檔案形狀：標頭欄名、列數、每列欄數都對凍結的 SCHEMA 比，而不是對檔案自己的標頭比
   for (const f of FILES) {
-    const cols = header(f).length;
+    const want = SCHEMA[f];
+    const got = header(f);
+    if (got.join(',') !== want.header.join(',')) found.add(`schema ${f} 標頭不符 ${got.join(',')}`);
+    const rows = body(f).filter((r) => !(r.length === 1 && r[0] === '')); // 檔尾空行不算
+    if (rows.length !== want.rows) found.add(`rowcount ${f} ${rows.length}≠${want.rows}`);
     body(f).forEach((r, i) => {
-      if (r.length === 1 && r[0] === '') return; // 檔尾空行
-      if (r.length !== cols) found.add(`malformed ${f} 第${i + 2}列 欄數${r.length}≠${cols}`);
+      if (r.length === 1 && r[0] === '') return;
+      if (r.length !== want.header.length) found.add(`malformed ${f} 第${i + 2}列 欄數${r.length}≠${want.header.length}`);
     });
   }
-  const rowsOf = (f: string) => body(f).filter((r) => r.length === header(f).length);
+  const rowsOf = (f: string) => body(f).filter((r) => r.length === SCHEMA[f].header.length);
   const acc = rowsOf('accessibility-facilities.csv');
   const elv = rowsOf('elevator-locations.csv');
   const coords = rowsOf('exit-coords.csv');
@@ -102,13 +126,11 @@ function audit(): string[] {
       if (truth && truth !== codes[i]) found.add(`order ${r[2]} ${r[0]}|${r[1]}`);
     }
   }
-  // 編號值：elevator-locations 的編號未出現在 accessibility 同站的編號集合裡。
-  // 兩邊的值都寫進簽章——只記其中一邊的話，另一邊換成別的錯值時簽章不變、稽核就漏掉了
-  for (const r of elv) {
-    const name = bareName(r[1]), code = r[2].trim();
-    if (!accCodes.get(name)?.includes(code)) {
-      found.add(`code ${name} elv=${code} acc=${codeSet(accCodes.get(name) ?? [])}`);
-    }
+  // 編號值：兩檔的每站編號集合**雙向**比對。單向只查「elv 的編號在不在 acc 裡」的話，
+  // acc 多出一個假編號時仍然全中、稽核照樣綠
+  for (const name of new Set([...accCodes.keys(), ...elvCodes.keys()])) {
+    const a = codeSet(accCodes.get(name) ?? []), e = codeSet(elvCodes.get(name) ?? []);
+    if (a !== e) found.add(`code ${name} elv=${e} acc=${a}`);
   }
   // 同一編號對到多站
   const byCode = new Map<string, Set<string>>();
@@ -165,7 +187,7 @@ describe('北捷開放資料 join key 稽核', () => {
   it('出口編號正規化涵蓋所有出現過的形態', () => {
     const shapes = new Set<string>();
     for (const f of ['exit-elevator-ramp-gps.csv', 'exit-coords.csv']) {
-      for (const r of body(f).filter((r) => r.length === header(f).length)) {
+      for (const r of body(f).filter((r) => r.length === SCHEMA[f].header.length)) {
         const v = r[2];
         shapes.add(v === '單一出口' ? '單一出口' : /^出口/.test(v) ? '出口+' : /^\d+[A-Z]?$/.test(v) ? '數字(+字母)' : /^M\d+$/.test(v) ? 'M+數字' : `未知:${v}`);
       }

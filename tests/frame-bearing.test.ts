@@ -75,6 +75,12 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect((stationDoc.frame as { bearing_deg?: number }).bearing_deg).toBeTypeOf('number');
   });
 
+  it('bearing_status 仍是 estimated——出口重心撐不起 surveyed', () => {
+    // schema 允許 surveyed，但這份開放資料的解析度只有 ±4~5°（見 docs/data-conventions.md）。
+    // 要升級請先換掉參考來源（R 線軌道座標或實測月台端點），不是改這個字串。
+    expect((stationDoc.frame as { bearing_status?: string }).bearing_status).toBe('estimated');
+  });
+
   it('local +Y 與真北的差在參考值解析度（±4.3°）內', () => {
     // 實際 R 線在台北車站的切線方位角：南北兩段半弦的平均（整段弦有曲率）
     const south = bearing(at('台大醫院站'), at('台北車站'));
