@@ -110,7 +110,15 @@ if (repeats.length) {
   const repMean = repeats.reduce((a, r) => a + r.d, 0) / repeats.length
   console.log(`\n=== 同位置重測(時間漂移)===`)
   for (const r of repeats) console.log(`${r.a} vs ${r.b}: ${r.d.toFixed(2)} dB`)
-  if (repMean > noiseFloor) {
+  // 重測點若比最遠的空間點對還遠,它就不是「同一點」——人沒走回原位,
+  // 拿它當基準會把基準抬到天上,推出「間距要放到 20m 以上」這種假結論。
+  const binMeans = [...bins.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length)
+  const maxBin = binMeans.length ? Math.max(...binMeans) : Infinity
+  if (repMean > maxBin) {
+    console.log(`\n⚠ 重測距離(${repMean.toFixed(2)} dB)比最遠的空間點對(${maxBin.toFixed(2)} dB)還大`)
+    console.log(`  → 這兩點不在同一位置:重測時沒走回原點(現場沒地標很容易這樣)。`)
+    console.log(`  → 基準退回分半雜訊;真實時間漂移仍未知,下次請確實走回原點重測。`)
+  } else if (repMean > noiseFloor) {
     baseline = repMean
     baselineName = '時間漂移'
     console.log(`時間漂移(${repMean.toFixed(2)} dB)> 分半雜訊(${noiseFloor.toFixed(2)} dB)`)
