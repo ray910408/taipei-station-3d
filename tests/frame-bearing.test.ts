@@ -10,9 +10,11 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
  *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，
  *  而重心不是軌道上的點：各站出口離散 RMS 85–129 m，除以 √出口數得各站重心 SE
  *  34.7–52.5 m；兩端合成後每條半弦的端點不確定度 57.3 m（701 m 那條）與
- *  69.5 m（552 m 那條），換算成角度是 ±4.7°／±7.2°，平均後 ±4.3°。台北車站(BL12/R10)、
- *  中山(R11/G14) 又都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別
- *  可供拆分。所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
+ *  69.5 m（552 m 那條），換算成角度是 ±4.7°／±7.2°。兩條半弦共用台北車站這個端點、
+ *  且以相反符號進入，正確傳遞後平均值是 ±3.1°（當獨立平均會高估成 ±4.3°）。
+ *  容差取 6°，餘裕留給那條式子涵蓋不到的系統性偏差：台北車站(BL12/R10)、中山(R11/G14)
+ *  都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別可供拆分。
+ *  所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
 
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
@@ -77,12 +79,12 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
   });
 
   it('bearing_status 仍是 estimated——出口重心撐不起 surveyed', () => {
-    // schema 允許 surveyed，但這份開放資料的解析度只有 ±4~5°（見 docs/data-conventions.md）。
+    // schema 允許 surveyed，但這份開放資料只能給到隨機項 ±3.1°＋未量化的系統性偏差（見 docs/data-conventions.md）。
     // 要升級請先換掉參考來源（R 線軌道座標或實測月台端點），不是改這個字串。
     expect((stationDoc.frame as { bearing_status?: string }).bearing_status).toBe('estimated');
   });
 
-  it('local +Y 與真北的差在參考值解析度（±4.3°）內', () => {
+  it('local +Y 與真北的差在參考值解析度內', () => {
     // 實際 R 線在台北車站的切線方位角：南北兩段半弦的平均（整段弦有曲率）
     const south = bearing(at('台大醫院站'), at('台北車站'));
     const north = bearing(at('台北車站'), at('中山站'));
@@ -98,6 +100,6 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(platform).toBeDefined();
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
 
-    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // ±4.3° 解析度 + 餘裕
+    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項 ±3.1°，餘裕留給未量化的系統性偏差
   });
 });

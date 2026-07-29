@@ -141,6 +141,11 @@ function audit(): string[] {
     for (const line of lines) {
       if (!lineCode.has(`${line}|${name}`)) found.add(`lineunknown ${r[2]} ${line}`);
     }
+    // 成分重複要在這裡擋掉：底下的比較一律經過 codeSet（去重），
+    // `文湖線/文湖線` 配 `BR13/BR13` 會 arity 相符、線別查得到、集合也一樣，整條路都綠
+    if (new Set(lines).size !== lines.length || new Set(codes).size !== codes.length) {
+      found.add(`dupcomponent ${r[2]} ${r[0]}|${r[1]}`);
+    }
     if (lines.length !== codes.length) { found.add(`arity ${r[2]} ${r[0]}|${r[1]}`); continue; }
     // 順序只在「兩檔的編號集合一致」時才判定——集合不一致是編號值錯（下面另報），
     // 拿有錯值的 elevator-locations 當真相會把值錯誤誤報成順序錯誤
@@ -178,10 +183,15 @@ function audit(): string[] {
   const rawFacility = new Map<string, number>();
   for (const r of rowsOf('station-facilities.csv')) rawFacility.set(r[3], (rawFacility.get(r[3]) ?? 0) + 1);
   for (const [name, n] of rawFacility) if (n > 1) found.add(`duprow station-facilities.csv ${name} x${n}`);
+  // ramp 側也要驗唯一性：把某列改標成同站另一個既有出口時，兩列都仍 join 得回去，
+  // 列數／站名／座標全不動，只有「兩筆設施共用同一個出口鍵」看得出來
+  const rampCount = new Map<string, number>();
   for (const r of ramps) {
     const k = `${stationOf(r[1])}|${exitKey(r[2])}`;
+    rampCount.set(k, (rampCount.get(k) ?? 0) + 1);
     if (!coordCount.has(k)) found.add(`exitkey ${r[1]} ${r[2]}`);
   }
+  for (const [k, n] of rampCount) if (n > 1) found.add(`dupexit exit-elevator-ramp-gps.csv ${k} x${n}`);
   // 座標值域：兩個帶經緯度的檔案。實際有效值 lon 121.41~121.62、lat 24.96~25.17，
   // 這裡取大台北的寬鬆外框，抓的是掉小數點／非數值這種明顯壞值
   for (const [f, rows] of [['exit-coords.csv', coords], ['exit-elevator-ramp-gps.csv', ramps]] as const) {
