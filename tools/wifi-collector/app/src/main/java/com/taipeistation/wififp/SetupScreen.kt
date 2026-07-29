@@ -124,7 +124,9 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
 
     // session 選擇
     Text("Session", style = MaterialTheme.typography.titleMedium)
-    FilterChip(selected = resumeFile == null, onClick = { resumeFile = null }, label = { Text("新 session") })
+    // 切回新 session 必須把續採檔頭覆寫掉的 mode/N 還原,否則會沿用舊 session 的設定
+    FilterChip(selected = resumeFile == null, label = { Text("新 session") },
+      onClick = { resumeFile = null; app.mode = DEFAULT_MODE; app.scansPerPoint = DEFAULT_SCANS_PER_POINT })
     sessions.value.take(5).forEach { f ->
       FilterChip(selected = resumeFile == f, onClick = {
         resumeFile = f

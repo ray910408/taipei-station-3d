@@ -21,7 +21,11 @@ fun parseRpList(json: String): RpList {
     } catch (e: Exception) { throw IllegalArgumentException("points[$i] 格式錯:${e.message}") }
   }
   require(pts.isNotEmpty()) { "points 為空" }
-  return RpList(root.optString("station"), root.optString("generated"), pts)
+  // generated 是續採時比對清單版本的唯一依據。這裡放行空值的話,session 會記下空的
+  // rpGenerated,採到一半中斷後就再也續採不了——要擋就擋在匯入,不能等到續採才發現。
+  val generated = root.optString("generated")
+  require(generated.isNotEmpty()) { "缺 generated(清單版本);請用 npm run gen:rp 重新產生" }
+  return RpList(root.optString("station"), generated, pts)
 }
 
 data class ApObs(val bssid: String, val ssid: String, val rssi: Int, val freq: Int)

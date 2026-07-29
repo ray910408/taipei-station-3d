@@ -14,13 +14,18 @@ import androidx.compose.runtime.setValue
 
 enum class Screen { SETUP, COLLECT }
 
+/** 新 session 的預設值。續採會由檔頭覆寫,切回「新 session」時必須還原回來——
+ *  否則點過一個舊的 N=10 session 再開新的,會沿用 N=10 默默把採集時間加倍。 */
+const val DEFAULT_MODE = "single"
+/** N=5:實測 N=5 的指紋庫雜訊 1.2 dB,而使用者端單次掃描帶進 10 dB——
+ *  把庫做得更準沒有意義,只是多花一倍採集時間。 */
+const val DEFAULT_SCANS_PER_POINT = 5
+
 class AppState {
   var screen by mutableStateOf(Screen.SETUP)
   var rpList by mutableStateOf<RpList?>(null)
-  var mode by mutableStateOf("single")
-  // N=5:實測 N=5 的指紋庫雜訊 1.2 dB,而使用者端單次掃描帶進 10 dB——
-  // 把庫做得更準沒有意義,只是多花一倍採集時間。(續採會由檔頭覆寫)
-  var scansPerPoint by mutableStateOf(5)
+  var mode by mutableStateOf(DEFAULT_MODE)
+  var scansPerPoint by mutableStateOf(DEFAULT_SCANS_PER_POINT)
   var rpName by mutableStateOf("rp-points.json")
   var writer by mutableStateOf<SessionWriter?>(null)
   var progress by mutableStateOf(Progress(emptySet(), emptySet()))

@@ -3,6 +3,7 @@ package com.taipeistation.wififp
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,6 +26,15 @@ class ModelTest {
 
   @Test(expected = IllegalArgumentException::class)
   fun parseRpList_badSchema() { parseRpList("""{"schema":"nope","points":[]}""") }
+
+  @Test fun parseRpList_rejects_missing_generated() {
+    // 放行空 generated 的話,session 會記下空的 rpGenerated,採到一半中斷後
+    // resumeBlockReason 會無條件擋住續採——數小時的採集就卡死。要擋在匯入。
+    for (bad in listOf(rpJson.replace(""""generated":"2026-07-24T10:00:00+08:00",""", ""),
+                       rpJson.replace("2026-07-24T10:00:00+08:00", ""))) {
+      assertThrows(IllegalArgumentException::class.java) { parseRpList(bad) }
+    }
+  }
 
   @Test fun pointLine_roundtrip() {
     val p = RpPoint("B1-001", "tra-concourse-b1", 40.0, -10.0, "東翼")
