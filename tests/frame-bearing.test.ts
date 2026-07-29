@@ -70,6 +70,11 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     for (const s of ['台大醫院站', '台北車站', '中山站']) expect(centroids.has(s)).toBe(true);
   });
 
+  it('station.json 有記 bearing_deg——缺欄位就沒東西可護', () => {
+    // schema 裡 bearing_deg 是選填，刪掉仍合法；不可讓下面的比對靜默代入 90 而通過
+    expect((stationDoc.frame as { bearing_deg?: number }).bearing_deg).toBeTypeOf('number');
+  });
+
   it('local +Y 與真北的差在參考值解析度（±4.3°）內', () => {
     // 實際 R 線在台北車站的切線方位角：南北兩段半弦的平均（整段弦有曲率）
     const south = bearing(at('台大醫院站'), at('台北車站'));
@@ -79,7 +84,9 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(trackBearing).toBeLessThan(22);
 
     // 模型月台軸的真方位角 = local +Y 的方位角 + 月台軸距 +Y 的夾角
-    const plusYBearing = (stationDoc.frame.bearing_deg ?? 90) - 90;
+    const bearingDeg = (stationDoc.frame as { bearing_deg?: number }).bearing_deg;
+    expect(bearingDeg).toBeTypeOf('number');
+    const plusYBearing = bearingDeg! - 90;
     const platform = rp.areas.find((a) => a.id === 'a-rp-platform');
     expect(platform).toBeDefined();
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
