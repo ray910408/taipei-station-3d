@@ -24,6 +24,11 @@ class CollectControllerTest {
     // 真機實測:握穩(0726 P02~P06)三軸 std ~1.2、magStd ~1.2
     assertEquals(MagQuality.OK, magQuality(mag(listOf(0.42, 0.33, 0.44), 0.36)))
     assertEquals(MagQuality.OK, magQuality(mag(listOf(1.13, 0.9, 1.0), 1.15)))
+    // 真機實測:北車手持站定(0729 P02/P03/P07/P09)——舊門檻 3.0 把這些誤報成轉動
+    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.27, 1.97, 2.21), 1.32)))
+    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.93, 2.81, 2.00), 1.00)))
+    assertEquals(MagQuality.OK, magQuality(mag(listOf(4.75, 3.43, 2.22), 1.57)))
+    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.87, 3.19, 1.51), 1.21)))
     // 真機實測:轉動(0725 s1649)三軸 ~16、magStd 1.75
     assertEquals(MagQuality.DEVICE_MOVED, magQuality(mag(listOf(16.27, 14.58, 13.55), 1.75)))
     // 真機實測:轉動且殘留偏移讓合力也超標(0726 P01 / P07)——舊版會誤判成 AMBIENT
