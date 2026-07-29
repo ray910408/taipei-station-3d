@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parseCsv } from '../tools/csv';
+import { bareName, exitKey, stationOf } from '../tools/opendata';
 
 /** 北捷開放資料 join key 稽核（見 refs/opendata/README.md）。
  *
@@ -18,12 +19,6 @@ const read = (f: string) => readFileSync(new URL(f, R), 'utf8');
 const body = (f: string) => parseCsv(read(f)).rows.slice(1);
 const header = (f: string) => parseCsv(read(f)).rows[0];
 const sha = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 16);
-
-/** 站名去尾綴。台北車站本名就以「站」結尾，不能無腦去尾 */
-const bareName = (s: string) => (s === '台北車站' ? s : s.replace(/站$/, '')).replace(/[（(].*/, '').trim();
-/** 出口編號正規化：去「出口」前綴、單一出口→0，其餘（M2、2A…）原樣保留 */
-const exitKey = (s: string) => (s === '單一出口' ? '0' : s.replace(/^出口/, ''));
-const stationOf = (exitName: string) => /^(台北車站|.+?站)/.exec(exitName)?.[1] ?? '';
 
 /** 這份快照的形狀，凍結起來。**不能拿進來的檔案自己的標頭當 schema**——整份被截掉一欄
  *  （標頭與每一列一起少）時那樣看是自洽的，一個欄位就這麼靜靜不見了。 */
@@ -69,10 +64,19 @@ function audit(): string[] {
     if (got.length !== want.header.length || got.some((h, i) => h !== want.header[i])) {
       found.add(`schema ${f} 標頭不符 ${JSON.stringify(got)}`);
     }
-    const rows = body(f).filter((r) => !(r.length === 1 && r[0] === '')); // 檔尾空行不算
+    const bodyRows = body(f);
+    const isBlank = (r: string[]) => r.length === 1 && r[0] === '';
+    const rows = bodyRows.filter((r) => !isBlank(r)); // 空白列（檔尾或內部）都不算列數
     if (rows.length !== want.rows) found.add(`rowcount ${f} ${rows.length}≠${want.rows}`);
-    body(f).forEach((r, i) => {
-      if (r.length === 1 && r[0] === '') return;
+    // 空白列只豁免「檔尾連續」那段——原意是容忍檔尾空行。插在資料中間的空白列不能一樣
+    // 悄悄放過：rowcount 濾掉它、下面的欄數檢查也濾掉它，完全不會被任何檢查看見
+    let tailStart = bodyRows.length;
+    while (tailStart > 0 && isBlank(bodyRows[tailStart - 1])) tailStart--;
+    bodyRows.forEach((r, i) => {
+      if (isBlank(r)) {
+        if (i < tailStart) found.add(`blankrow ${f} 第${i + 2}列`);
+        return;
+      }
       if (r.length !== want.header.length) found.add(`malformed ${f} 第${i + 2}列 欄數${r.length}≠${want.header.length}`);
     });
   }
@@ -175,9 +179,13 @@ function audit(): string[] {
     }
   }
   // 前導單引號：Excel 匯出「強制文字」的殘留，會被當成內容的一部分渲染出去
+  // 簽章要帶站名——只憑「檔名+欄名+內容前 12 字」的話，把同樣內容的 `'` 從一站搬到
+  // 另一個內容相同的站，簽章不會變，稽核照樣綠，但 README 會歸錯站
   for (const f of FILES) {
     for (const r of rowsOf(f)) {
-      r.forEach((v, i) => { if (v.startsWith("'")) found.add(`apostrophe ${f} ${SCHEMA[f].header[i]} ${v.slice(0, 12)}`); });
+      r.forEach((v, i) => {
+        if (v.startsWith("'")) found.add(`apostrophe ${f} ${STATION_COL[f](r)} ${SCHEMA[f].header[i]} ${v.slice(0, 12)}`);
+      });
     }
   }
   // 站名異體字
@@ -189,7 +197,7 @@ function audit(): string[] {
 
 /** README「已知原檔錯誤」的機器可讀版本。有增減＝原檔換版或掃描邏輯變了，兩邊都要更新。 */
 const EXPECTED = [
-  "apostrophe station-facilities.csv 充電站 '非付費區，近出口2", // 三和國中；Excel 強制文字殘留
+  "apostrophe station-facilities.csv 三和國中 充電站 '非付費區，近出口2", // Excel 強制文字殘留
   'arity 松江南京站 中和新蘆線|O08/G15',        // Line 只給一條、Station_Number 給兩個（G15 會被丟掉）
   'code 中山國中 elv=BF12 acc=BR12',            // elevator-locations 那邊錯，應為 BR12
   'code 七張 elv=G03A acc=G03',                // 同上，應為 G03
@@ -223,6 +231,17 @@ describe('北捷開放資料 join key 稽核', () => {
       .map((r) => r[3]).sort();
     expect(facilityNames.length).toBe(119);
     expect(sha(facilityNames.join('\n'))).toBe('a57f7ace95a0e907');
+
+    // elevator-locations 的「線別|站名|編號」三元組也要凍結指紋：`lineunknown` 檢查只拿
+    // acc 側的線別去查 lineCode，松江南京在 acc 只列「中和新蘆線」（已知 arity 缺陷，
+    // 見 EXPECTED 的 arity 條），所以 elv 側 G15 那列的「松山新店線」永遠不會被任何檢查
+    // 引用到——它是只有 elv 單側持有的資訊，唯一性檢查、雙向集合比對都吃不到這個洞，
+    // 把該欄改成錯字或別的線別，前面所有稽核都還是綠的，只有這組指紋看得出來
+    const elevatorTriples = body('elevator-locations.csv')
+      .filter((r) => r.length === SCHEMA['elevator-locations.csv'].header.length)
+      .map((r) => `${r[0].trim()}|${bareName(r[1])}|${r[2].trim()}`).sort();
+    expect(elevatorTriples.length).toBe(135);
+    expect(sha(elevatorTriples.join('\n'))).toBe('6d0a0626401139b7');
   });
 
   it('exit-coords 的「站|出口編號」鍵集合未變', () => {

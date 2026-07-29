@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseCsv } from '../tools/csv';
+import { stationOf } from '../tools/opendata';
 import stationDoc from '../data/station.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
@@ -34,7 +35,7 @@ function exitStats(): Map<string, { c: [number, number]; n: number; cov: [[numbe
   const pts = new Map<string, [number, number][]>();
   for (const c of rows.slice(1)) {
     if (c.length < 5) continue;
-    const station = /^(台北車站|.+?站)/.exec(c[1])?.[1];
+    const station = stationOf(c[1]);
     const lon = Number(c[3]), lat = Number(c[4]);
     if (!station || !Number.isFinite(lon) || !Number.isFinite(lat)) continue;
     const arr = pts.get(station) ?? [];
