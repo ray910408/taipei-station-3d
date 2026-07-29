@@ -61,6 +61,12 @@ function principalAxis(poly: Pt[]): [number, number] {
   return best
 }
 
+/** 格點被障礙擋住時的替代位置(單位:spacing 的倍數,由近到遠)。
+ *  橫向(dv)優先——月台樓梯井多半只吃掉中線,旁邊還走得過去。 */
+const BACKFILL: [number, number][] = ([] as [number, number][]).concat(
+  ...[0.25, 0.4, 0.5].map(r => [[0, r], [0, -r], [r, 0], [-r, 0], [r, r], [r, -r], [-r, r], [-r, -r]] as [number, number][]),
+)
+
 export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: number, clearance = 0.8): RpPoint[] {
   const areas = (floor.areas ?? []).filter(a => WALKABLE_KINDS.has(a.kind) && (a.polygon?.length ?? 0) >= 3)
   const units = (floor.units ?? []).filter(u => (u.polygon?.length ?? 0) >= 3)
@@ -86,18 +92,27 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
     // 列在該區的主軸方向上成形;跨區的走訪順序交給 chainRows,不要丟進全域的
     // round(y/spacing) 重新分列——各區相位不同會把不同區的列交錯在一起
     // (B3 曾因此在第 37→38 點倒退 52 m)。
+    // 只收自己這一區的點:落在鄰區的交給該區自己的格線。相鄰區相位不同時,
+    // 縫邊仍可能出現約 spacing/4 的點對(B3 有 5 對),屬冗餘而非錯誤——
+    // 不做距離去重,否則會砍掉窄區唯一的那一排,把覆蓋問題換個形式帶回來。
+    const placeable = (u: number, v: number): Pt | null => {
+      const p = toXY(u, v)
+      if (!pointInPolygon(p, area.polygon)) return null
+      if (nearWall(p, area.polygon, areas, clearance)) return null // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
+      if (units.some(un => pointInPolygon(p, un.polygon!) || distToPolygonEdge(p, un.polygon!) < clearance)) return null
+      return p
+    }
+
     const uTicks = ticks(Math.min(...us), Math.max(...us))
     for (const v of ticks(Math.min(...vs), Math.max(...vs))) {
       const row: { x: number; y: number; note?: string }[] = []
       for (const u of uTicks) {
-        const p = toXY(u, v)
-        // 只收自己這一區的點:落在鄰區的交給該區自己的格線。相鄰區相位不同時,
-        // 縫邊仍可能出現約 spacing/4 的點對(B3 有 5 對),屬冗餘而非錯誤——
-        // 不做距離去重,否則會砍掉窄區唯一的那一排,把上面修的覆蓋問題換個形式帶回來。
-        if (!pointInPolygon(p, area.polygon)) continue
-        if (nearWall(p, area.polygon, areas, clearance)) continue // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
-        if (units.some(u2 => pointInPolygon(p, u2.polygon!) || distToPolygonEdge(p, u2.polygon!) < clearance)) continue
-        row.push({ x: p[0], y: p[1], note: area.note })
+        // 被障礙擋掉就在鄰域找替代位置,不要直接丟棄:月台上的樓梯井會把整個
+        // 格點吃掉,留下兩倍間距的空洞(B4 曾出現兩段 41 m)。先讓開(橫向繞過
+        // 樓梯井)再前後挪,位移上限 spacing/2 以免和鄰點靠太近。
+        const p = placeable(u, v) ?? BACKFILL.reduce<Pt | null>(
+          (hit, [du, dv]) => hit ?? placeable(u + du * spacing, v + dv * spacing), null)
+        if (p) row.push({ x: p[0], y: p[1], note: area.note })
       }
       allRows.push(row)
     }

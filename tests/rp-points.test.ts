@@ -101,6 +101,27 @@ describe('generateFloorPoints', () => {
     expect(pts.some(p => 20 - p.x < 0.8)).toBe(false)             // 同距離的外牆側 → 剔除
   })
 
+  it('障礙不會造成兩倍間距的空洞:格點被擋就在鄰域找替代位置', () => {
+    // 真實案例:B4 月台中線上有 4 座 stair-void,直接丟棄格點會留下 41 m 的空段
+    const corridor = {
+      id: 'obstacle-floor',
+      slab: { outline: [[0, 0], [100, 0], [100, 20], [0, 20]] as Pt[] },
+      areas: [{ id: 'a', kind: 'corridor', polygon: [[0, 0], [100, 0], [100, 20], [0, 20]] as Pt[] }],
+      // 中線(y=10)上兩座障礙,兩側仍走得過去
+      units: [
+        { id: 'o1', kind: 'stair-void', polygon: [[28, 6], [38, 6], [38, 14], [28, 14]] as Pt[] },
+        { id: 'o2', kind: 'stair-void', polygon: [[58, 6], [68, 6], [68, 14], [58, 14]] as Pt[] },
+      ],
+    }
+    const pts = generateFloorPoints(corridor as never, 'C', 10, 0.8)
+    const steps = pts.slice(1).map((p, i) => Math.hypot(p.x - pts[i].x, p.y - pts[i].y))
+    expect(Math.max(...steps)).toBeLessThan(10 * 1.6) // 丟棄式作法會出現 2× 間距
+    // 障礙本身仍然淨空
+    for (const u of corridor.units) {
+      expect(pts.some(p => pointInPolygon([p.x, p.y], u.polygon as Pt[]))).toBe(false)
+    }
+  })
+
   it('比 spacing 窄的可走區不會整座落空', () => {
     // 真實案例:B2 四座月台各只有 11m 寬。全樓層共用一組格線時,20m 格線依相位
     // 只落進其中兩座,另兩座完全沒有點——採完才會發現半層沒資料。

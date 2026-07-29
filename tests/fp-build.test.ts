@@ -54,6 +54,18 @@ describe('parseSessions', () => {
     // 同版本照常合併
     expect(parseSessions([f1, [SESSION.replace('"s1"', '"s3"'), pt()].join('\n')]).sessions).toEqual(['s1', 's3'])
   })
+
+  it('缺 rpGenerated 的檔要合併 → 擋(缺版本≠版本相同)', () => {
+    // 兩個舊檔都沒記版本時,把它們都正規化成 '' 會讓相等檢查放行,
+    // 正好漏掉這個檢查要擋的情形——它們可能各自來自不同的清單。
+    const noVer = SESSION.replace(',"rpGenerated":"t"', '')
+    const a = [noVer, pt()].join('\n')
+    const b = [noVer.replace('"s1"', '"s2"'), pt()].join('\n')
+    expect(() => parseSessions([a, b])).toThrow(/沒記錄 rpGenerated/)
+    expect(() => parseSessions([a, [SESSION.replace('"s1"', '"s2"'), pt()].join('\n')])).toThrow(/沒記錄 rpGenerated/)
+    // 只有一個 session 時沒有可混的對象,缺版本無妨
+    expect(parseSessions([a]).sessions).toEqual(['s1'])
+  })
 })
 
 describe('cleanSamples(spec 1.1 逐條)', () => {

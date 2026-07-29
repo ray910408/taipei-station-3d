@@ -35,9 +35,14 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
       if (rec.type === 'session') {
         if (typeof rec.scansPerPoint !== 'number') throw new Error(`第 ${i + 1} 行:session header 缺 scansPerPoint`) // 否則短掃描規則靜默比 NaN
         const ver = typeof rec.rpGenerated === 'string' ? rec.rpGenerated : ''
-        if (listVer === null) listVer = ver
-        else if (ver !== listVer) {
-          throw new Error(`清單版本不一致:${sessions[0]} 用 rpGenerated=${listVer || '(缺)'},${rec.session} 用 ${ver || '(缺)'}。` +
+        if (listVer === null) listVer = ver // 只有一個 session 時沒有可混的對象,缺版本無妨
+        else if (ver === '' || listVer === '') {
+          // 缺版本 ≠ 版本相同。兩個都缺時若各自來自不同清單,把它們都正規化成 ''
+          // 會讓相等檢查放行,正好漏掉這個檢查要擋的情形
+          throw new Error(`要合併多個 session,但有檔案沒記錄 rpGenerated(${!ver ? rec.session : sessions[0]}),` +
+            `無法確認是否同一份清單。請分開建庫。`)
+        } else if (ver !== listVer) {
+          throw new Error(`清單版本不一致:${sessions[0]} 用 rpGenerated=${listVer},${rec.session} 用 ${ver}。` +
             `同一個 pointId 在兩份清單指向不同座標,合併會產出摻了兩套座標的庫——請分開建庫。`)
         }
         cur = rec; sessions.push(rec.session); continue
