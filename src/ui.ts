@@ -366,7 +366,7 @@ export function setupUI(opts: {
     floorButtons.hidden = mode !== 'overview';
     routeCard.hidden = mode !== 'preview';
     navBanner.hidden = mode !== 'nav';
-    syncNavBannerInsets(); // hidden 切換不保證觸發 ResizeObserver（display:none 的元素不被觀察）
+    syncNavBannerInsets(); // RO 通知在 rAF 之後才送達，cameraGoal 當幀就讀 insets，不同步呼叫第一幀會拿舊值
     if (mode !== 'nav') { transitionBanner.hidden = true; arriveCard.hidden = true; }
     if (mode !== 'overview') resetFloorFocus();
     if (mode === 'overview') resetEndpoints();

@@ -26,7 +26,7 @@ import { createSpeaker } from './speech';
 import { setupUI } from './ui';
 import { MODE_EXPLODE, type Mode } from './mode';
 import { floorOffsetY, applyExplode, easeInOutCubic, disposeDeep } from './explode';
-import { CameraRig, frameGoal } from './camera';
+import { CameraRig, frameGoal, VIEW_FOV } from './camera';
 import { buildPositionMarker, setFloorEmphasis, headingYaw, lerpYaw } from './follow';
 import { startNavSession, type EventOutcome, type NavSession } from './nav-session';
 import stationDoc from '../data/station.json';
@@ -98,7 +98,7 @@ async function boot(): Promise<void> {
   scene.add(stationGroup);
   attachPoiIcons(stationGroup, model); // Sprite 不入幾何，一律 runtime 附掛
 
-  const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
+  const camera = new THREE.PerspectiveCamera(VIEW_FOV, innerWidth / innerHeight, 0.1, 2000);
   camera.position.set(220, 140, 260);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   const fpsTick = attachFpsOverlay(renderer);

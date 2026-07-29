@@ -10,7 +10,7 @@ import {
 import { verticalStep, transitionLabel } from './mode';
 import { walkStep, crossedNodeIds, type WalkState } from './pdr';
 import type { CameraGoal } from './camera';
-import { chaseGoal, frameGoal, type ScreenInsets } from './camera';
+import { chaseGoal, frameGoal, VIEW_FOV, type ScreenInsets } from './camera';
 import {
   makeTween, tweenAt, chaseAim, aimPastVertical, type Tween, type PathTarget, swapFactors,
   type FloorSwap, planStepPath,
@@ -225,7 +225,7 @@ export function startNavSession(deps: NavSessionDeps, now: number): NavSession {
       // insets 讓開導航橫幅：marker 只在 connector 一端，往下的梯會落在畫面中心上方，
       // 不讓位就整個被橫幅蓋住（QA ISSUE-009）。橫幅在手機是底部 sheet，故上下都要讓。
       return frameGoal(
-        [nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], deps.aspect(), 55, deps.insets(),
+        [nodeWorld(holdEdge.from), nodeWorld(holdEdge.to)], deps.aspect(), VIEW_FOV, deps.insets(),
       );
     }
     if (atEnd(follow) && tween === null) {
