@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { parseCsv } from '../tools/csv';
 import stationDoc from '../data/station.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
@@ -7,11 +8,10 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
  *  模型的月台軸換算成真方位角後，必須落在北捷開放資料出入口 GPS 推得的實際 R 線走向附近。
  *  bearing_deg 被改、或月台幾何被整體旋轉，這裡就會紅。
  *
- *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，
- *  而重心不是軌道上的點：各站出口離散 RMS 85–129 m，除以 √出口數得各站重心 SE
- *  34.7–52.5 m；兩端合成後每條半弦的端點不確定度 57.3 m（701 m 那條）與
- *  69.5 m（552 m 那條），換算成角度是 ±4.7°／±7.2°。兩條半弦共用台北車站這個端點、
- *  且以相反符號進入，正確傳遞後平均值是 ±3.1°（當獨立平均會高估成 ±4.3°）。
+ *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，而重心不是
+ *  軌道上的點。推導見 docs/data-conventions.md：出口離散度要先投影到弦的法向
+ *  （方位角只吃垂直於弦的那半），再算進「兩條半弦共用台北車站端點」的共變異，
+ *  得隨機項 ±1.6°；直接拿二維徑向 RMS 又當兩弦獨立，會高估成 ±4.9°。
  *  容差取 6°，餘裕留給那條式子涵蓋不到的系統性偏差：台北車站(BL12/R10)、中山(R11/G14)
  *  都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別可供拆分。
  *  所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
@@ -22,12 +22,15 @@ const LAT0 = 25.0467;
 const M_PER_LAT = 111132.92 - 559.82 * Math.cos(rad(2 * LAT0)) + 1.175 * Math.cos(rad(4 * LAT0));
 const M_PER_LON = 111412.84 * Math.cos(rad(LAT0)) - 93.5 * Math.cos(rad(3 * LAT0));
 
-/** 各站出入口經緯度重心（refs/opendata/exit-coords.csv：項次,名稱,編號,經度,緯度,無障礙） */
-function exitCentroids(): Map<string, [number, number]> {
+/** 各站出入口經緯度重心（refs/opendata/exit-coords.csv：項次,名稱,編號,經度,緯度,無障礙）。
+ *  用共用 parser 而不是 split(',')——出入口名稱若合法地帶引號含逗號，逐行切會整列錯位，
+ *  那一筆出口就安靜地從重心裡消失，而 bearing 斷言仍然會過。 */
+function exitStats(): Map<string, { c: [number, number]; n: number }> {
   const csv = readFileSync(new URL('../refs/opendata/exit-coords.csv', import.meta.url), 'utf8');
+  const { rows, malformed } = parseCsv(csv);
+  if (malformed.length) throw new Error(`exit-coords.csv 語法有問題：${malformed.join('；')}`);
   const acc = new Map<string, [number, number, number]>();
-  for (const line of csv.split(/\r?\n/).slice(1)) {
-    const c = line.split(',');
+  for (const c of rows.slice(1)) {
     if (c.length < 5) continue;
     const station = /^(台北車站|.+?站)/.exec(c[1])?.[1];
     const lon = Number(c[3]), lat = Number(c[4]);
@@ -35,7 +38,7 @@ function exitCentroids(): Map<string, [number, number]> {
     const [x, y, n] = acc.get(station) ?? [0, 0, 0];
     acc.set(station, [x + lon, y + lat, n + 1]);
   }
-  return new Map([...acc].map(([k, [x, y, n]]) => [k, [x / n, y / n]]));
+  return new Map([...acc].map(([k, [x, y, n]]) => [k, { c: [x / n, y / n] as [number, number], n }]));
 }
 
 /** a→b 的真方位角（度，北為 0、順時針） */
@@ -62,15 +65,18 @@ function axisFromPlusY(polygon: number[][]): number {
 }
 
 describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
-  const centroids = exitCentroids();
+  const stats = exitStats();
   const at = (s: string) => {
-    const c = centroids.get(s);
-    if (!c) throw new Error(`exit-coords.csv 找不到 ${s}`);
-    return c;
+    const v = stats.get(s);
+    if (!v) throw new Error(`exit-coords.csv 找不到 ${s}`);
+    return v.c;
   };
 
-  it('出入口 CSV 仍含 R 線三站（台大醫院／台北車站／中山）', () => {
-    for (const s of ['台大醫院站', '台北車站', '中山站']) expect(centroids.has(s)).toBe(true);
+  it('出入口 CSV 仍含 R 線三站，且出口數與文件的推導一致', () => {
+    // 出口數要一起釘住：少一筆出口不會讓下面的 bearing 斷言變紅（掉一個台大醫院出口，
+    // 平均值仍落在 17° 附近），但 docs 那段不確定度就不是照這些點算出來的了
+    const n = Object.fromEntries(['台大醫院站', '台北車站', '中山站'].map((s) => [s, stats.get(s)?.n]));
+    expect(n).toEqual({ 台大醫院站: 4, 台北車站: 8, 中山站: 6 });
   });
 
   it('station.json 有記 bearing_deg——缺欄位就沒東西可護', () => {
@@ -79,7 +85,7 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
   });
 
   it('bearing_status 仍是 estimated——出口重心撐不起 surveyed', () => {
-    // schema 允許 surveyed，但這份開放資料只能給到隨機項 ±3.1°＋未量化的系統性偏差（見 docs/data-conventions.md）。
+    // schema 允許 surveyed，但這份開放資料只能給到隨機項 ±1.6°＋未量化的系統性偏差（見 docs/data-conventions.md）。
     // 要升級請先換掉參考來源（R 線軌道座標或實測月台端點），不是改這個字串。
     expect((stationDoc.frame as { bearing_status?: string }).bearing_status).toBe('estimated');
   });
@@ -100,6 +106,6 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(platform).toBeDefined();
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
 
-    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項 ±3.1°，餘裕留給未量化的系統性偏差
+    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // 隨機項僅 ±1.6°，餘裕幾乎全是留給未量化的系統性偏差
   });
 });

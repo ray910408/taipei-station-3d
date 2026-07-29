@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { parseCsv } from '../tools/csv';
 
 /** 北捷開放資料 join key 稽核（見 refs/opendata/README.md）。
  *
@@ -12,35 +13,6 @@ import { createHash } from 'node:crypto';
 const R = new URL('../refs/opendata/', import.meta.url);
 const read = (f: string) => readFileSync(new URL(f, R), 'utf8');
 
-/** 最小 CSV parser：elevator-locations 有帶引號的多行欄位 */
-function parseCsv(text: string): { rows: string[][]; malformed: string[] } {
-  const rows: string[][] = [];
-  const malformed: string[] = [];
-  let field = '', row: string[] = [], quoted = false, line = 1;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '\n') line++;
-      if (c !== '"') { field += c; continue; }
-      if (text[i + 1] === '"') { field += '"'; i++; continue; }
-      quoted = false;
-      // 收尾引號之後只允許逗號／換行／檔尾。`"月臺層"x` 這種寬鬆吃下去的話，
-      // 列數欄數都不會變，嚴格的 CSV 讀取器卻會拒收整份檔案
-      const next = text[i + 1];
-      if (next !== undefined && next !== ',' && next !== '\n' && next !== '\r') {
-        malformed.push(`第${line}行 收尾引號後接了 ${JSON.stringify(next)}`);
-      }
-    } else if (c === '"') quoted = true;
-    else if (c === ',') { row.push(field); field = ''; }
-    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; line++; }
-    else if (c !== '\r') field += c;
-  }
-  if (field || row.length) { row.push(field); rows.push(row); }
-  // 走到檔尾引號還沒收＝檔案語法壞掉。此時最後那個欄位會把剩下的內容整包吞進去，
-  // 列數欄數卻可能仍然「看起來正常」，所以要另外報出來
-  if (quoted) malformed.push('檔尾引號未收');
-  return { rows, malformed };
-}
 /** 資料列（不含標頭）。**不丟任何列**——欄數不對的列會被 `malformed` 檢查抓出來，
  *  在這裡 filter 掉等於讓截斷的列從所有後續檢查中安靜消失。 */
 const body = (f: string) => parseCsv(read(f)).rows.slice(1);
@@ -234,6 +206,23 @@ const EXPECTED = [
 describe('北捷開放資料 join key 稽核', () => {
   it('異常集合與 README 的已知錯誤清單一致', () => {
     expect(audit()).toEqual(EXPECTED);
+  });
+
+  it('兩個出口檔的鍵集合、station-facilities 的原始站名都未變', () => {
+    // 唯一性擋不住「改成另一個沒被用過的合法鍵」：ramp 側改 出口1→出口2 時鍵仍唯一、
+    // exit-coords 也查得到；station-facilities 把 板橋(環狀線) 改成 板橋(錯線) 時
+    // 原始名仍唯一、正規化後仍是「板橋」。這類改動只有整組指紋看得出來。
+    const rampKeys = body('exit-elevator-ramp-gps.csv')
+      .filter((r) => r.length === SCHEMA['exit-elevator-ramp-gps.csv'].header.length)
+      .map((r) => `${stationOf(r[1])}|${exitKey(r[2])}`).sort();
+    expect(rampKeys.length).toBe(190);
+    expect(sha(rampKeys.join('\n'))).toBe('67bba82d1c8d4e05');
+
+    const facilityNames = body('station-facilities.csv')
+      .filter((r) => r.length === SCHEMA['station-facilities.csv'].header.length)
+      .map((r) => r[3]).sort();
+    expect(facilityNames.length).toBe(119);
+    expect(sha(facilityNames.join('\n'))).toBe('a57f7ace95a0e907');
   });
 
   it('exit-coords 的「站|出口編號」鍵集合未變', () => {
