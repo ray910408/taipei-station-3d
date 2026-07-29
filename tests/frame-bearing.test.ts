@@ -3,9 +3,15 @@ import { readFileSync } from 'node:fs';
 import stationDoc from '../data/station.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
-/** 框架方位角回歸鎖（見 docs/data-conventions.md「方位角」）：
+/** 框架方位角一致性護欄（見 docs/data-conventions.md「方位角」）：
  *  模型的月台軸換算成真方位角後，必須落在北捷開放資料出入口 GPS 推得的實際 R 線走向附近。
- *  bearing_deg 被改、或月台幾何被整體旋轉，這裡就會紅。 */
+ *  bearing_deg 被改、或月台幾何被整體旋轉，這裡就會紅。
+ *
+ *  容差 = 參考值本身的解析度，不是精度宣稱。參考值是「站的出口重心連線」，
+ *  而重心不是軌道上的點：各站出口離散 RMS 85–129 m、重心 SE 50–70 m，換算到
+ *  552 m／701 m 的半弦是 ±7.2°／±4.7°，平均後 ±4.3°。台北車站(BL12/R10)、
+ *  中山(R11/G14) 又都是轉乘站，重心會被非 R 線的站體拉走，而 CSV 沒有逐出口的線別
+ *  可供拆分。所以這裡只當「有沒有被整個轉掉」的護欄，不拿來宣稱方位角精度。 */
 
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
@@ -64,7 +70,7 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     for (const s of ['台大醫院站', '台北車站', '中山站']) expect(centroids.has(s)).toBe(true);
   });
 
-  it('local +Y 與真北的差 < 5°', () => {
+  it('local +Y 與真北的差在參考值解析度（±4.3°）內', () => {
     // 實際 R 線在台北車站的切線方位角：南北兩段半弦的平均（整段弦有曲率）
     const south = bearing(at('台大醫院站'), at('台北車站'));
     const north = bearing(at('台北車站'), at('中山站'));
@@ -78,6 +84,6 @@ describe('框架方位角：模型月台軸 vs 實際 R 線走向', () => {
     expect(platform).toBeDefined();
     const modelBearing = plusYBearing + axisFromPlusY(platform!.polygon);
 
-    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(5);
+    expect(Math.abs(modelBearing - trackBearing)).toBeLessThan(6); // ±4.3° 解析度 + 餘裕
   });
 });

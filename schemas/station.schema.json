@@ -17,7 +17,7 @@
         "origin_note": { "type": "string" },
         "axis_note": { "type": "string" },
         "bearing_deg": { "type": "number" },
-        "bearing_status": { "enum": ["estimated", "crosschecked", "surveyed"] }
+        "bearing_status": { "enum": ["estimated", "surveyed"] }
       }
     },
     "systems": {
