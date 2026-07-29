@@ -123,7 +123,10 @@ function audit(): string[] {
     if (codeSet(codes) !== codeSet(elvCodes.get(name) ?? [])) continue;
     for (let i = 0; i < lines.length; i++) {
       const truth = lineCode.get(`${lines[i]}|${name}`);
-      if (truth && truth !== codes[i]) found.add(`order ${r[2]} ${r[0]}|${r[1]}`);
+      // 查無對照＝線別寫法在兩檔對不上（錯字、異體字），也是壞掉的 join key，
+      // 不能因為「沒東西可比」就跳過——那正是它會靜靜溜過去的原因
+      if (truth === undefined) found.add(`lineunknown ${r[2]} ${lines[i]}`);
+      else if (truth !== codes[i]) found.add(`order ${r[2]} ${r[0]}|${r[1]}`);
     }
   }
   // 編號值：兩檔的每站編號集合**雙向**比對。單向只查「elv 的編號在不在 acc 裡」的話，
@@ -141,11 +144,18 @@ function audit(): string[] {
   }
   for (const [code, names] of byCode) if (names.size > 1) found.add(`dupcode ${code} ${[...names].sort().join(',')}`);
 
-  // 出口編號：ramp-gps 每列都應能 join 回 exit-coords 的同站同編號
-  const coordKeys = new Set(coords.map((r) => `${stationOf(r[1])}|${exitKey(r[2])}`));
+  // 出口編號：ramp-gps 每列都應能 join 回 exit-coords 的同站同編號。
+  // exit-coords 這側先驗唯一性——把某站的出口改標成另一站既有的編號時，列數與座標值域
+  // 都不動、若該出口又沒有 ramp 對應列就完全無聲，只有重複鍵看得出來
+  const coordCount = new Map<string, number>();
+  for (const r of coords) {
+    const k = `${stationOf(r[1])}|${exitKey(r[2])}`;
+    coordCount.set(k, (coordCount.get(k) ?? 0) + 1);
+  }
+  for (const [k, n] of coordCount) if (n > 1) found.add(`dupexit exit-coords.csv ${k} x${n}`);
   for (const r of ramps) {
     const k = `${stationOf(r[1])}|${exitKey(r[2])}`;
-    if (!coordKeys.has(k)) found.add(`exitkey ${r[1]} ${r[2]}`);
+    if (!coordCount.has(k)) found.add(`exitkey ${r[1]} ${r[2]}`);
   }
   // 座標值域：兩個帶經緯度的檔案。實際有效值 lon 121.41~121.62、lat 24.96~25.17，
   // 這裡取大台北的寬鬆外框，抓的是掉小數點／非數值這種明顯壞值
@@ -157,6 +167,12 @@ function audit(): string[] {
       if (!ok) found.add(`coord ${f} ${r[1]} ${r[3]},${r[4]}`);
     }
   }
+  // 前導單引號：Excel 匯出「強制文字」的殘留，會被當成內容的一部分渲染出去
+  for (const f of FILES) {
+    for (const r of rowsOf(f)) {
+      r.forEach((v, i) => { if (v.startsWith("'")) found.add(`apostrophe ${f} ${SCHEMA[f].header[i]} ${v.slice(0, 12)}`); });
+    }
+  }
   // 站名異體字
   for (const f of ['accessibility-facilities.csv', 'elevator-locations.csv', 'exit-elevator-ramp-gps.csv',
     'exit-coords.csv', 'station-facilities.csv']) if (read(f).includes('幸褔')) found.add(`typo幸褔 ${f}`);
@@ -166,6 +182,7 @@ function audit(): string[] {
 
 /** README「已知原檔錯誤」的機器可讀版本。有增減＝原檔換版或掃描邏輯變了，兩邊都要更新。 */
 const EXPECTED = [
+  "apostrophe station-facilities.csv 充電站 '非付費區，近出口2", // 三和國中；Excel 強制文字殘留
   'arity 松江南京站 中和新蘆線|O08/G15',        // Line 只給一條、Station_Number 給兩個（G15 會被丟掉）
   'code 中山國中 elv=BF12 acc=BR12',            // elevator-locations 那邊錯，應為 BR12
   'code 七張 elv=G03A acc=G03',                // 同上，應為 G03
