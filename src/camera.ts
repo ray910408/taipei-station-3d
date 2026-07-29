@@ -7,6 +7,9 @@ export interface CameraGoal { pos: THREE.Vector3; target: THREE.Vector3 }
 export const CHASE_BACK = THEME.nav.chaseBack; // chase cam 後方水平距離（公尺）
 export const CHASE_UP = THEME.nav.chaseUp;     // chase cam 高度；back/up ≈ 27° 俯角
 
+// viewer 相機與 frameGoal 的 insets 投影共用——兩者不一致時讓位量算錯但不會炸，只會把內容推錯位置
+export const VIEW_FOV = 55;
+
 const FIT_MARGIN = 1.3;
 const MIN_RADIUS = 12; // 兩點很近（如單一豎井）時仍拉出能看清兩層的距離
 // inset 總和上限：總和→1 時可用半角→0、dist→∞。矮視窗配高卡片時夾住，寧可讓一點點遮擋。
@@ -48,7 +51,7 @@ export class CameraRig {
  *  不讓位就整個被蓋掉——而 marker 是使用者的自身位置指示。
  */
 export function frameGoal(
-  pts: THREE.Vector3[], aspect: number, fovDeg = 55, insets: ScreenInsets = {},
+  pts: THREE.Vector3[], aspect: number, fovDeg = VIEW_FOV, insets: ScreenInsets = {},
 ): CameraGoal {
   const sphere = new THREE.Box3().setFromPoints(pts).getBoundingSphere(new THREE.Sphere());
   const r = Math.max(sphere.radius, MIN_RADIUS);

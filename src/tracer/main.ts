@@ -3,7 +3,7 @@ import type { FloorDoc, SourceRef, SourcesDoc, Vec2 } from '../types';
 import { fitSimilarity, localToPx, type PxTransform } from './transform';
 import { fitView, screenToLocal, zoomAt, type ViewState } from './view';
 import { render, type RenderInput } from './render';
-import { createStore, type ToolContext, type ToolHandler, type ToolName, type TracerStore } from './store';
+import { createStore, isTraceable, pickSourceId, type ToolContext, type ToolHandler, type ToolName, type TracerStore } from './store';
 import { makeCalibrateTool } from './tool-calibrate';
 import { makeDrawTool, makeNavTool, makeSelectTool } from './tool-edit';
 import stationJson from '../../data/station.json';
@@ -55,7 +55,8 @@ function boot(store: TracerStore): void {
   if (saved.layers) store.layers = { ...store.layers, ...saved.layers };
   if (saved.imageOpacity !== undefined) store.imageOpacity = saved.imageOpacity;
   if (saved.views) store.views = saved.views;
-  store.sourceId = saved.sourceId ?? DEFAULT_SOURCE[store.floorId] ?? store.sourcesDoc.sources[0].id;
+  const traceable = store.sourcesDoc.sources.filter(isTraceable);
+  store.sourceId = pickSourceId(saved.sourceId, traceable.map((s) => s.id), DEFAULT_SOURCE[store.floorId]);
 
   function persistSession(): void {
     store.views[store.floorId] = store.view;
@@ -269,7 +270,7 @@ function boot(store: TracerStore): void {
     floorSel.append(opt);
   }
   const sourceSel = el<HTMLSelectElement>('#source');
-  for (const s of store.sourcesDoc.sources) {
+  for (const s of traceable) {
     const opt = document.createElement('option');
     opt.value = s.id;
     opt.textContent = s.id + (s.calibration ? '（已校準）' : '');

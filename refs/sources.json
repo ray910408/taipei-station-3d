@@ -126,6 +126,46 @@
       "license_note": "臺鐵公開站圖；臺鐵轉乘閘門判讀依據"
     },
     {
+      "id": "trtc-od-exit-coords",
+      "title": "北捷開放資料：車站出入口座標（WGS84）",
+      "file": "refs/opendata/exit-coords.csv",
+      "url": "https://data.gov.tw/dataset/128428",
+      "captured": "2026-07-23",
+      "license_note": "臺北大眾捷運公司開放資料；原檔 Big5，本副本已轉 UTF-8（內容未改）"
+    },
+    {
+      "id": "trtc-od-exit-elv-gps",
+      "title": "北捷開放資料：出入口無障礙電梯／坡道 GPS 座標",
+      "file": "refs/opendata/exit-elevator-ramp-gps.csv",
+      "url": "https://data.gov.tw/dataset/128414",
+      "captured": "2026-07-23",
+      "license_note": "臺北大眾捷運公司開放資料；原檔 Big5，本副本已轉 UTF-8（內容未改）"
+    },
+    {
+      "id": "trtc-od-accessibility",
+      "title": "北捷開放資料：車站無障礙設施資料（英文欄名）",
+      "file": "refs/opendata/accessibility-facilities.csv",
+      "url": "https://data.gov.tw/dataset/128416",
+      "captured": "2026-07-23",
+      "license_note": "臺北大眾捷運公司開放資料；原檔 Big5，本副本已轉 UTF-8（內容未改）"
+    },
+    {
+      "id": "trtc-od-elevators",
+      "title": "北捷開放資料：車站無障礙電梯位置（起訖層文字描述）",
+      "file": "refs/opendata/elevator-locations.csv",
+      "url": "https://data.taipei/dataset/detail?id=ba6b64b1-a387-4b34-93c6-7c3bf2dad3db",
+      "captured": "2026-07-23",
+      "license_note": "臺北大眾捷運公司開放資料；原檔 Big5，本副本已轉 UTF-8（內容未改）"
+    },
+    {
+      "id": "trtc-od-facilities",
+      "title": "北捷開放資料：車站設施資訊（電梯／電扶梯／售票機／廁所等）",
+      "file": "refs/opendata/station-facilities.csv",
+      "url": "https://data.gov.tw/dataset/128453",
+      "captured": "2026-07-23",
+      "license_note": "臺北大眾捷運公司開放資料；原檔 Big5，本副本已轉 UTF-8（內容未改）"
+    },
+    {
       "id": "site-guide-photo",
       "title": "台北車站資訊圖＋車站配置圖（現場照片/截圖）",
       "file": "refs/site/station-guide-photo.png",
