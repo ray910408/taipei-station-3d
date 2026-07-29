@@ -82,15 +82,26 @@ fun parseSession(lines: Sequence<String>): Progress {
   return Progress(done, skipped)
 }
 
-data class SessionHeader(val mode: String, val scansPerPoint: Int)
+data class SessionHeader(val mode: String, val scansPerPoint: Int, val rpGenerated: String)
 
-/** 讀 session 檔第一個 type=session 行的 mode/N;無則 null */
+/** 讀 session 檔第一個 type=session 行的 mode/N/清單版本;無則 null */
 fun parseSessionHeader(lines: Sequence<String>): SessionHeader? {
   for (line in lines) {
     val o = try { JSONObject(line) } catch (e: Exception) { continue }
     if (o.optString("type") == "session") {
-      return SessionHeader(o.optString("mode", "single"), o.optInt("scansPerPoint", 10))
+      return SessionHeader(
+        o.optString("mode", "single"), o.optInt("scansPerPoint", 10), o.optString("rpGenerated", ""))
     }
   }
   return null
+}
+
+/** 續採前必須擋:進度只認 point id,而重產清單會把同一個 id 指到不同座標
+ *  (例:B1-001 從 (87,-57) 變成 (18,-54))。清單版本不符卻續採,已完成的 id
+ *  會靜默跳過完全不相干的新位置,整個 session 混到兩套座標。 */
+fun resumeBlockReason(header: SessionHeader?, listGenerated: String): String? = when {
+  header == null -> "讀不到 session 檔頭,無法確認清單版本"
+  header.rpGenerated.isEmpty() -> "舊版 session 檔沒記錄清單版本,無法確認"
+  header.rpGenerated != listGenerated -> "清單版本不符——此 session 用的是 ${header.rpGenerated.take(10)} 產的清單,目前選的是 ${listGenerated.take(10)} 產的。請改開新 session。"
+  else -> null
 }

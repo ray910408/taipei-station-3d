@@ -106,18 +106,24 @@ for (let i = 0; i < fps.length; i++) {
 // 同位置隔一段時間重測才是指紋庫日後被查詢時要面對的雜訊。有重測就用它。
 let baseline = noiseFloor
 let baselineName = '分半雜訊'
+let ambiguous: { repMean: number; maxBin: number } | null = null
 if (repeats.length) {
   const repMean = repeats.reduce((a, r) => a + r.d, 0) / repeats.length
   console.log(`\n=== 同位置重測(時間漂移)===`)
   for (const r of repeats) console.log(`${r.a} vs ${r.b}: ${r.d.toFixed(2)} dB`)
-  // 重測點若比最遠的空間點對還遠,它就不是「同一點」——人沒走回原位,
-  // 拿它當基準會把基準抬到天上,推出「間距要放到 20m 以上」這種假結論。
+  // 重測距離大過最遠的空間點對時,有兩種可能且**指紋距離本身分不出來**:
+  //   (a) 人沒走回原位(現場無地標時很常見)——拿它當基準會推出假的「要 20m 以上」
+  //   (b) 環境真的漂移得那麼厲害(AP 上下線、人潮遮蔽)——退回分半雜訊則會低估
+  // 沒有獨立的位置證據就不該替使用者選一邊,兩個結論都印出來。
   const binMeans = [...bins.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length)
   const maxBin = binMeans.length ? Math.max(...binMeans) : Infinity
   if (repMean > maxBin) {
+    ambiguous = { repMean, maxBin }
     console.log(`\n⚠ 重測距離(${repMean.toFixed(2)} dB)比最遠的空間點對(${maxBin.toFixed(2)} dB)還大`)
-    console.log(`  → 這兩點不在同一位置:重測時沒走回原點(現場沒地標很容易這樣)。`)
-    console.log(`  → 基準退回分半雜訊;真實時間漂移仍未知,下次請確實走回原點重測。`)
+    console.log(`  兩種可能,指紋距離無法分辨:`)
+    console.log(`  (a) 重測時沒走回原點 → 真實漂移其實接近分半雜訊 ${noiseFloor.toFixed(2)} dB`)
+    console.log(`  (b) 環境真的劇烈漂移 → 基準就是 ${repMean.toFixed(2)} dB`)
+    console.log(`  下面兩個結論都會印;要定案得有獨立的位置證據(地標照片、回原點時的相對位置)。`)
   } else if (repMean > noiseFloor) {
     baseline = repMean
     baselineName = '時間漂移'
@@ -165,6 +171,21 @@ if (corr < 0.3) {
   console.log(`  → 要在 AP 密度足夠的真實場域(北車)重做,並確認有走足間距。`)
   console.log(`\n  若這批其實是「原地連測」(人沒移動,座標只是清單給的名目值):`)
   console.log(`  加 --fixed 重跑,會改測時間穩定性並推估每點該掃幾次。`)
+} else if (ambiguous) {
+  // 基準有兩個候選且指紋距離分不出哪個對,就把兩邊的結論都攤開,不替使用者選
+  const verdictFor = (b: number): string => {
+    const hit = sorted.find(bin => {
+      const arr = bins.get(bin)!
+      return arr.reduce((x, y) => x + y, 0) / arr.length / b >= 2
+    })
+    return hit !== undefined
+      ? `RP 間距 ≥ ${hit} m`
+      : `${Math.max(...sorted)} m 內都不足 2 倍 → 需更大間距或改區段級定位`
+  }
+  console.log(`\n⚠ 基準未定案(見上方重測警告),兩種可能各自的結論:`)
+  console.log(`  (a) 重測沒走回原點 → 基準 ${noiseFloor.toFixed(2)} dB → ${verdictFor(noiseFloor)}`)
+  console.log(`  (b) 環境真的漂移   → 基準 ${ambiguous.repMean.toFixed(2)} dB → ${verdictFor(ambiguous.repMean)}`)
+  console.log(`  → 差距這麼大時不要直接採用任一邊;先取得獨立的位置證據再定案。`)
 } else if (recommend > 0) {
   console.log(`指紋差達基準 2 倍的最小距離:${recommend} m`)
   console.log(`→ 建議 RP 間距 ≥ ${recommend} m(再密只是重複採同一份資訊)`)

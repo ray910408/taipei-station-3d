@@ -2,6 +2,7 @@ package com.taipeistation.wififp
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -75,5 +76,17 @@ class ModelTest {
     val h = parseSessionHeader(sequenceOf("junk", line))!!
     assertEquals("quad", h.mode)
     assertEquals(12, h.scansPerPoint)
+    assertEquals("g", h.rpGenerated)
+  }
+
+  @Test fun resume_blocked_when_rp_list_regenerated() {
+    // 重產清單會讓同一個 id 指到不同座標(B1-001 從 (87,-57) 變 (18,-54)),
+    // 進度只認 id,續採會靜默跳過不相干的新位置
+    val h = SessionHeader("single", 5, "2026-07-25T15:01:24.008Z")
+    assertNull(resumeBlockReason(h, "2026-07-25T15:01:24.008Z"))
+    assertNotNull(resumeBlockReason(h, "2026-07-29T08:12:00.000Z"))
+    // 讀不到檔頭 / 舊版檔頭沒記版本 → 一律擋,不猜
+    assertNotNull(resumeBlockReason(null, "2026-07-29T08:12:00.000Z"))
+    assertNotNull(resumeBlockReason(SessionHeader("single", 5, ""), "2026-07-29T08:12:00.000Z"))
   }
 }

@@ -134,9 +134,17 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
       },
         label = { Text("續採 ${f.name.removePrefix("wifi-fp-").removeSuffix(".jsonl")}") })
     }
+    // 清單版本不符時擋下續採:同一個 point id 在重產的清單裡會指到不同座標
+    val resumeBlock = resumeFile?.let { f ->
+      app.rpList?.let { resumeBlockReason(f.useLines { parseSessionHeader(it) }, it.generated) }
+    }
+    if (resumeBlock != null) {
+      Text("⚠ 不能續採:$resumeBlock", color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium)
+    }
 
     Button(
-      enabled = permsOk && locOn && wifiOn && app.rpList != null,
+      enabled = permsOk && locOn && wifiOn && app.rpList != null && resumeBlock == null,
       modifier = Modifier.fillMaxWidth().height(60.dp),
       onClick = {
         val list = app.rpList!!
