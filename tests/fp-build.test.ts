@@ -129,10 +129,14 @@ const sampleAt = (pointId: string, x: number, y: number, aps: [string, string, n
     scans: Array.from({ length: 3 }, () => ({ t: 't', fresh: true, aps: aps.map(([bssid, ssid, rssi]) => ({ bssid, ssid, rssi, freq: 2437 })) })),
   })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
 
+/** 出現率測試用:設定 N 與實際批數都是 3,分母才等於批數(否則要用設定的 scansPerPoint) */
+const SESSION_N3 = SESSION.replace('"scansPerPoint":10', '"scansPerPoint":3')
+
 /** 同上,但只讓 AP 出現在 3 批中的前 `hits` 批——用來造出「出現率低」的樣本 */
-const sampleRate = (pointId: string, x: number, y: number, bssid: string, ssid: string, rssi: number, hits: number) =>
-  parseSessions([[SESSION, pt({
-    pointId, x, y, floor: 'f0',
+const sampleRate = (pointId: string, x: number, y: number, bssid: string, ssid: string, rssi: number,
+                    hits: number, slot: number | null = null) =>
+  parseSessions([[SESSION_N3, pt({
+    pointId, x, y, floor: 'f0', headingSlot: slot,
     scans: Array.from({ length: 3 }, (_, i) => ({
       t: 't', fresh: true, aps: i < hits ? [{ bssid, ssid, rssi, freq: 2437 }] : [],
     })),
@@ -202,16 +206,21 @@ describe('filterHotspots(spec 1.2 三規則)', () => {
     // quad 模式同一個 pointId 有 4 筆樣本(headingSlot 0/90/180/270)。命中數會跨朝向
     // 累加,分母若只取「第一個看到它的朝向」,4 次命中會算成 4/3=1.0 而脫罪;
     // 正確分母是該 RP 的全部批數 4×3=12 → 0.33,仍屬 rare。
-    const quad = (slot: number, hits: number) =>
-      parseSessions([[SESSION, pt({
-        pointId: 'Q1', x: 0, y: 0, floor: 'f0', headingSlot: slot,
-        scans: Array.from({ length: 3 }, (_, i) => ({
-          t: 't', fresh: true, aps: i < hits ? [{ bssid: 'dd:00:00:00:00:01', ssid: 'T', rssi: -70, freq: 2437 }] : [],
-        })),
-      })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
+    const quad = (slot: number) => sampleRate('Q1', 0, 0, 'dd:00:00:00:00:01', 'T', -70, 1, slot)
     const kept = [...goodBase('aa:00:00:00:00:01', 'OK'),
-      ...quad(0, 1), ...quad(90, 1), ...quad(180, 1), ...quad(270, 1)]
+      ...quad(0), ...quad(90), ...quad(180), ...quad(270)]
     expect(filterHotspots(kept).get('dd:00:00:00:00:01')).toBe('rare')
+  })
+
+  it('規則3 掃描大量失敗的點不能靠僅有的一批脫罪', () => {
+    // 掃描失敗不會產生批次(ScanEngine 的 Outcome.Failed 不寫入),所以 N=10 只成功 1 批時
+    // 用「實際批數」當分母,那一批裡的任何 BSSID 都是 100% 出現率——一次性的路過熱點
+    // 就這樣脫罪。分母改用設定的 scansPerPoint(10),1/10=0.1 仍判 rare。
+    const one = parseSessions([[SESSION, pt({
+      pointId: 'S1', x: 0, y: 0, floor: 'f0', actualScans: 1,
+      scans: [{ t: 't', fresh: true, aps: [{ bssid: 'cc:00:00:00:00:09', ssid: 'Once', rssi: -70, freq: 2437 }] }],
+    })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
+    expect(filterHotspots([...goodBase('aa:00:00:00:00:01', 'OK'), ...one]).get('cc:00:00:00:00:09')).toBe('rare')
   })
 
   it('規則3 出現率脫罪:RP 數少但每批都在 → 是固定 AP,不是熱點', () => {

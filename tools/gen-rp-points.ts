@@ -166,7 +166,9 @@ function main() {
   }))
   const clearance = Number(values.clearance ?? 0.8)
   const outDir = values.out ?? 'rp'
-  const n = Number(values.n ?? 10) // 工時估算用的每點掃描次數
+  // 工時估算用的每點掃描次數;預設值必須跟 APK 的 DEFAULT_SCANS_PER_POINT 一致,
+  // 否則終端摘要的工時會是實際的兩倍,規劃現場行程時整個估錯。
+  const n = Number(values.n ?? 5)
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
   const wanted = (values.floors ?? '').split(',').filter(Boolean)
   const floors = station.floors.filter((f: { id: string }) => wanted.length === 0 || wanted.includes(f.id))

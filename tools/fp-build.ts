@@ -108,11 +108,17 @@ export const DRIFT_STRONG = -75   // 「不弱」門檻(dBm)
 
 export function filterHotspots(kept: CleanSample[]): Map<string, string> {
   // 每 BSSID:出現過的 RP(座標/樓層/每 RP 平均 RSSI)與看過的 ssid
-  // 出現率的分母要是「該 RP 的全部批數」。四朝向模式下同一個 pointId 有 4 筆樣本,
-  // 命中數 n 會跨朝向累加,分母若只取第一個看到它的朝向(N=5),四朝向各中一次
-  // 會算成 4/5=0.8 而脫罪,實際是 4/20=0.2。分母要先獨立於 AP 算好。
+  // 出現率的分母要是「該 RP 應有的全部批數」,兩個都要顧到:
+  // (a) 四朝向模式下同一個 pointId 有 4 筆樣本,命中數 n 會跨朝向累加,分母若只取
+  //     第一個看到它的朝向(N=5),四朝向各中一次會算成 4/5=0.8 而脫罪,實際是 4/20。
+  // (b) 用「實際成功批數」當分母時,掃描大量失敗的點(N=5 只成功 1 批)會讓那一批裡的
+  //     任何 BSSID 都變成 100% 出現率——一次性的路過熱點就這樣脫罪進庫。改用設定的
+  //     scansPerPoint 當分母:證據少就該算出低出現率,而不是把少量證據當成鐵證。
   const batchesAt = new Map<string, number>()
-  for (const { rec } of kept) batchesAt.set(rec.pointId, (batchesAt.get(rec.pointId) ?? 0) + rec.scans.length)
+  for (const { rec } of kept) {
+    batchesAt.set(rec.pointId,
+      (batchesAt.get(rec.pointId) ?? 0) + Math.max(rec.scansPerPoint, rec.scans.length))
+  }
 
   const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number }> }>()
   for (const { rec } of kept) {
