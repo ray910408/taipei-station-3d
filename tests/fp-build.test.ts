@@ -44,6 +44,28 @@ describe('parseSessions', () => {
     const bad = SESSION.replace('"scansPerPoint":10,', '')
     expect(() => parseSessions([[bad, pt()].join('\n')])).toThrow(/1/)
   })
+
+  it('混不同清單版本的檔 → 擋下(否則產出摻兩套座標的庫且不報錯)', () => {
+    // 樣本只以 (pointId, headingSlot) 為鍵,而重產的清單會把同一個 id 指到不同座標。
+    // 合併時新檔覆蓋同名 id、舊清單獨有的 id 原封留下,結果無聲無息地混了兩套座標。
+    const f1 = [SESSION, pt()].join('\n')
+    const f2 = [SESSION.replace('"s1"', '"s2"').replace('"rpGenerated":"t"', '"rpGenerated":"t2"'), pt()].join('\n')
+    expect(() => parseSessions([f1, f2])).toThrow(/清單版本不一致/)
+    // 同版本照常合併
+    expect(parseSessions([f1, [SESSION.replace('"s1"', '"s3"'), pt()].join('\n')]).sessions).toEqual(['s1', 's3'])
+  })
+
+  it('缺 rpGenerated 的檔要合併 → 擋(缺版本≠版本相同)', () => {
+    // 兩個舊檔都沒記版本時,把它們都正規化成 '' 會讓相等檢查放行,
+    // 正好漏掉這個檢查要擋的情形——它們可能各自來自不同的清單。
+    const noVer = SESSION.replace(',"rpGenerated":"t"', '')
+    const a = [noVer, pt()].join('\n')
+    const b = [noVer.replace('"s1"', '"s2"'), pt()].join('\n')
+    expect(() => parseSessions([a, b])).toThrow(/沒記錄 rpGenerated/)
+    expect(() => parseSessions([a, [SESSION.replace('"s1"', '"s2"'), pt()].join('\n')])).toThrow(/沒記錄 rpGenerated/)
+    // 只有一個 session 時沒有可混的對象,缺版本無妨
+    expect(parseSessions([a]).sessions).toEqual(['s1'])
+  })
 })
 
 describe('cleanSamples(spec 1.1 逐條)', () => {
@@ -80,8 +102,8 @@ describe('cleanSamples(spec 1.1 逐條)', () => {
   })
 
   it('兩者同幅度漲=環境擾動:軸向超標但未達合力×2 → WiFi 不降權', () => {
-    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [3.5, 3.2, 3], magStd: 1.9 } })]))
-    expect(kept[0]).toMatchObject({ w: 1, magOk: false }) // 軸 3.5 未達 1.9×2=3.8 → 非轉動
+    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [7.0, 6.5, 6], magStd: 4.0 } })]))
+    expect(kept[0]).toMatchObject({ w: 1, magOk: false }) // 軸 7.0 超過門檻 6 但未達 4.0×2=8 → 非轉動
   })
 
   it('環境擾動(magStd>2)→ 剔磁力、留 WiFi 全權重', () => {
@@ -105,6 +127,19 @@ const sampleAt = (pointId: string, x: number, y: number, aps: [string, string, n
   parseSessions([[SESSION, pt({
     pointId, x, y, floor,
     scans: Array.from({ length: 3 }, () => ({ t: 't', fresh: true, aps: aps.map(([bssid, ssid, rssi]) => ({ bssid, ssid, rssi, freq: 2437 })) })),
+  })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
+
+/** 出現率測試用:設定 N 與實際批數都是 3,分母才等於批數(否則要用設定的 scansPerPoint) */
+const SESSION_N3 = SESSION.replace('"scansPerPoint":10', '"scansPerPoint":3')
+
+/** 同上,但只讓 AP 出現在 3 批中的前 `hits` 批——用來造出「出現率低」的樣本 */
+const sampleRate = (pointId: string, x: number, y: number, bssid: string, ssid: string, rssi: number,
+                    hits: number, slot: number | null = null) =>
+  parseSessions([[SESSION_N3, pt({
+    pointId, x, y, floor: 'f0', headingSlot: slot,
+    scans: Array.from({ length: 3 }, (_, i) => ({
+      t: 't', fresh: true, aps: i < hits ? [{ bssid, ssid, rssi, freq: 2437 }] : [],
+    })),
   })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
 
 /** 三個相距 <30m 的 RP 都看到同一 AP → 通過 rare 門檻的「良民背景」 */
@@ -154,16 +189,49 @@ describe('filterHotspots(spec 1.2 三規則)', () => {
     expect(ex.has('bb:00:00:00:00:02')).toBe(false)
   })
 
-  it('規則3 極低出現率:出現 RP 數 < 3 → rare', () => {
+  it('規則3 rare:RP 數少且在該點也只是偶爾出現 → 判熱點', () => {
     const kept = [
       ...goodBase('aa:00:00:00:00:01', 'OK'),
-      ...sampleAt('G1', 0, 0, [['ff:00:00:00:00:01', 'Z', -70]]),
-      ...sampleAt('G2', 5, 0, [['ff:00:00:00:00:01', 'Z', -72]]), // 只有 2 個 RP
+      // 只有 2 個 RP,且兩處都只被 1/3 批掃到——路過的手機
+      ...sampleRate('G1', 0, 0, 'ff:00:00:00:00:01', 'Z', -70, 1),
+      ...sampleRate('G2', 5, 0, 'ff:00:00:00:00:01', 'Z', -72, 1),
     ]
     const ex = filterHotspots(kept)
     expect(ex.get('ff:00:00:00:00:01')).toBe('rare')
     expect(ex.has('aa:00:00:00:00:01')).toBe(false) // 3 RP 達標
     expect(HOTSPOT_MIN_RP).toBe(3)
+  })
+
+  it('規則3 出現率分母含同 RP 的其他朝向:四朝向各中一次不算高出現率', () => {
+    // quad 模式同一個 pointId 有 4 筆樣本(headingSlot 0/90/180/270)。命中數會跨朝向
+    // 累加,分母若只取「第一個看到它的朝向」,4 次命中會算成 4/3=1.0 而脫罪;
+    // 正確分母是該 RP 的全部批數 4×3=12 → 0.33,仍屬 rare。
+    const quad = (slot: number) => sampleRate('Q1', 0, 0, 'dd:00:00:00:00:01', 'T', -70, 1, slot)
+    const kept = [...goodBase('aa:00:00:00:00:01', 'OK'),
+      ...quad(0), ...quad(90), ...quad(180), ...quad(270)]
+    expect(filterHotspots(kept).get('dd:00:00:00:00:01')).toBe('rare')
+  })
+
+  it('規則3 掃描大量失敗的點不能靠僅有的一批脫罪', () => {
+    // 掃描失敗不會產生批次(ScanEngine 的 Outcome.Failed 不寫入),所以 N=10 只成功 1 批時
+    // 用「實際批數」當分母,那一批裡的任何 BSSID 都是 100% 出現率——一次性的路過熱點
+    // 就這樣脫罪。分母改用設定的 scansPerPoint(10),1/10=0.1 仍判 rare。
+    const one = parseSessions([[SESSION, pt({
+      pointId: 'S1', x: 0, y: 0, floor: 'f0', actualScans: 1,
+      scans: [{ t: 't', fresh: true, aps: [{ bssid: 'cc:00:00:00:00:09', ssid: 'Once', rssi: -70, freq: 2437 }] }],
+    })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
+    expect(filterHotspots([...goodBase('aa:00:00:00:00:01', 'OK'), ...one]).get('cc:00:00:00:00:09')).toBe('rare')
+  })
+
+  it('規則3 出現率脫罪:RP 數少但每批都在 → 是固定 AP,不是熱點', () => {
+    // RP 間距 20 m 的月台上,正常 AP 的有效範圍常只涵蓋 1~2 個 RP,湊滿 3 個要橫跨約 40 m。
+    // 只用 RP 數當判準會隨間距漂移,把真 AP 當熱點刪掉。
+    const kept = [
+      ...goodBase('aa:00:00:00:00:01', 'OK'),
+      ...sampleRate('P1', 0, 0, 'ee:00:00:00:00:01', 'Fixed', -60, 3),
+      ...sampleRate('P2', 20, 0, 'ee:00:00:00:00:01', 'Fixed', -78, 3),
+    ]
+    expect(filterHotspots(kept).has('ee:00:00:00:00:01')).toBe(false)
   })
 })
 

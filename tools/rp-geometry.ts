@@ -13,19 +13,49 @@ export function distToPolygonEdge(p: Pt, poly: Pt[]): number {
   return min
 }
 
-/** 蛇行(boustrophedon):按 y 分列由南到北,列內 x 隔列反向 */
-export function serpentineOrder<T extends { x: number; y: number }>(points: T[], spacing: number): T[] {
-  const rows = new Map<number, T[]>()
-  for (const p of points) {
-    const r = Math.round(p.y / spacing)
-    const row = rows.get(r)
-    if (row) row.push(p)
-    else rows.set(r, [p])
+/** 把已成形的列串成一條行走路線:每次挑端點離目前位置最近的未走列,必要時整列反向。
+ *  列必須由呼叫端依各自的區/方向產生——逐區各自蛇行會在區與區之間留下整條長廊的
+ *  回頭路(B2 四座月台每座都從同一端開始,曾因此多走 450 m)。 */
+export function chainRows<T extends { x: number; y: number }>(rows: T[][]): T[] {
+  const valid = rows.filter(r => r.length > 0)
+  if (valid.length === 0) return []
+
+  // 純貪婪的結果高度取決於起點,隨便挑第一列會留下一條橫跨全樓層的回頭路
+  // (B1 曾因此出現 96 m 的單步跳躍)。列數每層 ≤20,直接試遍所有起點取最短。
+  const runFrom = (start: number): { seq: T[]; len: number } => {
+    const left = valid.map((r, i) => ({ r, i }))
+    const seq: T[] = []
+    let len = 0
+    let cur: { x: number; y: number } | null = null
+    let pick = left.findIndex(e => e.i === start)
+    while (left.length > 0) {
+      if (cur !== null) {
+        let bd = Infinity
+        for (const [i, e] of left.entries()) {
+          const dh = Math.hypot(e.r[0].x - cur.x, e.r[0].y - cur.y)
+          const dt = Math.hypot(e.r[e.r.length - 1].x - cur.x, e.r[e.r.length - 1].y - cur.y)
+          if (dh < bd) { bd = dh; pick = i }
+          if (dt < bd) { bd = dt; pick = ~i } // 補碼表示「這列要反向」
+        }
+        len += bd
+      }
+      const rev = pick < 0
+      const idx = rev ? ~pick : pick
+      const row = rev ? [...left[idx].r].reverse() : left[idx].r
+      left.splice(idx, 1)
+      for (let k = 1; k < row.length; k++) len += Math.hypot(row[k].x - row[k - 1].x, row[k].y - row[k - 1].y)
+      seq.push(...row)
+      cur = row[row.length - 1]
+      pick = 0
+    }
+    return { seq, len }
   }
-  const out: T[] = []
-  const keys = [...rows.keys()].sort((a, b) => a - b)
-  keys.forEach((r, idx) => {
-    out.push(...rows.get(r)!.sort((a, b) => (idx % 2 === 0 ? a.x - b.x : b.x - a.x)))
-  })
-  return out
+
+  let best = runFrom(0)
+  for (let s = 1; s < valid.length; s++) {
+    const cand = runFrom(s)
+    if (cand.len < best.len) best = cand
+  }
+  return best.seq
 }
+

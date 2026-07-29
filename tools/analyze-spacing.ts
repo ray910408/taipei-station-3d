@@ -106,11 +106,34 @@ for (let i = 0; i < fps.length; i++) {
 // 同位置隔一段時間重測才是指紋庫日後被查詢時要面對的雜訊。有重測就用它。
 let baseline = noiseFloor
 let baselineName = '分半雜訊'
+let ambiguous: { repMean: number; maxBin: number; goodMean: number } | null = null
 if (repeats.length) {
   const repMean = repeats.reduce((a, r) => a + r.d, 0) / repeats.length
   console.log(`\n=== 同位置重測(時間漂移)===`)
   for (const r of repeats) console.log(`${r.a} vs ${r.b}: ${r.d.toFixed(2)} dB`)
-  if (repMean > noiseFloor) {
+  // 重測距離大過最遠的空間點對時,有兩種可能且**指紋距離本身分不出來**:
+  //   (a) 人沒走回原位(現場無地標時很常見)——拿它當基準會推出假的「要 20m 以上」
+  //   (b) 環境真的漂移得那麼厲害(AP 上下線、人潮遮蔽)——退回分半雜訊則會低估
+  // 沒有獨立的位置證據就不該替使用者選一邊,兩個結論都印出來。
+  const binMeans = [...bins.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length)
+  const maxBin = binMeans.length ? Math.max(...binMeans) : Infinity
+  // 逐對判定,不能只看平均:一組正常的重測會把另一組明顯站錯位置的稀釋掉,
+  // 平均值就這樣混進「可信的時間漂移」被當基準用。
+  const suspect = repeats.filter(r => r.d > maxBin)
+  if (suspect.length > 0) {
+    const good = repeats.filter(r => r.d <= maxBin)
+    // 夾到 noiseFloor 以上:分半雜訊是同一批資料量到的、不可避免的抖動,基準不可能
+    // 比它更低。非模糊分支也是只在漂移「大於」它時才換基準,兩邊判準要一致。
+    const goodMean = Math.max(noiseFloor,
+      good.length ? good.reduce((a, r) => a + r.d, 0) / good.length : noiseFloor)
+    console.log(`\n⚠ ${suspect.length}/${repeats.length} 組重測比最遠的空間點對(${maxBin.toFixed(2)} dB)還大:` +
+      suspect.map(r => `${r.a}vs${r.b} ${r.d.toFixed(1)}`).join('、'))
+    console.log(`  兩種可能,指紋距離無法分辨:`)
+    console.log(`  (a) 這些重測沒走回原點 → 基準取其餘可信的重測 ${goodMean.toFixed(2)} dB`)
+    console.log(`  (b) 環境真的劇烈漂移   → 基準取全部重測的平均 ${repMean.toFixed(2)} dB`)
+    console.log(`  下面兩個結論都會印;要定案得有獨立的位置證據(地標照片、回原點時的相對位置)。`)
+    ambiguous = { repMean: Math.max(noiseFloor, repMean), maxBin, goodMean }
+  } else if (repMean > noiseFloor) {
     baseline = repMean
     baselineName = '時間漂移'
     console.log(`時間漂移(${repMean.toFixed(2)} dB)> 分半雜訊(${noiseFloor.toFixed(2)} dB)`)
@@ -157,6 +180,21 @@ if (corr < 0.3) {
   console.log(`  → 要在 AP 密度足夠的真實場域(北車)重做,並確認有走足間距。`)
   console.log(`\n  若這批其實是「原地連測」(人沒移動,座標只是清單給的名目值):`)
   console.log(`  加 --fixed 重跑,會改測時間穩定性並推估每點該掃幾次。`)
+} else if (ambiguous) {
+  // 基準有兩個候選且指紋距離分不出哪個對,就把兩邊的結論都攤開,不替使用者選
+  const verdictFor = (b: number): string => {
+    const hit = sorted.find(bin => {
+      const arr = bins.get(bin)!
+      return arr.reduce((x, y) => x + y, 0) / arr.length / b >= 2
+    })
+    return hit !== undefined
+      ? `RP 間距 ≥ ${hit} m`
+      : `${Math.max(...sorted)} m 內都不足 2 倍 → 需更大間距或改區段級定位`
+  }
+  console.log(`\n⚠ 基準未定案(見上方重測警告),兩種可能各自的結論:`)
+  console.log(`  (a) 可疑的重測沒走回原點 → 基準 ${ambiguous.goodMean.toFixed(2)} dB → ${verdictFor(ambiguous.goodMean)}`)
+  console.log(`  (b) 環境真的漂移   → 基準 ${ambiguous.repMean.toFixed(2)} dB → ${verdictFor(ambiguous.repMean)}`)
+  console.log(`  → 差距這麼大時不要直接採用任一邊;先取得獨立的位置證據再定案。`)
 } else if (recommend > 0) {
   console.log(`指紋差達基準 2 倍的最小距離:${recommend} m`)
   console.log(`→ 建議 RP 間距 ≥ ${recommend} m(再密只是重複採同一份資訊)`)

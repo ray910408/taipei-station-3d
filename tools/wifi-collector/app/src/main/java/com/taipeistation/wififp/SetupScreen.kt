@@ -124,7 +124,9 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
 
     // session 選擇
     Text("Session", style = MaterialTheme.typography.titleMedium)
-    FilterChip(selected = resumeFile == null, onClick = { resumeFile = null }, label = { Text("新 session") })
+    // 切回新 session 必須把續採檔頭覆寫掉的 mode/N 還原,否則會沿用舊 session 的設定
+    FilterChip(selected = resumeFile == null, label = { Text("新 session") },
+      onClick = { resumeFile = null; app.mode = DEFAULT_MODE; app.scansPerPoint = DEFAULT_SCANS_PER_POINT })
     sessions.value.take(5).forEach { f ->
       FilterChip(selected = resumeFile == f, onClick = {
         resumeFile = f
@@ -134,9 +136,17 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
       },
         label = { Text("續採 ${f.name.removePrefix("wifi-fp-").removeSuffix(".jsonl")}") })
     }
+    // 清單版本不符時擋下續採:同一個 point id 在重產的清單裡會指到不同座標
+    val resumeBlock = resumeFile?.let { f ->
+      app.rpList?.let { resumeBlockReason(f.useLines { parseSessionHeader(it) }, it.generated) }
+    }
+    if (resumeBlock != null) {
+      Text("⚠ 不能續採:$resumeBlock", color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium)
+    }
 
     Button(
-      enabled = permsOk && locOn && wifiOn && app.rpList != null,
+      enabled = permsOk && locOn && wifiOn && app.rpList != null && resumeBlock == null,
       modifier = Modifier.fillMaxWidth().height(60.dp),
       onClick = {
         val list = app.rpList!!

@@ -21,7 +21,11 @@ fun parseRpList(json: String): RpList {
     } catch (e: Exception) { throw IllegalArgumentException("points[$i] 格式錯:${e.message}") }
   }
   require(pts.isNotEmpty()) { "points 為空" }
-  return RpList(root.optString("station"), root.optString("generated"), pts)
+  // generated 是續採時比對清單版本的唯一依據。這裡放行空值的話,session 會記下空的
+  // rpGenerated,採到一半中斷後就再也續採不了——要擋就擋在匯入,不能等到續採才發現。
+  val generated = root.optString("generated")
+  require(generated.isNotEmpty()) { "缺 generated(清單版本);請用 npm run gen:rp 重新產生" }
+  return RpList(root.optString("station"), generated, pts)
 }
 
 data class ApObs(val bssid: String, val ssid: String, val rssi: Int, val freq: Int)
@@ -82,15 +86,26 @@ fun parseSession(lines: Sequence<String>): Progress {
   return Progress(done, skipped)
 }
 
-data class SessionHeader(val mode: String, val scansPerPoint: Int)
+data class SessionHeader(val mode: String, val scansPerPoint: Int, val rpGenerated: String)
 
-/** 讀 session 檔第一個 type=session 行的 mode/N;無則 null */
+/** 讀 session 檔第一個 type=session 行的 mode/N/清單版本;無則 null */
 fun parseSessionHeader(lines: Sequence<String>): SessionHeader? {
   for (line in lines) {
     val o = try { JSONObject(line) } catch (e: Exception) { continue }
     if (o.optString("type") == "session") {
-      return SessionHeader(o.optString("mode", "single"), o.optInt("scansPerPoint", 10))
+      return SessionHeader(
+        o.optString("mode", "single"), o.optInt("scansPerPoint", 10), o.optString("rpGenerated", ""))
     }
   }
   return null
+}
+
+/** 續採前必須擋:進度只認 point id,而重產清單會把同一個 id 指到不同座標
+ *  (例:B1-001 從 (87,-57) 變成 (18,-54))。清單版本不符卻續採,已完成的 id
+ *  會靜默跳過完全不相干的新位置,整個 session 混到兩套座標。 */
+fun resumeBlockReason(header: SessionHeader?, listGenerated: String): String? = when {
+  header == null -> "讀不到 session 檔頭,無法確認清單版本"
+  header.rpGenerated.isEmpty() -> "舊版 session 檔沒記錄清單版本,無法確認"
+  header.rpGenerated != listGenerated -> "清單版本不符——此 session 用的是 ${header.rpGenerated.take(10)} 產的清單,目前選的是 ${listGenerated.take(10)} 產的。請改開新 session。"
+  else -> null
 }

@@ -29,8 +29,10 @@ fun progressAfterRedo(progress: Progress, id: String): Progress =
 /** 合力擾動門檻(µT):magStd 超標=環境磁場本身在變(列車/電梯) */
 const val MAG_NOISY_STD = 2.0
 
-/** 單軸擾動門檻(µT):合力穩但三軸狂擺=手機被轉動;magStd 是旋轉不變量,抓不到這種 */
-const val MAG_AXIS_NOISY_STD = 3.0
+/** 單軸擾動門檻(µT):合力穩但三軸狂擺=手機被轉動;magStd 是旋轉不變量,抓不到這種。
+ *  取 6.0 是實測夾出來的:北車手持站定 25 秒,軸向 std 上限 4.75(呼吸/手抖本來就有這個量級);
+ *  真正的轉動實測落在 10~19。原本設 3.0 會把握穩也報成轉動(0729 十一點中誤報四點)。 */
+const val MAG_AXIS_NOISY_STD = 6.0
 
 enum class MagQuality { OK, AMBIENT_NOISY, DEVICE_MOVED }
 

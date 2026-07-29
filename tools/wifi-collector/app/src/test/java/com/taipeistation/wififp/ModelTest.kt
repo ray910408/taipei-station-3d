@@ -2,6 +2,8 @@ package com.taipeistation.wififp
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,6 +26,15 @@ class ModelTest {
 
   @Test(expected = IllegalArgumentException::class)
   fun parseRpList_badSchema() { parseRpList("""{"schema":"nope","points":[]}""") }
+
+  @Test fun parseRpList_rejects_missing_generated() {
+    // 放行空 generated 的話,session 會記下空的 rpGenerated,採到一半中斷後
+    // resumeBlockReason 會無條件擋住續採——數小時的採集就卡死。要擋在匯入。
+    for (bad in listOf(rpJson.replace(""""generated":"2026-07-24T10:00:00+08:00",""", ""),
+                       rpJson.replace("2026-07-24T10:00:00+08:00", ""))) {
+      assertThrows(IllegalArgumentException::class.java) { parseRpList(bad) }
+    }
+  }
 
   @Test fun pointLine_roundtrip() {
     val p = RpPoint("B1-001", "tra-concourse-b1", 40.0, -10.0, "東翼")
@@ -75,5 +86,17 @@ class ModelTest {
     val h = parseSessionHeader(sequenceOf("junk", line))!!
     assertEquals("quad", h.mode)
     assertEquals(12, h.scansPerPoint)
+    assertEquals("g", h.rpGenerated)
+  }
+
+  @Test fun resume_blocked_when_rp_list_regenerated() {
+    // 重產清單會讓同一個 id 指到不同座標(B1-001 從 (87,-57) 變 (18,-54)),
+    // 進度只認 id,續採會靜默跳過不相干的新位置
+    val h = SessionHeader("single", 5, "2026-07-25T15:01:24.008Z")
+    assertNull(resumeBlockReason(h, "2026-07-25T15:01:24.008Z"))
+    assertNotNull(resumeBlockReason(h, "2026-07-29T08:12:00.000Z"))
+    // 讀不到檔頭 / 舊版檔頭沒記版本 → 一律擋,不猜
+    assertNotNull(resumeBlockReason(null, "2026-07-29T08:12:00.000Z"))
+    assertNotNull(resumeBlockReason(SessionHeader("single", 5, ""), "2026-07-29T08:12:00.000Z"))
   }
 }

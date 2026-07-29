@@ -22,6 +22,10 @@ export interface RawSample extends PointRecord { session: string; scansPerPoint:
 export function parseSessions(texts: string[]): { samples: RawSample[]; sessions: string[] } {
   const byKey = new Map<string, RawSample>()
   const sessions: string[] = []
+  // 樣本只以 (pointId, headingSlot) 為鍵,而重產的清單會把同一個 id 指到不同座標。
+  // 混版合併的結果是:新檔覆蓋同名 id、舊清單獨有的 id 原封留下,產出一份摻了
+  // 兩套座標的庫,而且完全不會報錯。只能擋,不能靠鍵去分。
+  let listVer: string | null = null
   for (const text of texts) {
     let cur: { session: string; scansPerPoint: number } | null = null
     for (const [i, line] of text.split(/\r?\n/).entries()) {
@@ -30,6 +34,17 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
       try { rec = JSON.parse(line) } catch (e) { throw new Error(`第 ${i + 1} 行:JSON 解析失敗——${e}`) } // 截斷行(採集中斷)最常見
       if (rec.type === 'session') {
         if (typeof rec.scansPerPoint !== 'number') throw new Error(`第 ${i + 1} 行:session header 缺 scansPerPoint`) // 否則短掃描規則靜默比 NaN
+        const ver = typeof rec.rpGenerated === 'string' ? rec.rpGenerated : ''
+        if (listVer === null) listVer = ver // 只有一個 session 時沒有可混的對象,缺版本無妨
+        else if (ver === '' || listVer === '') {
+          // 缺版本 ≠ 版本相同。兩個都缺時若各自來自不同清單,把它們都正規化成 ''
+          // 會讓相等檢查放行,正好漏掉這個檢查要擋的情形
+          throw new Error(`要合併多個 session,但有檔案沒記錄 rpGenerated(${!ver ? rec.session : sessions[0]}),` +
+            `無法確認是否同一份清單。請分開建庫。`)
+        } else if (ver !== listVer) {
+          throw new Error(`清單版本不一致:${sessions[0]} 用 rpGenerated=${listVer},${rec.session} 用 ${ver}。` +
+            `同一個 pointId 在兩份清單指向不同座標,合併會產出摻了兩套座標的庫——請分開建庫。`)
+        }
         cur = rec; sessions.push(rec.session); continue
       }
       if (rec.type === 'skip') continue
@@ -46,7 +61,10 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
 // Stage 1.1 門檻(真機資料進來後的調參旋鈕;可調可回溯)
 export const SHORT_SCAN_RATIO = 0.6 // actualScans < 此×scansPerPoint → 降權
 export const DOWNWEIGHT = 0.5       // 短掃描/轉動共用降權係數
-export const ROT_AXIS_STD = 3       // 軸向 std 超過此(µT)才談轉動
+// 必須與 APK 的 MAG_AXIS_NOISY_STD 同值:採集端顯示 OK 的點若在這裡被判成轉動,
+// 磁力會被剔除且 WiFi 遭降權——採集者看到綠燈,建庫卻默默丟掉。
+// 6.0 由實測兩端夾出:北車手持站定軸向 std 上限 4.75,真轉動 10~19。
+export const ROT_AXIS_STD = 6       // 軸向 std 超過此(µT)才談轉動
 export const ROT_AXIS_RATIO = 2     // 且軸向 > 合力×此 → 手機轉動(轉動的軸向擾動遠大於合力擾動)
 export const MAGSTD_SPLIT = 2       // 合力 std 超過此(µT)=環境磁場真的變了
 export const MIN_MAG_ACCURACY = 1   // accuracy ≤ 此 → 剔磁力
@@ -80,12 +98,28 @@ export const HOTSPOT_SSID_PATTERNS: RegExp[] = [
   /iphone/i, /^androidap/i, /^oppo\b/i, /smartphone_connect/i,
   /^xiaomi\b/i, /^redmi\b/i, /^huawei\b/i, /^samsung\b/i, /^pixel\b/i, /^vivo\b/i, / 5g$/i,
 ]
-export const HOTSPOT_MIN_RP = 3   // 全庫出現 RP 數低於此 → rare
+export const HOTSPOT_MIN_RP = 3   // 全庫出現 RP 數低於此 → rare(但可被出現率脫罪,見下)
+/** 出現 RP 數少不必然是熱點:RP 間距 20 m 的月台上,正常 AP 的有效範圍常只涵蓋 1~2 個 RP,
+ *  湊滿 3 個要橫跨約 40 m。真熱點的特徵是「連在該點也只是偶爾出現」——路過的手機只被少數
+ *  幾批掃到,固定 AP 則幾乎每批都在。改用出現率脫罪,判準就不再隨 RP 密度漂移。 */
+export const RARE_RESCUE_DETECT_RATE = 0.8
 export const DRIFT_DIST = 30      // 相距 >30m 的 RP 皆不弱 → 在移動
 export const DRIFT_STRONG = -75   // 「不弱」門檻(dBm)
 
 export function filterHotspots(kept: CleanSample[]): Map<string, string> {
   // 每 BSSID:出現過的 RP(座標/樓層/每 RP 平均 RSSI)與看過的 ssid
+  // 出現率的分母要是「該 RP 應有的全部批數」,兩個都要顧到:
+  // (a) 四朝向模式下同一個 pointId 有 4 筆樣本,命中數 n 會跨朝向累加,分母若只取
+  //     第一個看到它的朝向(N=5),四朝向各中一次會算成 4/5=0.8 而脫罪,實際是 4/20。
+  // (b) 用「實際成功批數」當分母時,掃描大量失敗的點(N=5 只成功 1 批)會讓那一批裡的
+  //     任何 BSSID 都變成 100% 出現率——一次性的路過熱點就這樣脫罪進庫。改用設定的
+  //     scansPerPoint 當分母:證據少就該算出低出現率,而不是把少量證據當成鐵證。
+  const batchesAt = new Map<string, number>()
+  for (const { rec } of kept) {
+    batchesAt.set(rec.pointId,
+      (batchesAt.get(rec.pointId) ?? 0) + Math.max(rec.scansPerPoint, rec.scans.length))
+  }
+
   const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number }> }>()
   for (const { rec } of kept) {
     for (const scan of rec.scans) for (const ap of scan.aps) {
@@ -108,7 +142,9 @@ export function filterHotspots(kept: CleanSample[]): Map<string, string> {
       if (Math.hypot(strong[i].x - strong[j].x, strong[i].y - strong[j].y) > DRIFT_DIST) { drift = true; break }
     }
     if (drift) { excluded.set(bssid, 'drift'); continue }
-    if (s.rps.size < HOTSPOT_MIN_RP) excluded.set(bssid, 'rare')
+    // 出現率高＝在該點穩定可見,是固定 AP 而非路過的手機;RP 數少不足以定罪
+    const bestRate = Math.max(...[...s.rps.entries()].map(([id, r]) => r.n / Math.max(1, batchesAt.get(id) ?? 1)))
+    if (s.rps.size < HOTSPOT_MIN_RP && bestRate < RARE_RESCUE_DETECT_RATE) excluded.set(bssid, 'rare')
   }
   return excluded
 }
