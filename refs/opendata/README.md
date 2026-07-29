@@ -19,6 +19,9 @@ tracer 底圖選單的來源，非影像項目由 `isTraceable()` 濾掉（`test
 
 ## 跨檔比對前必先正規化 join key
 
+正規化實作收斂在 `tools/opendata.ts`（`bareName`／`exitKey`／`stationOf`），
+`tests/opendata-joinkeys.test.ts` 與 `tests/frame-bearing.test.ts` 共用同一份，避免兩檔各自維護、規則改版時靜默分岔。
+
 不正規化會爆假陽性（曾誤報 191 筆缺漏，實際 118 站完全對齊——這句話由稽核每次跑過）。
 **下面這份清單由 `tests/opendata-joinkeys.test.ts` 現掃現比守住**——它把異常集合凍結起來，
 原檔換版或掃描邏輯改動只要異常有增減就會紅，逼人回來更新這裡（這份清單手寫維護時錯過三輪）。
