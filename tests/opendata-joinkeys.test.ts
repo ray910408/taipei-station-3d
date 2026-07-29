@@ -87,6 +87,16 @@ function audit(): string[] {
     const k = `${stationOf(r[1])}|${exitKey(r[2])}`;
     if (!coordKeys.has(k)) found.add(`exitkey ${r[1]} ${r[2]}`);
   }
+  // 座標值域：兩個帶經緯度的檔案。實際有效值 lon 121.41~121.62、lat 24.96~25.17，
+  // 這裡取大台北的寬鬆外框，抓的是掉小數點／非數值這種明顯壞值
+  for (const [f, rows] of [['exit-coords.csv', coords], ['exit-elevator-ramp-gps.csv', ramps]] as const) {
+    for (const r of rows) {
+      const lon = Number(r[3]), lat = Number(r[4]);
+      const ok = Number.isFinite(lon) && Number.isFinite(lat)
+        && lon >= 121.3 && lon <= 121.7 && lat >= 24.9 && lat <= 25.3;
+      if (!ok) found.add(`coord ${f} ${r[1]} ${r[3]},${r[4]}`);
+    }
+  }
   // 站名異體字
   for (const f of ['accessibility-facilities.csv', 'elevator-locations.csv', 'exit-elevator-ramp-gps.csv',
     'exit-coords.csv', 'station-facilities.csv']) if (read(f).includes('幸褔')) found.add(`typo幸褔 ${f}`);
@@ -99,6 +109,7 @@ const EXPECTED = [
   'arity 松江南京站 中和新蘆線|O08/G15',        // Line 只給一條、Station_Number 給兩個（G15 會被丟掉）
   'code 中山國中 BF12',                        // 應為 BR12
   'code 七張 G03A',                            // 應為 G03
+  'coord exit-elevator-ramp-gps.csv 圓山站出口無障礙坡道2 121.5201211,250717908', // 緯度掉小數點
   'dupcode G03A 七張,小碧潭',                  // 同上的後果：同編號對到兩站
   'exitkey 奇岩站出口無障礙坡道 單一出口',      // exit-coords 只有出口 1/2/3、無 0
   'exitkey 幸褔站出口電梯 出口1',               // 幸褔異體字的連帶後果：站名對不上就 join 不到
