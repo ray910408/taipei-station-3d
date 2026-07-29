@@ -92,30 +92,45 @@ function main() {
     spacing: { type: 'string' }, clearance: { type: 'string' }, out: { type: 'string' },
     n: { type: 'string' }, floors: { type: 'string' }, svg: { type: 'boolean' },
   } })
-  const spacing = Number(values.spacing ?? 6)
+  // --spacing 支援逐層覆寫:`12,tra-platform-b2=20`。月台是長條一維空間、
+  // PDR 在那裡最準,不需要跟大廳一樣密。
+  const [defSpacing, ...overrides] = String(values.spacing ?? 6).split(',')
+  const spacing = Number(defSpacing)
+  const byFloor = new Map(overrides.map(o => {
+    const [id, v] = o.split('=')
+    if (!id || !v || !Number.isFinite(Number(v))) { console.error(`--spacing 覆寫格式要 <floorId>=<公尺>:${o}`); process.exit(1) }
+    return [id, Number(v)] as const
+  }))
   const clearance = Number(values.clearance ?? 0.8)
   const outDir = values.out ?? 'rp'
   const n = Number(values.n ?? 10) // 工時估算用的每點掃描次數
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
   const wanted = (values.floors ?? '').split(',').filter(Boolean)
   const floors = station.floors.filter((f: { id: string }) => wanted.length === 0 || wanted.includes(f.id))
+  // 打錯樓層 id 會靜默走預設密度,採完才發現——先擋下來
+  const ids = new Set(station.floors.map((f: { id: string }) => f.id))
+  for (const id of byFloor.keys()) if (!ids.has(id)) { console.error(`--spacing 覆寫的樓層不存在:${id}(可用:${[...ids].join(', ')})`); process.exit(1) }
 
   const all: RpPoint[] = []
   mkdirSync(join(outDir, 'maps'), { recursive: true })
   for (const f of floors) {
     const floor: FloorJson = JSON.parse(readFileSync(join('data', f.file), 'utf8'))
-    const pts = generateFloorPoints(floor, f.labels.complex, spacing, clearance)
+    const sp = byFloor.get(floor.id) ?? spacing
+    const pts = generateFloorPoints(floor, f.labels.complex, sp, clearance)
     all.push(...pts)
     const hours = (pts.length * (n * 4.5 + 15)) / 3600
-    console.log(`${f.labels.complex} ${floor.id}: ${pts.length} 點 · 預估 ${hours.toFixed(1)} h (N=${n})`)
+    console.log(`${f.labels.complex} ${floor.id}: ${pts.length} 點 · 間距 ${sp}m · 預估 ${hours.toFixed(1)} h (N=${n})`)
     if (values.svg) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
   }
   if (all.length === 0) { console.error('產出 0 點——檢查 --floors 或樓層資料'); process.exit(1) }
   writeFileSync(join(outDir, 'rp-points.json'), JSON.stringify({
     schema: 'rp-list@1', station: station.id, coordSystem: 'model',
-    generated: new Date().toISOString(), spacing, points: all,
+    generated: new Date().toISOString(), spacing,
+    ...(byFloor.size ? { spacingByFloor: Object.fromEntries(byFloor) } : {}),
+    points: all,
   }, null, 2))
-  console.log(`共 ${all.length} 點 → ${join(outDir, 'rp-points.json')}`)
+  const totalH = (all.length * (n * 4.5 + 15)) / 3600
+  console.log(`共 ${all.length} 點 · 預估 ${totalH.toFixed(1)} h → ${join(outDir, 'rp-points.json')}`)
 }
 
 // 見 fp-sim.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準

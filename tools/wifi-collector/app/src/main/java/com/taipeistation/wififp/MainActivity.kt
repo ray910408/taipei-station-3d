@@ -18,7 +18,9 @@ class AppState {
   var screen by mutableStateOf(Screen.SETUP)
   var rpList by mutableStateOf<RpList?>(null)
   var mode by mutableStateOf("single")
-  var scansPerPoint by mutableStateOf(10)
+  // N=5:實測 N=5 的指紋庫雜訊 1.2 dB,而使用者端單次掃描帶進 10 dB——
+  // 把庫做得更準沒有意義,只是多花一倍採集時間。(續採會由檔頭覆寫)
+  var scansPerPoint by mutableStateOf(5)
   var rpName by mutableStateOf("rp-points.json")
   var writer by mutableStateOf<SessionWriter?>(null)
   var progress by mutableStateOf(Progress(emptySet(), emptySet()))
