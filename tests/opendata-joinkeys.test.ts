@@ -12,7 +12,7 @@ const R = new URL('../refs/opendata/', import.meta.url);
 const read = (f: string) => readFileSync(new URL(f, R), 'utf8');
 
 /** 最小 CSV parser：elevator-locations 有帶引號的多行欄位 */
-function parseCsv(text: string): string[][] {
+function parseCsv(text: string): { rows: string[][]; unterminated: boolean } {
   const rows: string[][] = [];
   let field = '', row: string[] = [], quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -27,12 +27,14 @@ function parseCsv(text: string): string[][] {
     else if (c !== '\r') field += c;
   }
   if (field || row.length) { row.push(field); rows.push(row); }
-  return rows;
+  // 走到檔尾引號還沒收＝檔案語法壞掉。此時最後那個欄位會把剩下的內容整包吞進去，
+  // 列數欄數卻可能仍然「看起來正常」，所以要另外報出來
+  return { rows, unterminated: quoted };
 }
 /** 資料列（不含標頭）。**不丟任何列**——欄數不對的列會被 `malformed` 檢查抓出來，
  *  在這裡 filter 掉等於讓截斷的列從所有後續檢查中安靜消失。 */
-const body = (f: string) => parseCsv(read(f)).slice(1);
-const header = (f: string) => parseCsv(read(f))[0];
+const body = (f: string) => parseCsv(read(f)).rows.slice(1);
+const header = (f: string) => parseCsv(read(f)).rows[0];
 
 /** 站名去尾綴。台北車站本名就以「站」結尾，不能無腦去尾 */
 const bareName = (s: string) => (s === '台北車站' ? s : s.replace(/站$/, '')).replace(/[（(].*/, '').trim();
@@ -77,6 +79,7 @@ function audit(): string[] {
   // 檔案形狀：標頭欄名、列數、每列欄數都對凍結的 SCHEMA 比，而不是對檔案自己的標頭比
   for (const f of FILES) {
     const want = SCHEMA[f];
+    if (parseCsv(read(f)).unterminated) found.add(`unterminated ${f}`);
     const got = header(f);
     if (got.join(',') !== want.header.join(',')) found.add(`schema ${f} 標頭不符 ${got.join(',')}`);
     const rows = body(f).filter((r) => !(r.length === 1 && r[0] === '')); // 檔尾空行不算
@@ -117,16 +120,18 @@ function audit(): string[] {
     const lines = r[0].split('/').map((s) => s.trim());
     const codes = r[1].split('/').map((s) => s.trim());
     const name = bareName(r[2]);
+    // 線別對照的存在性**先獨立驗**，不受下面任何 gate 影響。查無對照＝線別寫法在兩檔
+    // 對不上（錯字、異體字），也是壞掉的 join key；掛在 gate 後面的話，凡是已有編號值
+    // 錯誤的站（中山國中、七張）就永遠驗不到線別
+    for (const line of lines) {
+      if (!lineCode.has(`${line}|${name}`)) found.add(`lineunknown ${r[2]} ${line}`);
+    }
     if (lines.length !== codes.length) { found.add(`arity ${r[2]} ${r[0]}|${r[1]}`); continue; }
     // 順序只在「兩檔的編號集合一致」時才判定——集合不一致是編號值錯（下面另報），
     // 拿有錯值的 elevator-locations 當真相會把值錯誤誤報成順序錯誤
     if (codeSet(codes) !== codeSet(elvCodes.get(name) ?? [])) continue;
     for (let i = 0; i < lines.length; i++) {
-      const truth = lineCode.get(`${lines[i]}|${name}`);
-      // 查無對照＝線別寫法在兩檔對不上（錯字、異體字），也是壞掉的 join key，
-      // 不能因為「沒東西可比」就跳過——那正是它會靜靜溜過去的原因
-      if (truth === undefined) found.add(`lineunknown ${r[2]} ${lines[i]}`);
-      else if (truth !== codes[i]) found.add(`order ${r[2]} ${r[0]}|${r[1]}`);
+      if (lineCode.get(`${lines[i]}|${name}`) !== codes[i]) found.add(`order ${r[2]} ${r[0]}|${r[1]}`);
     }
   }
   // 編號值：兩檔的每站編號集合**雙向**比對。單向只查「elv 的編號在不在 acc 裡」的話，

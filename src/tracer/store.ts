@@ -79,3 +79,9 @@ export function createStore(args: {
     undo: [],
   };
 }
+
+/** tracer 只描得動圖片。`refs/sources.json` 同時登記了非影像來源（北捷開放資料 CSV 等），
+ *  那些選進來只會得到一張 naturalWidth=0 的空白底圖、還校準不了，所以不進選單也不接受還原。 */
+export function isTraceable(s: { file: string }): boolean {
+  return /\.(png|jpe?g|webp|gif)$/i.test(s.file);
+}
