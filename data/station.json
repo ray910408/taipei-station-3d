@@ -8,9 +8,9 @@
   "frame": {
     "units": "m",
     "origin_note": "臺鐵站體中心",
-    "axis_note": "+X 沿臺鐵站體長軸約東向，+Y 約北向；R 線站體長軸約 N20°E",
+    "axis_note": "+X 沿臺鐵站體長軸約東向，+Y 約北向；R 線站體長軸約 N20°E。以北捷開放資料出入口 GPS 交叉核對：模型月台軸 N17.5°E vs 實際 R 線 N15.6–21.0°E，local +Y 與真北差 0°±3°",
     "bearing_deg": 90,
-    "bearing_status": "estimated"
+    "bearing_status": "crosschecked"
   },
   "systems": {
     "trtc": {
