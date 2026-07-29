@@ -108,14 +108,20 @@ export const DRIFT_STRONG = -75   // 「不弱」門檻(dBm)
 
 export function filterHotspots(kept: CleanSample[]): Map<string, string> {
   // 每 BSSID:出現過的 RP(座標/樓層/每 RP 平均 RSSI)與看過的 ssid
-  const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number; batches: number }> }>()
+  // 出現率的分母要是「該 RP 的全部批數」。四朝向模式下同一個 pointId 有 4 筆樣本,
+  // 命中數 n 會跨朝向累加,分母若只取第一個看到它的朝向(N=5),四朝向各中一次
+  // 會算成 4/5=0.8 而脫罪,實際是 4/20=0.2。分母要先獨立於 AP 算好。
+  const batchesAt = new Map<string, number>()
+  for (const { rec } of kept) batchesAt.set(rec.pointId, (batchesAt.get(rec.pointId) ?? 0) + rec.scans.length)
+
+  const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number }> }>()
   for (const { rec } of kept) {
     for (const scan of rec.scans) for (const ap of scan.aps) {
       let s = stat.get(ap.bssid)
       if (!s) stat.set(ap.bssid, s = { ssids: new Set(), rps: new Map() })
       if (ap.ssid) s.ssids.add(ap.ssid)
       let r = s.rps.get(rec.pointId)
-      if (!r) s.rps.set(rec.pointId, r = { floor: rec.floor, x: rec.x, y: rec.y, sum: 0, n: 0, batches: rec.scans.length })
+      if (!r) s.rps.set(rec.pointId, r = { floor: rec.floor, x: rec.x, y: rec.y, sum: 0, n: 0 })
       r.sum += ap.rssi; r.n++
     }
   }
@@ -131,7 +137,7 @@ export function filterHotspots(kept: CleanSample[]): Map<string, string> {
     }
     if (drift) { excluded.set(bssid, 'drift'); continue }
     // 出現率高＝在該點穩定可見,是固定 AP 而非路過的手機;RP 數少不足以定罪
-    const bestRate = Math.max(...[...s.rps.values()].map(r => r.n / Math.max(1, r.batches)))
+    const bestRate = Math.max(...[...s.rps.entries()].map(([id, r]) => r.n / Math.max(1, batchesAt.get(id) ?? 1)))
     if (s.rps.size < HOTSPOT_MIN_RP && bestRate < RARE_RESCUE_DETECT_RATE) excluded.set(bssid, 'rare')
   }
   return excluded

@@ -198,6 +198,22 @@ describe('filterHotspots(spec 1.2 三規則)', () => {
     expect(HOTSPOT_MIN_RP).toBe(3)
   })
 
+  it('規則3 出現率分母含同 RP 的其他朝向:四朝向各中一次不算高出現率', () => {
+    // quad 模式同一個 pointId 有 4 筆樣本(headingSlot 0/90/180/270)。命中數會跨朝向
+    // 累加,分母若只取「第一個看到它的朝向」,4 次命中會算成 4/3=1.0 而脫罪;
+    // 正確分母是該 RP 的全部批數 4×3=12 → 0.33,仍屬 rare。
+    const quad = (slot: number, hits: number) =>
+      parseSessions([[SESSION, pt({
+        pointId: 'Q1', x: 0, y: 0, floor: 'f0', headingSlot: slot,
+        scans: Array.from({ length: 3 }, (_, i) => ({
+          t: 't', fresh: true, aps: i < hits ? [{ bssid: 'dd:00:00:00:00:01', ssid: 'T', rssi: -70, freq: 2437 }] : [],
+        })),
+      })].join('\n')]).samples.map(rec => ({ rec, w: 1, magOk: true }))
+    const kept = [...goodBase('aa:00:00:00:00:01', 'OK'),
+      ...quad(0, 1), ...quad(90, 1), ...quad(180, 1), ...quad(270, 1)]
+    expect(filterHotspots(kept).get('dd:00:00:00:00:01')).toBe('rare')
+  })
+
   it('規則3 出現率脫罪:RP 數少但每批都在 → 是固定 AP,不是熱點', () => {
     // RP 間距 20 m 的月台上,正常 AP 的有效範圍常只涵蓋 1~2 個 RP,湊滿 3 個要橫跨約 40 m。
     // 只用 RP 數當判準會隨間距漂移,把真 AP 當熱點刪掉。

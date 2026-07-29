@@ -122,14 +122,17 @@ if (repeats.length) {
   const suspect = repeats.filter(r => r.d > maxBin)
   if (suspect.length > 0) {
     const good = repeats.filter(r => r.d <= maxBin)
-    const goodMean = good.length ? good.reduce((a, r) => a + r.d, 0) / good.length : noiseFloor
+    // 夾到 noiseFloor 以上:分半雜訊是同一批資料量到的、不可避免的抖動,基準不可能
+    // 比它更低。非模糊分支也是只在漂移「大於」它時才換基準,兩邊判準要一致。
+    const goodMean = Math.max(noiseFloor,
+      good.length ? good.reduce((a, r) => a + r.d, 0) / good.length : noiseFloor)
     console.log(`\n⚠ ${suspect.length}/${repeats.length} 組重測比最遠的空間點對(${maxBin.toFixed(2)} dB)還大:` +
       suspect.map(r => `${r.a}vs${r.b} ${r.d.toFixed(1)}`).join('、'))
     console.log(`  兩種可能,指紋距離無法分辨:`)
     console.log(`  (a) 這些重測沒走回原點 → 基準取其餘可信的重測 ${goodMean.toFixed(2)} dB`)
     console.log(`  (b) 環境真的劇烈漂移   → 基準取全部重測的平均 ${repMean.toFixed(2)} dB`)
     console.log(`  下面兩個結論都會印;要定案得有獨立的位置證據(地標照片、回原點時的相對位置)。`)
-    ambiguous = { repMean, maxBin, goodMean }
+    ambiguous = { repMean: Math.max(noiseFloor, repMean), maxBin, goodMean }
   } else if (repMean > noiseFloor) {
     baseline = repMean
     baselineName = '時間漂移'
