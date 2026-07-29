@@ -43,21 +43,29 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
   const units = (floor.units ?? []).filter(u => (u.polygon?.length ?? 0) >= 3)
   if (areas.length === 0) return []
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  for (const a of areas) for (const [x, y] of a.polygon) {
-    minX = Math.min(minX, x); maxX = Math.max(maxX, x)
-    minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+  // 格線逐區生成並置中。全樓層共用一組格線時,比 spacing 窄的可走區會依格線相位
+  // 整座落空——B2 四座月台各只有 11 m 寬,20 m 格線只落進其中兩座,另兩座完全沒有點。
+  // 置中後窄區至少拿到中央那一排,寬區的實際間距為 extent/round(extent/spacing),接近 spacing。
+  const ticks = (min: number, max: number): number[] => {
+    const n = Math.max(1, Math.round((max - min) / spacing))
+    const step = (max - min) / n
+    return Array.from({ length: n }, (_, i) => min + step * (i + 0.5))
   }
 
   const raw: { x: number; y: number; note?: string }[] = []
-  for (let y = minY + spacing / 2; y <= maxY; y += spacing) {
-    for (let x = minX + spacing / 2; x <= maxX; x += spacing) {
-      const p: Pt = [x, y]
-      const host = areas.find(a => pointInPolygon(p, a.polygon))
-      if (!host) continue
-      if (nearWall(p, host.polygon, areas, clearance)) continue // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
-      if (units.some(u => pointInPolygon(p, u.polygon!) || distToPolygonEdge(p, u.polygon!) < clearance)) continue
-      raw.push({ x, y, note: host.note })
+  for (const area of areas) {
+    const axs = area.polygon.map(p => p[0]), ays = area.polygon.map(p => p[1])
+    for (const y of ticks(Math.min(...ays), Math.max(...ays))) {
+      for (const x of ticks(Math.min(...axs), Math.max(...axs))) {
+        const p: Pt = [x, y]
+        // 只收自己這一區的點:落在鄰區的交給該區自己的格線。相鄰區相位不同時,
+        // 縫邊仍可能出現約 spacing/4 的點對(B3 有 5 對),屬冗餘而非錯誤——
+        // 不做距離去重,否則會砍掉窄區唯一的那一排,把上面修的覆蓋問題換個形式帶回來。
+        if (!pointInPolygon(p, area.polygon)) continue
+        if (nearWall(p, area.polygon, areas, clearance)) continue // 貼牆/月台緣/軌道緣剔除;內部縫不算牆
+        if (units.some(u => pointInPolygon(p, u.polygon!) || distToPolygonEdge(p, u.polygon!) < clearance)) continue
+        raw.push({ x, y, note: area.note })
+      }
     }
   }
   return serpentineOrder(raw, spacing).map((p, i) => ({
@@ -94,12 +102,18 @@ function main() {
   } })
   // --spacing 支援逐層覆寫:`12,tra-platform-b2=20`。月台是長條一維空間、
   // PDR 在那裡最準,不需要跟大廳一樣密。
+  // 間距必須 > 0:0 會讓格線迴圈永遠不前進(CLI 直接卡死),負值同理
+  const positive = (v: string, what: string): number => {
+    const n = Number(v)
+    if (!Number.isFinite(n) || n <= 0) { console.error(`${what} 必須是大於 0 的數字:${v}`); process.exit(1) }
+    return n
+  }
   const [defSpacing, ...overrides] = String(values.spacing ?? 6).split(',')
-  const spacing = Number(defSpacing)
+  const spacing = positive(defSpacing, '--spacing')
   const byFloor = new Map(overrides.map(o => {
     const [id, v] = o.split('=')
-    if (!id || !v || !Number.isFinite(Number(v))) { console.error(`--spacing 覆寫格式要 <floorId>=<公尺>:${o}`); process.exit(1) }
-    return [id, Number(v)] as const
+    if (!id || v === undefined) { console.error(`--spacing 覆寫格式要 <floorId>=<公尺>:${o}`); process.exit(1) }
+    return [id, positive(v, `--spacing 覆寫 ${id}`)] as const
   }))
   const clearance = Number(values.clearance ?? 0.8)
   const outDir = values.out ?? 'rp'

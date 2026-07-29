@@ -80,9 +80,27 @@ describe('generateFloorPoints', () => {
         { id: 'R', kind: 'unpaid', polygon: [[10, 0], [20, 0], [20, 10], [10, 10]] as Pt[] },
       ],
     }
-    const pts = generateFloorPoints(seamFloor as never, 'S', 3, 0.8)
-    const coords = pts.map(p => [p.x, p.y])
-    expect(coords).toContainEqual([10.5, 4.5])   // 距內部縫 0.5m → 保留(非牆)
-    expect(coords).not.toContainEqual([19.5, 4.5]) // 距外牆 0.5m → 剔除
+    // 格線逐區置中,間距 1.4 讓 R 區最外兩排都落在距邊界 0.71m(< clearance 0.8)
+    const pts = generateFloorPoints(seamFloor as never, 'S', 1.4, 0.8)
+    expect(pts.some(p => p.x > 10 && p.x - 10 < 0.8)).toBe(true)  // 距內部縫 <0.8 → 保留(縫非牆)
+    expect(pts.some(p => 20 - p.x < 0.8)).toBe(false)             // 同距離的外牆側 → 剔除
+  })
+
+  it('比 spacing 窄的可走區不會整座落空', () => {
+    // 真實案例:B2 四座月台各只有 11m 寬。全樓層共用一組格線時,20m 格線依相位
+    // 只落進其中兩座,另兩座完全沒有點——採完才會發現半層沒資料。
+    const bands: [number, number][] = [[-51.5, -40.5], [-28.8, -17.8], [-1, 10], [20.5, 31.5]]
+    const platFloor = {
+      id: 'plat-floor',
+      slab: { outline: [[-95, -55], [95, -55], [95, 35], [-95, 35]] as Pt[] },
+      areas: bands.map(([y0, y1], i) => ({
+        id: `plat-${i + 1}`, kind: 'platform',
+        polygon: [[-95, y0], [95, y0], [95, y1], [-95, y1]] as Pt[],
+      })),
+    }
+    const pts = generateFloorPoints(platFloor as never, 'P', 20, 0.8)
+    for (const [y0, y1] of bands) {
+      expect(pts.filter(p => p.y >= y0 && p.y <= y1).length).toBeGreaterThan(0)
+    }
   })
 })
