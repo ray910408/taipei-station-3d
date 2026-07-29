@@ -98,20 +98,24 @@ export const HOTSPOT_SSID_PATTERNS: RegExp[] = [
   /iphone/i, /^androidap/i, /^oppo\b/i, /smartphone_connect/i,
   /^xiaomi\b/i, /^redmi\b/i, /^huawei\b/i, /^samsung\b/i, /^pixel\b/i, /^vivo\b/i, / 5g$/i,
 ]
-export const HOTSPOT_MIN_RP = 3   // 全庫出現 RP 數低於此 → rare
+export const HOTSPOT_MIN_RP = 3   // 全庫出現 RP 數低於此 → rare(但可被出現率脫罪,見下)
+/** 出現 RP 數少不必然是熱點:RP 間距 20 m 的月台上,正常 AP 的有效範圍常只涵蓋 1~2 個 RP,
+ *  湊滿 3 個要橫跨約 40 m。真熱點的特徵是「連在該點也只是偶爾出現」——路過的手機只被少數
+ *  幾批掃到,固定 AP 則幾乎每批都在。改用出現率脫罪,判準就不再隨 RP 密度漂移。 */
+export const RARE_RESCUE_DETECT_RATE = 0.8
 export const DRIFT_DIST = 30      // 相距 >30m 的 RP 皆不弱 → 在移動
 export const DRIFT_STRONG = -75   // 「不弱」門檻(dBm)
 
 export function filterHotspots(kept: CleanSample[]): Map<string, string> {
   // 每 BSSID:出現過的 RP(座標/樓層/每 RP 平均 RSSI)與看過的 ssid
-  const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number }> }>()
+  const stat = new Map<string, { ssids: Set<string>; rps: Map<string, { floor: string; x: number; y: number; sum: number; n: number; batches: number }> }>()
   for (const { rec } of kept) {
     for (const scan of rec.scans) for (const ap of scan.aps) {
       let s = stat.get(ap.bssid)
       if (!s) stat.set(ap.bssid, s = { ssids: new Set(), rps: new Map() })
       if (ap.ssid) s.ssids.add(ap.ssid)
       let r = s.rps.get(rec.pointId)
-      if (!r) s.rps.set(rec.pointId, r = { floor: rec.floor, x: rec.x, y: rec.y, sum: 0, n: 0 })
+      if (!r) s.rps.set(rec.pointId, r = { floor: rec.floor, x: rec.x, y: rec.y, sum: 0, n: 0, batches: rec.scans.length })
       r.sum += ap.rssi; r.n++
     }
   }
@@ -126,7 +130,9 @@ export function filterHotspots(kept: CleanSample[]): Map<string, string> {
       if (Math.hypot(strong[i].x - strong[j].x, strong[i].y - strong[j].y) > DRIFT_DIST) { drift = true; break }
     }
     if (drift) { excluded.set(bssid, 'drift'); continue }
-    if (s.rps.size < HOTSPOT_MIN_RP) excluded.set(bssid, 'rare')
+    // 出現率高＝在該點穩定可見,是固定 AP 而非路過的手機;RP 數少不足以定罪
+    const bestRate = Math.max(...[...s.rps.values()].map(r => r.n / Math.max(1, r.batches)))
+    if (s.rps.size < HOTSPOT_MIN_RP && bestRate < RARE_RESCUE_DETECT_RATE) excluded.set(bssid, 'rare')
   }
   return excluded
 }

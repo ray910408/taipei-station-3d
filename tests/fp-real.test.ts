@@ -83,14 +83,15 @@ describe('【已知缺口】衍生 MAC 未合併——待決 #4 裁定後這兩�
     .filter(c => mid2(a) === mid2(c) && popcount(tail3(a) ^ tail3(c)) <= 1)
     .map(c => [a, c] as const))
 
-  it('目前有 5 對疑似同源的錨點未被合併(改判準後應為 0)', () => {
-    expect(suspect.length).toBe(5)
+  // 5→6 / 10→11:rare 規則加入出現率脫罪後,多留下一顆真 AP,它也進了錨點池
+  it('目前有 6 對疑似同源的錨點未被合併(改判準後應為 0)', () => {
+    expect(suspect.length).toBe(6)
   })
 
-  it('其中 10 對同時進了某個 RP 的 Top-15,佔全部欄位 16.7%(改判準後應為 0)', () => {
+  it('其中 11 對同時進了某個 RP 的 Top-15,佔全部欄位 18.3%(改判準後應為 0)', () => {
     const rps = Object.values(db.floors).flatMap(f => f.rps)
     const dupInTop = rps.reduce((n, rp) => n + suspect.filter(([a, c]) => a in rp.aps && c in rp.aps).length, 0)
-    expect(dupInTop).toBe(10)
-    expect((dupInTop * 2) / (rps.length * 15)).toBeCloseTo(0.167, 2)
+    expect(dupInTop).toBe(11)
+    expect((dupInTop * 2) / (rps.length * 15)).toBeCloseTo(0.183, 2)
   })
 })

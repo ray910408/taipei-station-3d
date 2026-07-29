@@ -106,7 +106,7 @@ for (let i = 0; i < fps.length; i++) {
 // 同位置隔一段時間重測才是指紋庫日後被查詢時要面對的雜訊。有重測就用它。
 let baseline = noiseFloor
 let baselineName = '分半雜訊'
-let ambiguous: { repMean: number; maxBin: number } | null = null
+let ambiguous: { repMean: number; maxBin: number; goodMean: number } | null = null
 if (repeats.length) {
   const repMean = repeats.reduce((a, r) => a + r.d, 0) / repeats.length
   console.log(`\n=== 同位置重測(時間漂移)===`)
@@ -117,13 +117,19 @@ if (repeats.length) {
   // 沒有獨立的位置證據就不該替使用者選一邊,兩個結論都印出來。
   const binMeans = [...bins.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length)
   const maxBin = binMeans.length ? Math.max(...binMeans) : Infinity
-  if (repMean > maxBin) {
-    ambiguous = { repMean, maxBin }
-    console.log(`\n⚠ 重測距離(${repMean.toFixed(2)} dB)比最遠的空間點對(${maxBin.toFixed(2)} dB)還大`)
+  // 逐對判定,不能只看平均:一組正常的重測會把另一組明顯站錯位置的稀釋掉,
+  // 平均值就這樣混進「可信的時間漂移」被當基準用。
+  const suspect = repeats.filter(r => r.d > maxBin)
+  if (suspect.length > 0) {
+    const good = repeats.filter(r => r.d <= maxBin)
+    const goodMean = good.length ? good.reduce((a, r) => a + r.d, 0) / good.length : noiseFloor
+    console.log(`\n⚠ ${suspect.length}/${repeats.length} 組重測比最遠的空間點對(${maxBin.toFixed(2)} dB)還大:` +
+      suspect.map(r => `${r.a}vs${r.b} ${r.d.toFixed(1)}`).join('、'))
     console.log(`  兩種可能,指紋距離無法分辨:`)
-    console.log(`  (a) 重測時沒走回原點 → 真實漂移其實接近分半雜訊 ${noiseFloor.toFixed(2)} dB`)
-    console.log(`  (b) 環境真的劇烈漂移 → 基準就是 ${repMean.toFixed(2)} dB`)
+    console.log(`  (a) 這些重測沒走回原點 → 基準取其餘可信的重測 ${goodMean.toFixed(2)} dB`)
+    console.log(`  (b) 環境真的劇烈漂移   → 基準取全部重測的平均 ${repMean.toFixed(2)} dB`)
     console.log(`  下面兩個結論都會印;要定案得有獨立的位置證據(地標照片、回原點時的相對位置)。`)
+    ambiguous = { repMean, maxBin, goodMean }
   } else if (repMean > noiseFloor) {
     baseline = repMean
     baselineName = '時間漂移'
@@ -183,7 +189,7 @@ if (corr < 0.3) {
       : `${Math.max(...sorted)} m 內都不足 2 倍 → 需更大間距或改區段級定位`
   }
   console.log(`\n⚠ 基準未定案(見上方重測警告),兩種可能各自的結論:`)
-  console.log(`  (a) 重測沒走回原點 → 基準 ${noiseFloor.toFixed(2)} dB → ${verdictFor(noiseFloor)}`)
+  console.log(`  (a) 可疑的重測沒走回原點 → 基準 ${ambiguous.goodMean.toFixed(2)} dB → ${verdictFor(ambiguous.goodMean)}`)
   console.log(`  (b) 環境真的漂移   → 基準 ${ambiguous.repMean.toFixed(2)} dB → ${verdictFor(ambiguous.repMean)}`)
   console.log(`  → 差距這麼大時不要直接採用任一邊;先取得獨立的位置證據再定案。`)
 } else if (recommend > 0) {
