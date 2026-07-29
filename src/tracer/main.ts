@@ -3,7 +3,7 @@ import type { FloorDoc, SourceRef, SourcesDoc, Vec2 } from '../types';
 import { fitSimilarity, localToPx, type PxTransform } from './transform';
 import { fitView, screenToLocal, zoomAt, type ViewState } from './view';
 import { render, type RenderInput } from './render';
-import { createStore, isTraceable, type ToolContext, type ToolHandler, type ToolName, type TracerStore } from './store';
+import { createStore, isTraceable, pickSourceId, type ToolContext, type ToolHandler, type ToolName, type TracerStore } from './store';
 import { makeCalibrateTool } from './tool-calibrate';
 import { makeDrawTool, makeNavTool, makeSelectTool } from './tool-edit';
 import stationJson from '../../data/station.json';
@@ -56,8 +56,7 @@ function boot(store: TracerStore): void {
   if (saved.imageOpacity !== undefined) store.imageOpacity = saved.imageOpacity;
   if (saved.views) store.views = saved.views;
   const traceable = store.sourcesDoc.sources.filter(isTraceable);
-  const savedSource = traceable.some((s) => s.id === saved.sourceId) ? saved.sourceId : undefined;
-  store.sourceId = savedSource ?? DEFAULT_SOURCE[store.floorId] ?? traceable[0].id;
+  store.sourceId = pickSourceId(saved.sourceId, traceable.map((s) => s.id), DEFAULT_SOURCE[store.floorId]);
 
   function persistSession(): void {
     store.views[store.floorId] = store.view;

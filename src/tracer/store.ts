@@ -85,3 +85,16 @@ export function createStore(args: {
 export function isTraceable(s: { file: string }): boolean {
   return /\.(png|jpe?g|webp|gif)$/i.test(s.file);
 }
+
+/** session 還原時決定用哪個底圖：存檔的選擇優先（但必須仍是可描的來源），
+ *  否則退樓層預設，再否則第一個可描來源。抽出來是為了能單獨測——它同時要滿足
+ *  「合法的非預設選擇要接得回來」與「已失效／非影像的選擇不能還原成壞狀態」。 */
+export function pickSourceId(
+  savedId: string | undefined,
+  traceableIds: readonly string[],
+  floorDefault: string | undefined,
+): string {
+  if (savedId !== undefined && traceableIds.includes(savedId)) return savedId;
+  if (floorDefault !== undefined && traceableIds.includes(floorDefault)) return floorDefault;
+  return traceableIds[0];
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTraceable } from '../src/tracer/store';
+import { isTraceable, pickSourceId } from '../src/tracer/store';
 import sourcesDoc from '../refs/sources.json';
 
 /** tracer 的底圖選單是從 refs/sources.json 全表長出來的，而該表也登記非影像來源
@@ -24,5 +24,24 @@ describe('tracer 底圖來源過濾', () => {
 
   it('校準過的來源都還在選單裡——校準資料只對影像有意義', () => {
     for (const s of sources.filter((s) => 'calibration' in s)) expect(isTraceable(s)).toBe(true);
+  });
+});
+
+describe('pickSourceId：session 還原的來源挑選', () => {
+  const ids = ['trtc-info-b4', 'tra-b1-map', 'site-isometric-2017'];
+
+  it('存檔的合法選擇要接得回來（即使不是樓層預設）', () => {
+    expect(pickSourceId('site-isometric-2017', ids, 'tra-b1-map')).toBe('site-isometric-2017');
+  });
+
+  it('存檔的選擇已不在可描清單（CSV／已移除）就退樓層預設', () => {
+    expect(pickSourceId('trtc-od-exit-coords', ids, 'tra-b1-map')).toBe('tra-b1-map');
+    expect(pickSourceId('gone', ids, 'tra-b1-map')).toBe('tra-b1-map');
+  });
+
+  it('沒有存檔就退樓層預設；樓層預設也無效才用第一個', () => {
+    expect(pickSourceId(undefined, ids, 'tra-b1-map')).toBe('tra-b1-map');
+    expect(pickSourceId(undefined, ids, undefined)).toBe('trtc-info-b4');
+    expect(pickSourceId(undefined, ids, 'trtc-od-exit-coords')).toBe('trtc-info-b4');
   });
 });

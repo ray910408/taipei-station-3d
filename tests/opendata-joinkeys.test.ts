@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 /** 北捷開放資料 join key 稽核（見 refs/opendata/README.md）。
  *
@@ -12,29 +13,39 @@ const R = new URL('../refs/opendata/', import.meta.url);
 const read = (f: string) => readFileSync(new URL(f, R), 'utf8');
 
 /** 最小 CSV parser：elevator-locations 有帶引號的多行欄位 */
-function parseCsv(text: string): { rows: string[][]; unterminated: boolean } {
+function parseCsv(text: string): { rows: string[][]; malformed: string[] } {
   const rows: string[][] = [];
-  let field = '', row: string[] = [], quoted = false;
+  const malformed: string[] = [];
+  let field = '', row: string[] = [], quoted = false, line = 1;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (quoted) {
-      if (c !== '"') field += c;
-      else if (text[i + 1] === '"') { field += '"'; i++; }
-      else quoted = false;
+      if (c === '\n') line++;
+      if (c !== '"') { field += c; continue; }
+      if (text[i + 1] === '"') { field += '"'; i++; continue; }
+      quoted = false;
+      // 收尾引號之後只允許逗號／換行／檔尾。`"月臺層"x` 這種寬鬆吃下去的話，
+      // 列數欄數都不會變，嚴格的 CSV 讀取器卻會拒收整份檔案
+      const next = text[i + 1];
+      if (next !== undefined && next !== ',' && next !== '\n' && next !== '\r') {
+        malformed.push(`第${line}行 收尾引號後接了 ${JSON.stringify(next)}`);
+      }
     } else if (c === '"') quoted = true;
     else if (c === ',') { row.push(field); field = ''; }
-    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; line++; }
     else if (c !== '\r') field += c;
   }
   if (field || row.length) { row.push(field); rows.push(row); }
   // 走到檔尾引號還沒收＝檔案語法壞掉。此時最後那個欄位會把剩下的內容整包吞進去，
   // 列數欄數卻可能仍然「看起來正常」，所以要另外報出來
-  return { rows, unterminated: quoted };
+  if (quoted) malformed.push('檔尾引號未收');
+  return { rows, malformed };
 }
 /** 資料列（不含標頭）。**不丟任何列**——欄數不對的列會被 `malformed` 檢查抓出來，
  *  在這裡 filter 掉等於讓截斷的列從所有後續檢查中安靜消失。 */
 const body = (f: string) => parseCsv(read(f)).rows.slice(1);
 const header = (f: string) => parseCsv(read(f)).rows[0];
+const sha = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 16);
 
 /** 站名去尾綴。台北車站本名就以「站」結尾，不能無腦去尾 */
 const bareName = (s: string) => (s === '台北車站' ? s : s.replace(/站$/, '')).replace(/[（(].*/, '').trim();
@@ -79,9 +90,13 @@ function audit(): string[] {
   // 檔案形狀：標頭欄名、列數、每列欄數都對凍結的 SCHEMA 比，而不是對檔案自己的標頭比
   for (const f of FILES) {
     const want = SCHEMA[f];
-    if (parseCsv(read(f)).unterminated) found.add(`unterminated ${f}`);
+    for (const m of parseCsv(read(f)).malformed) found.add(`csvsyntax ${f} ${m}`);
     const got = header(f);
-    if (got.join(',') !== want.header.join(',')) found.add(`schema ${f} 標頭不符 ${got.join(',')}`);
+    // 逐欄比、也比長度。用 join(',') 比的話，「把兩個欄名用引號併成一欄」這種改動
+    // 接起來的字串一模一樣，欄數卻少一個，而資料列是對凍結長度驗的、看不出來
+    if (got.length !== want.header.length || got.some((h, i) => h !== want.header[i])) {
+      found.add(`schema ${f} 標頭不符 ${JSON.stringify(got)}`);
+    }
     const rows = body(f).filter((r) => !(r.length === 1 && r[0] === '')); // 檔尾空行不算
     if (rows.length !== want.rows) found.add(`rowcount ${f} ${rows.length}≠${want.rows}`);
     body(f).forEach((r, i) => {
@@ -158,6 +173,11 @@ function audit(): string[] {
     coordCount.set(k, (coordCount.get(k) ?? 0) + 1);
   }
   for (const [k, n] of coordCount) if (n > 1) found.add(`dupexit exit-coords.csv ${k} x${n}`);
+  // station-facilities 的站名帶線別（板橋拆兩列），正規化後會被站名集合收斂掉；
+  // 把其中一列換成另一列的複本時列數與站名集合都不動，只有原始站名的重複看得出來
+  const rawFacility = new Map<string, number>();
+  for (const r of rowsOf('station-facilities.csv')) rawFacility.set(r[3], (rawFacility.get(r[3]) ?? 0) + 1);
+  for (const [name, n] of rawFacility) if (n > 1) found.add(`duprow station-facilities.csv ${name} x${n}`);
   for (const r of ramps) {
     const k = `${stationOf(r[1])}|${exitKey(r[2])}`;
     if (!coordCount.has(k)) found.add(`exitkey ${r[1]} ${r[2]}`);
@@ -204,6 +224,18 @@ const EXPECTED = [
 describe('北捷開放資料 join key 稽核', () => {
   it('異常集合與 README 的已知錯誤清單一致', () => {
     expect(audit()).toEqual(EXPECTED);
+  });
+
+  it('exit-coords 的「站|出口編號」鍵集合未變', () => {
+    // 唯一性與 ramp 側查得到都擋不住「把某個沒有 ramp 對應列的出口改成另一個新編號」，
+    // 那種改動列數／站名／座標／唯一性全部不動。所以整組鍵取指紋凍結。
+    // 指紋不符時：跑 `npx vitest run tests/opendata-joinkeys.test.ts` 看新值，
+    // 並與原檔 diff 確認差異是有意的，再更新這裡。
+    const keys = body('exit-coords.csv')
+      .filter((r) => r.length === SCHEMA['exit-coords.csv'].header.length)
+      .map((r) => `${stationOf(r[1])}|${exitKey(r[2])}`).sort();
+    expect(keys.length).toBe(388);
+    expect(sha(keys.join('\n'))).toBe('632e8b89cbc8d394');
   });
 
   it('出口編號正規化涵蓋所有出現過的形態', () => {
