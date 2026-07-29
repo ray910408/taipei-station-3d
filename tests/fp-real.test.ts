@@ -30,8 +30,20 @@ describe('真機回歸:Stage 1 清洗判定', () => {
     expect(p).toMatchObject({ w: 1, magOk: false })
   })
 
-  it('P08 手舉高判裝置移動——姿勢改變同樣讓軸向主導,處置與轉動相同', () => {
-    expect(clean().get('P08')).toMatchObject({ w: 0.5, magOk: false })
+  it('P08 手舉高落在偵測下限之下——小幅姿勢改變與站定不動無法分離', () => {
+    // P08(刻意手舉高)axisMax 3.22 / magStd 1.46 / ratio 2.21。
+    // 對照 2026-07-29 北車「站著不動」實測:P02 3.27/1.32/2.48、P07 4.75/1.57/3.03——
+    // 站定的數值比 P08 還大。軸向 std 與比值在這個量級都沒有鑑別力,
+    // 舊門檻 3.0 抓到 P08 是碰巧,同一條規則會把真正站定的點誤判成移動(北車 11 點誤報 4 點)。
+    // 判成乾淨是正確處置:磁力只是輔助訊號,小幅姿勢變化的污染遠小於誤剔的代價。
+    const p = clean().get('P08')!
+    expect(Math.max(...p.rec.mag.std)).toBeLessThan(ROT_AXIS_STD)
+    expect(p).toMatchObject({ w: 1, magOk: true })
+  })
+
+  it('只有大幅轉動才在偵測範圍內(P01 axisMax 24.72,是 P08 的 7.7 倍)', () => {
+    const c = clean()
+    expect(Math.max(...c.get('P01')!.rec.mag.std)).toBeGreaterThan(ROT_AXIS_STD * 2)
   })
 
   it('無點被整筆剔除(這次採集沒有 throttled)', () => {
@@ -47,7 +59,7 @@ describe('真機回歸:建庫結構', () => {
     expect(rps.length).toBe(8)
     for (const rp of rps) expect(Object.keys(rp.aps).length).toBe(15)
     const magNull = rps.filter(rp => rp.mag === null).map(rp => rp.id).sort()
-    expect(magNull).toEqual(['P01', 'P03', 'P08']) // 轉動、環境擾動、裝置移動
+    expect(magNull).toEqual(['P01', 'P03']) // 大幅轉動、環境擾動;P08 小幅姿勢改變在偵測下限之下
   })
 
   it('熱點濾除零誤殺:排除的全是出現率過低者,沒有任何 ssid-pattern/drift', () => {

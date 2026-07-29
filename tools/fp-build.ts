@@ -46,7 +46,10 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
 // Stage 1.1 門檻(真機資料進來後的調參旋鈕;可調可回溯)
 export const SHORT_SCAN_RATIO = 0.6 // actualScans < 此×scansPerPoint → 降權
 export const DOWNWEIGHT = 0.5       // 短掃描/轉動共用降權係數
-export const ROT_AXIS_STD = 3       // 軸向 std 超過此(µT)才談轉動
+// 必須與 APK 的 MAG_AXIS_NOISY_STD 同值:採集端顯示 OK 的點若在這裡被判成轉動,
+// 磁力會被剔除且 WiFi 遭降權——採集者看到綠燈,建庫卻默默丟掉。
+// 6.0 由實測兩端夾出:北車手持站定軸向 std 上限 4.75,真轉動 10~19。
+export const ROT_AXIS_STD = 6       // 軸向 std 超過此(µT)才談轉動
 export const ROT_AXIS_RATIO = 2     // 且軸向 > 合力×此 → 手機轉動(轉動的軸向擾動遠大於合力擾動)
 export const MAGSTD_SPLIT = 2       // 合力 std 超過此(µT)=環境磁場真的變了
 export const MIN_MAG_ACCURACY = 1   // accuracy ≤ 此 → 剔磁力

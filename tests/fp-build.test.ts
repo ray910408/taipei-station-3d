@@ -80,8 +80,8 @@ describe('cleanSamples(spec 1.1 逐條)', () => {
   })
 
   it('兩者同幅度漲=環境擾動:軸向超標但未達合力×2 → WiFi 不降權', () => {
-    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [3.5, 3.2, 3], magStd: 1.9 } })]))
-    expect(kept[0]).toMatchObject({ w: 1, magOk: false }) // 軸 3.5 未達 1.9×2=3.8 → 非轉動
+    const { kept } = cleanSamples(parse([pt({ mag: { ...MAG_OK, std: [7.0, 6.5, 6], magStd: 4.0 } })]))
+    expect(kept[0]).toMatchObject({ w: 1, magOk: false }) // 軸 7.0 超過門檻 6 但未達 4.0×2=8 → 非轉動
   })
 
   it('環境擾動(magStd>2)→ 剔磁力、留 WiFi 全權重', () => {
