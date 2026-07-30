@@ -110,28 +110,85 @@ export function connectorRunDir(nodes: NavNode[], edges: NavEdge[], nodeId: stri
   return len < 1e-6 ? null : [dx / len, dy / len];
 }
 
-/** 軌道鋼軌：細長四邊形軌道溝取中線（最長邊定行進向、與對邊端點平均），
- *  鋪兩根標準軌距（1.435m）鋼軌。非四邊形的軌道溝略過——目前資料全為四邊形。 */
+function edgeMid(polygon: Vec2[], i: number): Vec2 {
+  const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+/** 四邊形短邊對：起始索引 s（(0,2) 與 (1,3) 中總長較小者）＋兩短邊平均長（＝軌道帶實寬）。 */
+function shortEdgePair(polygon: Vec2[]): { s: number; width: number } | null {
+  if (polygon.length !== 4) return null;
+  const len = (i: number): number => {
+    const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+    return Math.hypot(b[0] - a[0], b[1] - a[1]);
+  };
+  const s = len(0) + len(2) <= len(1) + len(3) ? 0 : 1;
+  return { s, width: (len(s) + len(s + 2)) / 2 };
+}
+
+/** 軌道中軸：四邊形兩條短邊的中點連線。不假設軸對齊——B4 軌道為斜置四邊形。非四邊形回 null。 */
+export function trackAxis(polygon: Vec2[]): [Vec2, Vec2] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  return [edgeMid(polygon, e.s), edgeMid(polygon, e.s + 2)];
+}
+
+/** slab 開洞內縮量：B2 軌道 x 貼滿 ±175 與 slab 邊重合、B4 長邊直接落在 slab outline 上，
+ *  不內縮會生出邊貼邊的退化 hole。 */
+export const TRACK_HOLE_INSET = 0.1;
+/** 溝壁內縮量（> TRACK_HOLE_INSET，壁體才包住 slab 的切面不共面）；負值＝外擴。 */
+const TRENCH_WALL_INSET = 0.16;
+const TRENCH_WALL_LIP = -0.02; // 壁外緣外擴：B4 軌道長邊與 slab outline 共面，不外推會 z-fight
+
+/** 軌道輪廓的等距內縮環（inset 為負則外擴）：中軸兩端內縮、側向半寬 = 實寬/2 − inset。
+ *  頂點序恆為 cw（signed area = −2·軸長·半寬），符合 hole 慣例（見 validate.ts iterRings）。 */
+export function trackHole(polygon: Vec2[], inset = TRACK_HOLE_INSET): Vec2[] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  const m0 = edgeMid(polygon, e.s), m1 = edgeMid(polygon, e.s + 2);
+  const [dx, dy] = [m1[0] - m0[0], m1[1] - m0[1]];
+  const L = Math.hypot(dx, dy);
+  const half = e.width / 2 - inset;
+  if (L <= 2 * inset || half <= 0) return null; // 內縮後退化
+  const [ux, uy] = [dx / L, dy / L];
+  const [px, py] = [-uy * half, ux * half]; // 左法向 × 半寬
+  const a: Vec2 = [m0[0] + ux * inset, m0[1] + uy * inset];
+  const b: Vec2 = [m1[0] - ux * inset, m1[1] - uy * inset];
+  return [
+    [a[0] + px, a[1] + py], [b[0] + px, b[1] + py],
+    [b[0] - px, b[1] - py], [a[0] - px, a[1] - py],
+  ];
+}
+
+/** 軌道凹槽的四面溝壁：外環為軌道帶略外擴、內環為內縮 TRENCH_WALL_INSET，
+ *  自道床頂面往上封到 slab 頂面（+1cm 免共面）——沒有這圈壁，下沉的道床側視會是懸空黑縫。
+ *  用環狀 extrude（外環 ccw + 內環 cw）一次成形，四角不留縫；材質即 slab 自身（看起來是切開樓板）。 */
+function trenchWall(polygon: Vec2[], elevation: number, material: THREE.Material[]): THREE.Mesh | null {
+  const inner = trackHole(polygon, TRENCH_WALL_INSET);
+  const outer = trackHole(polygon, TRENCH_WALL_LIP);
+  if (!inner || !outer) return null;
+  const bedTop = elevation - THEME.trackSunk + 0.05;
+  return extrudeMesh(outer.slice().reverse(), [inner], elevation + 0.01 - bedTop, bedTop,
+    material, 'track-wall'); // outer 反轉成 ccw（trackHole 回 cw）
+}
+
+/** 軌道鋼軌：沿中軸鋪兩根標準軌距鋼軌，底面貼道床頂面 → 軌頂 = elevation − 1.25。
+ *  非四邊形的軌道帶略過——目前資料全為四邊形。 */
 function railGeometries(quad: Vec2[], topY: number): THREE.BufferGeometry[] {
-  let i0 = 0, best = -1;
-  for (let i = 0; i < 4; i++) {
-    const len = Math.hypot(quad[(i + 1) % 4][0] - quad[i][0], quad[(i + 1) % 4][1] - quad[i][1]);
-    if (len > best) { best = len; i0 = i; }
-  }
-  const a: Vec2 = [(quad[i0][0] + quad[(i0 + 3) % 4][0]) / 2, (quad[i0][1] + quad[(i0 + 3) % 4][1]) / 2];
-  const b: Vec2 = [(quad[(i0 + 1) % 4][0] + quad[(i0 + 2) % 4][0]) / 2, (quad[(i0 + 1) % 4][1] + quad[(i0 + 2) % 4][1]) / 2];
+  const axis = trackAxis(quad);
+  if (!axis) return [];
+  const R = THEME.materials.rail;
+  const [a, b] = axis;
   const dx = b[0] - a[0], dy = b[1] - a[1];
   const len = Math.hypot(dx, dy);
   if (len < 1e-6) return [];
   const nx = -dy / len, ny = dx / len;
   const out: THREE.BufferGeometry[] = [];
-  const GAUGE = 1.435; // 標準軌距——量的是兩軌「內側面」間距，非中心距
-  const RAIL_WIDTH = 0.07; // 單軌斷面寬（BoxGeometry z 尺寸）
-  const RAIL_OFFSET = (GAUGE + RAIL_WIDTH) / 2; // 內側面基準要外推半個軌寬，才是中心偏移
-  for (const s of [-RAIL_OFFSET, RAIL_OFFSET]) {
-    const g = new THREE.BoxGeometry(len, 0.12, RAIL_WIDTH);
+  const offset = (R.gauge + R.w) / 2; // 內側面基準要外推半個軌寬，才是中心偏移
+  for (const s of [-offset, offset]) {
+    const g = new THREE.BoxGeometry(len, R.h, R.w);
     g.rotateY(Math.atan2(dy, dx));
-    g.translate((a[0] + b[0]) / 2 + nx * s, topY + 0.06, -((a[1] + b[1]) / 2 + ny * s));
+    g.translate((a[0] + b[0]) / 2 + nx * s, topY + R.h / 2, -((a[1] + b[1]) / 2 + ny * s));
     out.push(g);
   }
   return out;
@@ -342,8 +399,15 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     g.userData = { floorId: meta.id, kind: 'floor' };
 
     // slab：厚 0.3 m、頂面在 elevation（頂亮側暗）
-    g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
-      matPair(M.slab.color, M.slab.opacity), 'slab'));
+    // 軌道下沉到 elevation−1.40 後會被不透明的 slab 頂面完全遮住，故就地把 track 帶推導成額外
+    // hole（不改 data——nav 與 validator 看的仍是資料上的 holes），才看得進溝裡見到軌床與鋼軌
+    const trackHoles = (floor.areas ?? [])
+      .filter((a) => a.kind === 'track')
+      .map((a) => trackHole(a.polygon))
+      .filter((h): h is Vec2[] => h !== null);
+    const slabMat = matPair(M.slab.color, M.slab.opacity); // 溝壁共用同一材質：視覺上就是樓板被切開
+    g.add(extrudeMesh(floor.slab.outline, [...(floor.slab.holes ?? []), ...trackHoles],
+      0.3, meta.elevation - 0.3, slabMat, 'slab'));
 
     // 程序化周界牆帶：沿 slab 外框逐段生實心矮牆（massHeight）——非可走周界「fake wall」，nav 中隱藏
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
@@ -366,7 +430,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     const plats: { polygon: Vec2[]; topY: number }[] = [];
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
-      const sunk = a.kind === 'track' ? -1.1 : 0.01 + i * 0.01;
+      const sunk = a.kind === 'track' ? -THEME.trackSunk : 0.01 + i * 0.01;
       // 圖 2 構圖：月台＝系統色淡化錨點（去塑膠 T3）；系統未知回退 kind 色
       const sys = model.station.systems[a.system]?.color;
       const base = a.kind === 'platform' && sys
@@ -375,6 +439,8 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
       if (a.kind === 'track' && a.polygon.length === 4) {
         railParts.push(...railGeometries(a.polygon, meta.elevation + sunk + 0.05));
+        const wall = trenchWall(a.polygon, meta.elevation, slabMat);
+        if (wall) g.add(wall);
         for (let j = 0; j < 4; j++) { // 供警戒帶鄰接判定的軌道長邊
           const c = a.polygon[j], e = a.polygon[(j + 1) % 4];
           if (Math.hypot(e[0] - c[0], e[1] - c[1]) >= 10) trackEdges.push([c, e]);

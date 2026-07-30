@@ -17,7 +17,67 @@
         "origin_note": { "type": "string" },
         "axis_note": { "type": "string" },
         "bearing_deg": { "type": "number" },
-        "bearing_status": { "enum": ["estimated", "surveyed"] }
+        "bearing_status": { "enum": ["estimated", "surveyed"] },
+        "origin_wgs84": {
+          "type": "object",
+          "required": ["lat", "lon", "status", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+            "status": { "enum": ["estimated", "surveyed"] },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "building": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "length_m": { "type": "number", "exclusiveMinimum": 0 },
+            "width_m": { "type": "number", "exclusiveMinimum": 0 },
+            "height_m": { "type": "number", "exclusiveMinimum": 0 },
+            "floors_above": { "type": "integer", "minimum": 0 },
+            "floors_below": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "platforms": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[a-z0-9-]+$" },
+          "additionalProperties": {
+            "type": "object",
+            "required": ["form", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "form": { "type": "string" },
+              "count": { "type": "integer", "minimum": 1 },
+              "length_m": { "type": "number", "exclusiveMinimum": 0 },
+              "width_m": { "type": "number", "exclusiveMinimum": 0 },
+              "tracks": { "type": "integer", "minimum": 1 },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "exits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "building": { "type": "integer", "minimum": 0 },
+            "metro": { "type": "integer", "minimum": 0 },
+            "note": { "type": "string" }
+          }
+        },
+        "opened": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
       }
     },
     "systems": {

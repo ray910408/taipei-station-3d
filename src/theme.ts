@@ -23,6 +23,9 @@ export const THEME = {
   // 地板類單獨壓低走拋光石英磚（env 反射），其餘材質維持全域 roughness。
   // panelMeters：牆帶/柱面的面板接縫間距（牆 UV 已在 builder 換算成公尺）
   textures: { tileMeters: 2, tileGrid: 4, noiseAlpha: 0.05, groutAlpha: 0.22, tileTintAlpha: 0.05, floorRoughness: 0.5, panelMeters: 2.4 },
+  // 軌道凹槽深度：床頂面 = elevation − trackSunk + 0.05（area 厚度）= −1.40，
+  // 加 materials.rail.h 後軌條頂面 = elevation − 1.25，即月台面與軌面的高差
+  trackSunk: 1.45,
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
   nav: {
     chaseBack: 14, chaseUp: 7,
@@ -37,7 +40,8 @@ export const THEME = {
     wall: { color: '#c8ccd4', opacity: 1 },
     area: {
       platform: '#e9e2cf', paid: '#efe6e6', unpaid: '#e4ebf6',
-      corridor: '#e6efe8', track: '#0f1218', restricted: '#e7e9ee',
+      // track：道床灰——原 #0f1218 在深色場景裡是純黑洞，看不出凹槽也吃掉鋼軌對比
+      corridor: '#e6efe8', track: '#2a2f38', restricted: '#e7e9ee',
     } satisfies Record<AreaKind, string>,
     areaOpacity: 1,
     unit: {
@@ -48,7 +52,9 @@ export const THEME = {
       'stair-void': { color: '#dadce0', opacity: 0.4 },
     } satisfies Record<UnitKind, { color: string; opacity: number }>,
     gate: { accessible: '#37a559', standard: '#7a828f' },
-    rail: { color: '#9aa2ae' }, // 軌道溝內的鋼軌——深色溝底上的亮線
+    // 軌道凹槽內的鋼軌——道床上的亮線。gauge 量的是兩軌內側面間距（標準軌距，高鐵/臺鐵/北捷同 1435mm）；
+    // w/h 為軌條斷面寬高（示意尺度，非實際軌型）。h 與 trackSunk 綁定軌頂 = elevation − 1.25 的語意
+    rail: { color: '#9aa2ae', gauge: 1.435, w: 0.07, h: 0.15 },
     platformEdge: { color: '#d9b74a', inset: 0.45, width: 0.4 }, // 月台邊緣警戒帶（鄰軌道的長邊）
     paidOverlay: { color: '#e6b45a', opacity: 0.18, dash: '#e6b45a' },
     connector: {
@@ -74,8 +80,10 @@ export const THEME = {
   poiSize: 2.4,
   labels: {
     floorTagMinExplode: 0.6, landmarkMaxDist: 320, landmarkNearDist: 140, floorTagStagger: 10, declutterPad: 4,
+    platformStagger: 30, // 同層多月台沿長軸錯開的間距（m）——B2 四座月台質心 x 全為 0，不錯開會被 declutter 剔掉
     floorTag: { bg: '#1b1e26e6', fg: '#e7ebf2' },
     landmark: { bg: '#22262fcc', fg: '#c7cedb' },
+    platform: { bg: '#22262fcc', fg: '#c7cedb' }, // 月台編號籤：先沿用 landmark 值，僅字重加粗區隔
   },
   ui: {
     '--bg': '#1b1e26f2', '--line': '#2f343d', '--fg': '#e7ebf2',
