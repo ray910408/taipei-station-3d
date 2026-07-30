@@ -10,7 +10,13 @@
     "origin_note": "臺鐵站體中心",
     "axis_note": "+X 沿臺鐵站體長軸約東向，+Y 約北向；R 線站體長軸約 N20°E。以北捷開放資料出入口 GPS 核對過但解析度有限（出口重心非軌道點）：模型月台軸 N17.5°E vs 按弦長加權內插站處切線 N17.49°E，與模型軸差 0.02°±1.65°（僅隨機項，轉乘站重心偏差開不出標準差）——未被推翻，但不足以升級為實測值",
     "bearing_deg": 90,
-    "bearing_status": "estimated"
+    "bearing_status": "estimated",
+    "origin_wgs84": {
+      "lat": 25.04778,
+      "lon": 121.51722,
+      "status": "estimated",
+      "note": "維基百科 infobox 座標（25°2′52″N 121°31′2″E，角秒解析度約 ±15m）；代表點是整個車站而非嚴格的臺鐵站體中心，僅供 GPS 粗定位錨定"
+    }
   },
   "systems": {
     "trtc": {
@@ -24,6 +30,56 @@
         "zh": "臺鐵"
       },
       "color": "#0070bd"
+    }
+  },
+  "facts": {
+    "source": "https://zh.wikipedia.org/zh-tw/臺北車站（2026-07-30 擷取；文獻值，非實測）",
+    "building": {
+      "length_m": 149,
+      "width_m": 110,
+      "height_m": 48,
+      "floors_above": 6,
+      "floors_below": 4
+    },
+    "platforms": {
+      "tra": {
+        "form": "島式",
+        "count": 2,
+        "length_m": 330,
+        "width_m": 9,
+        "tracks": 5,
+        "note": "第3、4月台（3A/3B、4A/4B）；5 股道含 1 條通過線。模型 B2 幾何已依本值重畫，橫向中心線仍依 tra-b2-map 描圖"
+      },
+      "hsr": {
+        "form": "島式",
+        "count": 2,
+        "length_m": 330,
+        "width_m": 9,
+        "tracks": 4,
+        "note": "第1、2月台（1A/1B、2A/2B）；模型中 system 概括為 tra，幾何同依文獻值重畫"
+      },
+      "trtc-r": {
+        "form": "島式",
+        "count": 1,
+        "note": "淡水信義線一/二月台"
+      },
+      "trtc-bl": {
+        "form": "島式",
+        "count": 1,
+        "note": "板南線三/四月台；月台不在本模型範圍"
+      }
+    },
+    "exits": {
+      "building": 12,
+      "metro": 8,
+      "note": "站體東南西北各 3 座；捷運出口 M1–M8"
+    },
+    "opened": {
+      "tra": "1989-09-02",
+      "hsr": "2007-03-02",
+      "trtc-r": "1997-12-25",
+      "trtc-bl": "1999-12-24",
+      "note": "tra 為現址第四代站房啟用日；trtc 為淡水線/南港線通車日"
     }
   },
   "floors": [

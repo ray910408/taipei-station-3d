@@ -12,7 +12,12 @@ export interface Provenance {
 export interface Slab extends Provenance { outline: Vec2[]; holes?: Vec2[][] }
 
 export type AreaKind = 'platform' | 'paid' | 'unpaid' | 'corridor' | 'track' | 'restricted';
-export interface Area extends Provenance { id: string; kind: AreaKind; system: string; polygon: Vec2[] }
+// sides：島式月台兩面的側別編號（如 4A/4B），鍵為該面朝向的方位
+export interface Area extends Provenance {
+  id: string; kind: AreaKind; system: string; polygon: Vec2[];
+  name?: LocalizedName;
+  sides?: { north?: string; south?: string; east?: string; west?: string };
+}
 
 export interface Wall extends Provenance { id: string; polyline: Vec2[]; height: number; width?: number }
 
@@ -48,9 +53,22 @@ export interface FloorMeta {
 
 export interface StationDoc {
   schema: 'station@1'; id: string; name: LocalizedName;
-  frame: { units: 'm'; origin_note: string; axis_note: string; bearing_deg?: number; bearing_status?: string };
+  frame: {
+    units: 'm'; origin_note: string; axis_note: string; bearing_deg?: number; bearing_status?: string;
+    origin_wgs84?: { lat: number; lon: number; status: 'estimated' | 'surveyed'; note: string };
+  };
   systems: Record<string, { name: LocalizedName; color: string }>;
+  facts?: StationFacts;
   floors: FloorMeta[];
+}
+
+// 文獻參考值（wiki 等），非模型幾何的一部分；模型與文獻衝突時記在 note，不回寫幾何
+export interface StationFacts {
+  source: string;
+  building?: { length_m?: number; width_m?: number; height_m?: number; floors_above?: number; floors_below?: number };
+  platforms?: Record<string, { form: string; count: number; length_m?: number; width_m?: number; tracks?: number; note?: string }>;
+  exits?: { building?: number; metro?: number; note?: string };
+  opened?: Record<string, string>;
 }
 
 export interface ConnectorLevel { floor: string; node: string }

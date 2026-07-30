@@ -20,6 +20,11 @@ export const THEME = {
   body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7, massHeight: 0.9, escalatorRun: 8 },
   // 程序化地磚（Phase 6 去塑膠）：白底單磚 × 材質底色相乘；強度刻意壓低——要「有材質的白」不要照片地板
   textures: { tileMeters: 2, noiseAlpha: 0.05, groutAlpha: 0.1 },
+  // 軌道床下沉深度：床頂面 = elevation − trackSunk + 0.05（area 厚度）= −1.40，
+  // 加 rail.h 後軌條頂面 = elevation − 1.25，即月台面與軌面的高差
+  trackSunk: 1.45,
+  // 鋼軌：gauge 為標準軌距（高鐵/臺鐵/北捷同 1435mm）；w/h 為軌條斷面寬高（示意尺度，非實際軌型）
+  rail: { gauge: 1.435, w: 0.08, h: 0.15, color: '#8f969e' },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
   nav: {
     chaseBack: 14, chaseUp: 7,
@@ -69,8 +74,10 @@ export const THEME = {
   poiSize: 2.4,
   labels: {
     floorTagMinExplode: 0.6, landmarkMaxDist: 320, landmarkNearDist: 140, floorTagStagger: 10, declutterPad: 4,
+    platformStagger: 30, // 同層多月台沿長軸錯開的間距（m）——B2 四座月台質心 x 全為 0，不錯開會被 declutter 剔掉
     floorTag: { bg: '#1b1e26e6', fg: '#e7ebf2' },
     landmark: { bg: '#22262fcc', fg: '#c7cedb' },
+    platform: { bg: '#22262fcc', fg: '#c7cedb' }, // 月台編號籤：先沿用 landmark 值，僅字重加粗區隔
   },
   ui: {
     '--bg': '#1b1e26f2', '--line': '#2f343d', '--fg': '#e7ebf2',

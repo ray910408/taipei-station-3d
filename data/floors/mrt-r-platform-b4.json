@@ -21,6 +21,14 @@
       "id": "a-rp-platform",
       "kind": "platform",
       "system": "trtc",
+      "name": {
+        "zh": "淡水信義線月台",
+        "en": "Tamsui-Xinyi Platform"
+      },
+      "sides": {
+        "east": "1",
+        "west": "2"
+      },
       "polygon": [
         [105.3, -86.8],
         [147.4, 49.4],

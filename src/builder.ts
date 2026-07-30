@@ -190,6 +190,75 @@ export function buildConnectorsGroup(
   return connGroup;
 }
 
+function edgeMid(polygon: Vec2[], i: number): Vec2 {
+  const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+/** 四邊形短邊對：起始索引 s（(0,2) 與 (1,3) 中總長較小者）＋兩短邊平均長（＝軌道帶實寬）。 */
+function shortEdgePair(polygon: Vec2[]): { s: number; width: number } | null {
+  if (polygon.length !== 4) return null;
+  const len = (i: number): number => {
+    const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+    return Math.hypot(b[0] - a[0], b[1] - a[1]);
+  };
+  const s = len(0) + len(2) <= len(1) + len(3) ? 0 : 1;
+  return { s, width: (len(s) + len(s + 2)) / 2 };
+}
+
+/** 軌道中軸：四邊形兩條短邊的中點連線。不假設軸對齊——B4 軌道為斜置四邊形。非四邊形回 null。 */
+export function trackAxis(polygon: Vec2[]): [Vec2, Vec2] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  return [edgeMid(polygon, e.s), edgeMid(polygon, e.s + 2)];
+}
+
+/** hole 四邊各內縮的公尺數：B2 軌道 x 貼滿 ±175 與 slab 邊重合、B4 短邊直接落在 slab outline 上，
+ *  不內縮會生出邊貼邊的退化 hole。 */
+export const TRACK_HOLE_INSET = 0.1;
+
+/** slab 開洞用的軌道輪廓：中軸兩端內縮、側向半寬 = 實寬/2 − inset 的平行四邊形。
+ *  繞向恆為 cw（signed area = −2·軸長·半寬），符合 hole 慣例（見 validate.ts iterRings）。 */
+export function trackHole(polygon: Vec2[]): Vec2[] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  const m0 = edgeMid(polygon, e.s), m1 = edgeMid(polygon, e.s + 2);
+  const [dx, dy] = [m1[0] - m0[0], m1[1] - m0[1]];
+  const L = Math.hypot(dx, dy);
+  const half = e.width / 2 - TRACK_HOLE_INSET;
+  if (L <= 2 * TRACK_HOLE_INSET || half <= 0) return null; // 內縮後退化
+  const [ux, uy] = [dx / L, dy / L];
+  const [px, py] = [-uy * half, ux * half]; // 左法向 × 半寬
+  const a: Vec2 = [m0[0] + ux * TRACK_HOLE_INSET, m0[1] + uy * TRACK_HOLE_INSET];
+  const b: Vec2 = [m1[0] - ux * TRACK_HOLE_INSET, m1[1] - uy * TRACK_HOLE_INSET];
+  return [
+    [a[0] + px, a[1] + py], [b[0] + px, b[1] + py],
+    [b[0] - px, b[1] - py], [a[0] - px, a[1] - py],
+  ];
+}
+
+/** 兩條鋼軌：沿軌道中軸、垂直偏移 ±gauge/2，底面貼軌道床頂面 → 軌條頂面 = elevation − 1.25。 */
+function buildRails(polygon: Vec2[], elevation: number): THREE.Mesh[] {
+  const axis = trackAxis(polygon);
+  if (!axis) return [];
+  const R = THEME.rail;
+  const centerY = elevation - THEME.trackSunk + 0.05 + R.h / 2; // 床頂 + 半個軌高
+  const a = toWorld(axis[0], centerY);
+  const b = toWorld(axis[1], centerY);
+  const len = a.distanceTo(b);
+  if (len < 1e-6) return [];
+  const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x).normalize();
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const material = mat(R.color, 1);
+  return [-1, 1].map((sign) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(len, R.h, R.w), material);
+    rail.position.copy(mid).addScaledVector(lateral, (sign * R.gauge) / 2);
+    rail.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x); // Box 長軸為 x，同牆帶慣例
+    rail.userData.kind = 'rail';
+    return rail;
+  });
+}
+
 /** 付費區表現：半透明染 overlay（貼在付費地面略上）＋虛線邊界框。 */
 export function buildPaidOverlay(ring: Vec2[], elevation: number): THREE.Object3D[] {
   const P = THEME.materials.paidOverlay;
@@ -219,8 +288,14 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     g.userData = { floorId: meta.id, kind: 'floor' };
 
     // slab：厚 0.3 m、頂面在 elevation（頂亮側暗）
-    g.add(extrudeMesh(floor.slab.outline, floor.slab.holes ?? [], 0.3, meta.elevation - 0.3,
-      matPair(M.slab.color, M.slab.opacity), 'slab'));
+    // 軌道下沉到 elevation−1.40 後會被不透明的 slab 頂面完全遮住，故就地把 track 帶推導成額外
+    // hole（不改 data——nav 與 validator 看的仍是資料上的 holes），才看得進溝裡見到軌床與鋼軌
+    const trackHoles = (floor.areas ?? [])
+      .filter((a) => a.kind === 'track')
+      .map((a) => trackHole(a.polygon))
+      .filter((h): h is Vec2[] => h !== null);
+    g.add(extrudeMesh(floor.slab.outline, [...(floor.slab.holes ?? []), ...trackHoles],
+      0.3, meta.elevation - 0.3, matPair(M.slab.color, M.slab.opacity), 'slab'));
 
     // 程序化周界牆帶：沿 slab 外框逐段生實心矮牆（massHeight）——非可走周界「fake wall」，nav 中隱藏
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
@@ -239,7 +314,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
 
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
-      const sunk = a.kind === 'track' ? -1.1 : 0.01 + i * 0.01;
+      const sunk = a.kind === 'track' ? -THEME.trackSunk : 0.01 + i * 0.01;
       // 圖 2 構圖：月台＝系統色淡化錨點（去塑膠 T3）；系統未知回退 kind 色
       const sys = model.station.systems[a.system]?.color;
       const base = a.kind === 'platform' && sys
@@ -247,6 +322,7 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       g.add(extrudeMesh(
         a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
       if (a.kind === 'paid') for (const o of buildPaidOverlay(a.polygon, meta.elevation)) g.add(o);
+      if (a.kind === 'track') for (const r of buildRails(a.polygon, meta.elevation)) g.add(r);
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];
