@@ -183,6 +183,12 @@ export function routeSteps(model: StationModel, graph: NavGraph, edges: GraphEdg
   for (const e of edges) {
     if (e.kind === 'walk' || e.kind === 'platform-edge') {
       walk += e.length;
+      const a = graph.nodes.get(e.from)!;
+      const b = graph.nodes.get(e.to)!;
+      if (a.floor !== b.floor) {          // 縫合邊：同高跨檔（垂直移動不會是 walk）
+        flushWalk();
+        steps.push(`進入「${floorZh(b.floor)}」`);
+      }
       continue;
     }
     flushWalk();
