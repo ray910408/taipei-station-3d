@@ -5,6 +5,7 @@ import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import tc from '../data/floors/tra-concourse-b1.json';
 import tp from '../data/floors/tra-platform-b2.json';
+import bc from '../data/floors/mrt-bl-concourse-b2.json';
 import rc from '../data/floors/mrt-r-concourse-b3.json';
 import bp from '../data/floors/mrt-bl-platform-b3.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
@@ -12,6 +13,7 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
 const model = assembleModel(stationDoc, {
   'floors/tra-concourse-b1.json': tc,
   'floors/tra-platform-b2.json': tp,
+  'floors/mrt-bl-concourse-b2.json': bc,
   'floors/mrt-r-concourse-b3.json': rc,
   'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': rp,

@@ -5,6 +5,7 @@ import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import tc from '../data/floors/tra-concourse-b1.json';
 import tp from '../data/floors/tra-platform-b2.json';
+import bc from '../data/floors/mrt-bl-concourse-b2.json';
 import rc from '../data/floors/mrt-r-concourse-b3.json';
 import bp from '../data/floors/mrt-bl-platform-b3.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
@@ -12,16 +13,18 @@ import rp from '../data/floors/mrt-r-platform-b4.json';
 const model = assembleModel(stationDoc, {
   'floors/tra-concourse-b1.json': tc,
   'floors/tra-platform-b2.json': tp,
+  'floors/mrt-bl-concourse-b2.json': bc,
   'floors/mrt-r-concourse-b3.json': rc,
   'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': rp,
 }, connectorsDoc);
 
 describe('地標池（終審 mutation audit #2：mojibake 回歸鎖）', () => {
-  it('共 33 個地標、Phase 3.5 新增 17 名精確值', () => {
+  it('共 34 個地標、Phase 3.5 新增 17 名精確值、bc 新增 1 名', () => {
     const byId = new Map(listLandmarks(model).map((l) => [l.id, l.label]));
-    expect(byId.size).toBe(33);
+    expect(byId.size).toBe(34);
     const expected: Record<string, string> = {
+      'n-bc-001': '板南線大廳（詢問處）',
       'n-rp-002': '淡水信義線月台 南端電梯口',
       'n-rp-004': '淡水信義線月台 北梯群口',
       'n-rp-006': '淡水信義線月台 中段電梯口',

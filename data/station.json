@@ -119,7 +119,22 @@
       },
       "labels": {
         "complex": "B2",
-        "tra": "B2 月台層",
+        "tra": "B2 月台層"
+      },
+      "elevation": -14,
+      "height": 4.5,
+      "estimated": true
+    },
+    {
+      "id": "mrt-bl-concourse-b2",
+      "short": "bc",
+      "file": "floors/mrt-bl-concourse-b2.json",
+      "name": {
+        "zh": "板南線大廳層",
+        "en": "Bannan Line Concourse"
+      },
+      "labels": {
+        "complex": "BL2",
         "trtc": "B2 板南線大廳層"
       },
       "elevation": -14,
