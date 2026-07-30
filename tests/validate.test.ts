@@ -27,6 +27,21 @@ describe('validateDocs', () => {
     expect(errors.some((e) => e.includes('nope'))).toBe(true);
   });
 
+  it('參照：station facts source 不存在於 sources.json', () => {
+    const docs = freshDocs();
+    (docs.station as any).facts = { source: 'nope' };
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('station facts') && e.includes('nope'))).toBe(true);
+  });
+
+  it.each(['station_records', 'ridership', 'opened'])('schema 違規：facts 不接受非建模欄位 %s', (field) => {
+    const docs = freshDocs();
+    const source = docs.sources.sources[0].id;
+    (docs.station as any).facts = { source, [field]: {} };
+    const { errors } = validateDocs(docs);
+    expect(errors.some((e) => e.includes('station.json'))).toBe(true);
+  });
+
   it('參照：connector 指到不存在的 node', () => {
     const docs = freshDocs();
     (docs.connectors as any).connectors[0].levels[0].node = 'n-pl-999';

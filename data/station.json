@@ -12,10 +12,10 @@
     "bearing_deg": 90,
     "bearing_status": "estimated",
     "origin_wgs84": {
-      "lat": 25.04778,
-      "lon": 121.51722,
+      "lat": 25.04771,
+      "lon": 121.51784,
       "status": "estimated",
-      "note": "維基百科 infobox 座標（25°2′52″N 121°31′2″E，角秒解析度約 ±15m）；代表點是整個車站而非嚴格的臺鐵站體中心，僅供 GPS 粗定位錨定"
+      "note": "臺鐵車站基本資料集 stationCode=1000 的官方 gps（lat lon）；資料集未明載 CRS，且代表點不等於模型的臺鐵站體中心，僅供 GPS 粗定位錨定"
     }
   },
   "systems": {
@@ -33,30 +33,34 @@
     }
   },
   "facts": {
-    "source": "https://zh.wikipedia.org/zh-tw/臺北車站（2026-07-30 擷取；文獻值，非實測）",
+    "source": "taipei-main-station-facts-2026-07-30",
+    "verified": "2026-07-30",
     "building": {
-      "length_m": 149,
-      "width_m": 110,
-      "height_m": 48,
       "floors_above": 6,
       "floors_below": 4
     },
     "platforms": {
+      "tra-hsr-total": {
+        "form": "島式",
+        "count": 4,
+        "length_m": 330,
+        "width_m": 9,
+        "tracks": 9,
+        "note": "交通部鐵道局官方工程出版品的臺鐵＋高鐵合計值；不要與下列營運者分項重複加總"
+      },
       "tra": {
         "form": "島式",
         "count": 2,
         "length_m": 330,
         "width_m": 9,
-        "tracks": 5,
-        "note": "第3、4月台（3A/3B、4A/4B）；5 股道含 1 條通過線。模型 B2 幾何已依本值重畫，橫向中心線仍依 tra-b2-map 描圖"
+        "note": "第3、4月台（3A/3B、4A/4B）；官方一手文字未拆分臺鐵／高鐵股道數，模型 B2 橫向中心線仍依 tra-b2-map 描圖"
       },
       "hsr": {
         "form": "島式",
         "count": 2,
         "length_m": 330,
         "width_m": 9,
-        "tracks": 4,
-        "note": "第1、2月台（1A/1B、2A/2B）；模型中 system 概括為 tra，幾何同依文獻值重畫"
+        "note": "第1、2月台（1A/1B、2A/2B）；官方一手文字未拆分臺鐵／高鐵股道數，模型中 system 仍概括為 tra"
       },
       "trtc-r": {
         "form": "島式",
@@ -72,14 +76,19 @@
     "exits": {
       "building": 12,
       "metro": 8,
-      "note": "站體東南西北各 3 座；捷運出口 M1–M8"
+      "metro_accessible": [
+        "M2",
+        "M4"
+      ],
+      "note": "站體東南西北各 3 座；捷運出口 M1–M8，其中 M2、M4 為無障礙出口"
     },
-    "opened": {
-      "tra": "1989-09-02",
-      "hsr": "2007-03-02",
-      "trtc-r": "1997-12-25",
-      "trtc-bl": "1999-12-24",
-      "note": "tra 為現址第四代站房啟用日；trtc 為淡水線/南港線通車日"
+    "accessibility": {
+      "metro_elevators": 7,
+      "tra_ramps": [
+        "北一門",
+        "北二門"
+      ],
+      "note": "北捷官方站頁列 7 部無障礙電梯；臺鐵官方站頁列北一門、北二門無障礙坡道"
     }
   },
   "floors": [

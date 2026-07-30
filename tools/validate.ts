@@ -74,6 +74,8 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
   const systemIds = new Set([...Object.keys(station.systems), 'shared']);
   const floorMeta = new Map(station.floors.map((f) => [f.id, f]));
   const allIds = new Map<string, string>(); // id -> 所在描述，全域唯一檢查
+  if (station.facts && !sourceIds.has(station.facts.source))
+    errors.push(`[ref] station facts source "${station.facts.source}" 不存在於 refs/sources.json`);
 
   const claimId = (id: string, where: string): void => {
     if (allIds.has(id)) errors.push(`[id] ${id} 重複（${allIds.get(id)} 與 ${where}）`);

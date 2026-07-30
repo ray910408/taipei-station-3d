@@ -9,13 +9,12 @@ describe('tracer 底圖來源過濾', () => {
   const sources = sourcesDoc.sources;
 
   it('CSV 來源一律排除、影像來源一律保留', () => {
-    const traceable = sources.filter(isTraceable).map((s) => s.id);
-    const rest = sources.filter((s) => !isTraceable(s)).map((s) => s.id);
-    expect(rest.length).toBeGreaterThan(0); // 表裡確實有非影像來源，這條測試才有意義
-    for (const id of rest) expect(id).toMatch(/^trtc-od-/);
-    for (const s of sources.filter((s) => /\.(png|jpe?g)$/i.test(s.file))) {
-      expect(traceable).toContain(s.id);
-    }
+    const csv = sources.filter((s) => /\.csv$/i.test(s.file));
+    const images = sources.filter((s) => /\.(png|jpe?g)$/i.test(s.file));
+    expect(csv.length).toBeGreaterThan(0);
+    expect(images.length).toBeGreaterThan(0);
+    for (const s of csv) expect(isTraceable(s)).toBe(false);
+    for (const s of images) expect(isTraceable(s)).toBe(true);
   });
 
   it('每個 traceable 來源的副檔名都是瀏覽器能當底圖載入的', () => {

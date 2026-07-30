@@ -62,13 +62,14 @@ export interface StationDoc {
   floors: FloorMeta[];
 }
 
-// 文獻參考值（wiki 等），非模型幾何的一部分；模型與文獻衝突時記在 note，不回寫幾何
+// 官方建模參考值，非模型幾何本體；模型與資料衝突時記在 note，不直接回寫幾何
 export interface StationFacts {
   source: string;
+  verified?: string;
   building?: { length_m?: number; width_m?: number; height_m?: number; floors_above?: number; floors_below?: number };
   platforms?: Record<string, { form: string; count: number; length_m?: number; width_m?: number; tracks?: number; note?: string }>;
-  exits?: { building?: number; metro?: number; note?: string };
-  opened?: Record<string, string>;
+  exits?: { building?: number; metro?: number; metro_accessible?: string[]; note?: string };
+  accessibility?: { metro_elevators?: number; tra_ramps?: string[]; note?: string };
 }
 
 export interface ConnectorLevel { floor: string; node: string }
