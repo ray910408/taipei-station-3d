@@ -172,8 +172,8 @@ export function createLabelLayer(
       for (const e of entries) {
         // 樓層聚焦：非聚焦樓層標籤直接隱藏（半透明仍佔位——不採用）
         if (focusFloor !== null && e.floor !== focusFloor) { e.obj.visible = false; continue; }
-        // 鏡頭滑行中 landmark 不參與（距離掃過閾值會大量閃現）；floor tag 不受影響
-        if (e.kind === 'landmark' && inTransit) { e.obj.visible = false; continue; }
+        // 鏡頭滑行中 landmark／platform 不參與（距離掃過 LOD 閾值會大量閃現）；floor tag 不受影響
+        if ((e.kind === 'landmark' || e.kind === 'platform') && inTransit) { e.obj.visible = false; continue; }
         const world = e.obj.getWorldPosition(tmp);
         const dist = world.distanceTo(camera.position);
         if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }

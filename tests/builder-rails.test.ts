@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildStationGroup, trackAxis, trackHole, TRACK_HOLE_INSET } from '../src/builder';
-import { ringArea } from '../src/geometry';
+import { buildStationGroup, insetQuad, trackAxis, trackHole, TRACK_HOLE_INSET } from '../src/builder';
+import { pointInPolygon, ringArea } from '../src/geometry';
 import { THEME } from '../src/theme';
 import type { StationModel, Vec2 } from '../src/types';
 
@@ -83,5 +83,40 @@ describe('trackHole：slab 程序化開洞輪廓', () => {
   it('非四邊形回 null', () => {
     expect(trackHole([[0, 0], [10, 0], [10, 10]])).toBeNull();
     expect(trackHole([[0, 0], [10, 0], [10, 10], [0, 10], [-5, 5]])).toBeNull();
+  });
+});
+
+describe('insetQuad：梯形也要每邊等距（B4 軌道兩短邊 4.18 vs 5.00）', () => {
+  // B4 a-rp-track-w 真實座標；舊的「中軸±平均半寬」平行四邊形在這裡一端開穿 0.12m、
+  // 另一端留下 0.22m 懸在溝上的樓板舌片
+  const w: Vec2[] = [[88.1, -85], [131.7, 57], [127.7, 58.2], [83.2, -84]];
+  // 有向邊左側為正（ccw ring 的內側）
+  const inDist = (pt: Vec2, a: Vec2, b: Vec2): number => {
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    return ((pt[0] - a[0]) * dy - (pt[1] - a[1]) * dx) / -Math.hypot(dx, dy);
+  };
+
+  it('每個新頂點到其兩條原始鄰邊的垂距都 = inset', () => {
+    const r = insetQuad(w, 0.1)!;
+    expect(r).toHaveLength(4);
+    for (const [i, pt] of r.entries()) {
+      // 頂點 i ＝邊 (i−1) 與邊 i 的交點
+      for (const e of [(i + 3) % 4, i])
+        expect(inDist(pt, w[e], w[(e + 1) % 4])).toBeCloseTo(0.1, 6);
+      expect(pointInPolygon(pt, w)).toBe(true);
+    }
+  });
+
+  it('矩形輸入與舊平行四邊形結果一致（B2 不變）', () => {
+    const b2: Vec2[] = [[-175, -55], [175, -55], [175, -50.5], [-175, -50.5]];
+    expect(insetQuad(b2, 0.1)).toEqual([
+      [-174.9, -54.9], [174.9, -54.9], [174.9, -50.6], [-174.9, -50.6],
+    ]);
+  });
+
+  it('保持輸入繞向；外擴（d<0）與內縮過頭的守門', () => {
+    expect(ringArea(insetQuad(w, 0.1)!)).toBeGreaterThan(0); // 輸入 ccw → 輸出 ccw
+    expect(ringArea(insetQuad(w, -0.02)!)).toBeGreaterThan(Math.abs(ringArea(w))); // 外擴變大
+    expect(insetQuad(w, 3)).toBeNull(); // 內縮超過半寬 → 翻面
   });
 });
