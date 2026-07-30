@@ -9,12 +9,14 @@ import connectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
 import b2 from '../data/floors/tra-platform-b2.json';
 import b3 from '../data/floors/mrt-r-concourse-b3.json';
+import bp from '../data/floors/mrt-bl-platform-b3.json';
 import b4 from '../data/floors/mrt-r-platform-b4.json';
 
 const model = assembleModel(stationDoc, {
   'floors/tra-concourse-b1.json': b1,
   'floors/tra-platform-b2.json': b2,
   'floors/mrt-r-concourse-b3.json': b3,
+  'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': b4,
 }, connectorsDoc);
 
