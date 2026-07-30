@@ -27,6 +27,13 @@ function extrudeMesh(
   return mesh;
 }
 
+/** BoxGeometry UV 0..1 → 公尺：共用面板紋理在不同長度的牆上接縫間距才一致。
+ *  端面/頂面（0.4m 窄條）跟著長邊比例被拉伸，可忽略。 */
+function scaleWallUV(geo: THREE.BoxGeometry, len: number, height: number): void {
+  const uv = geo.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * len, uv.getY(i) * height);
+}
+
 function mat(color: string, opacity: number): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color, roughness: THEME.materials.roughness, metalness: 0,
@@ -103,11 +110,179 @@ export function connectorRunDir(nodes: NavNode[], edges: NavEdge[], nodeId: stri
   return len < 1e-6 ? null : [dx / len, dy / len];
 }
 
+function edgeMid(polygon: Vec2[], i: number): Vec2 {
+  const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+/** 四邊形短邊對：起始索引 s（(0,2) 與 (1,3) 中總長較小者）＋兩短邊平均長（＝軌道帶實寬）。 */
+function shortEdgePair(polygon: Vec2[]): { s: number; width: number } | null {
+  if (polygon.length !== 4) return null;
+  const len = (i: number): number => {
+    const a = polygon[i % 4], b = polygon[(i + 1) % 4];
+    return Math.hypot(b[0] - a[0], b[1] - a[1]);
+  };
+  const s = len(0) + len(2) <= len(1) + len(3) ? 0 : 1;
+  return { s, width: (len(s) + len(s + 2)) / 2 };
+}
+
+/** 軌道中軸：四邊形兩條短邊的中點連線。不假設軸對齊——B4 軌道為斜置四邊形。非四邊形回 null。 */
+export function trackAxis(polygon: Vec2[]): [Vec2, Vec2] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  return [edgeMid(polygon, e.s), edgeMid(polygon, e.s + 2)];
+}
+
+/** slab 開洞內縮量：B2 軌道 x 貼滿 ±175 與 slab 邊重合、B4 長邊直接落在 slab outline 上，
+ *  不內縮會生出邊貼邊的退化 hole。 */
+export const TRACK_HOLE_INSET = 0.1;
+/** 溝壁內縮量（> TRACK_HOLE_INSET，壁體才包住 slab 的切面不共面）；負值＝外擴。 */
+const TRENCH_WALL_INSET = 0.16;
+const TRENCH_WALL_LIP = -0.02; // 壁外緣外擴：B4 軌道長邊與 slab outline 共面，不外推會 z-fight
+
+/** 軌道輪廓的等距內縮環（inset 為負則外擴）：中軸兩端內縮、側向半寬 = 實寬/2 − inset。
+ *  頂點序恆為 cw（signed area = −2·軸長·半寬），符合 hole 慣例（見 validate.ts iterRings）。 */
+export function trackHole(polygon: Vec2[], inset = TRACK_HOLE_INSET): Vec2[] | null {
+  const e = shortEdgePair(polygon);
+  if (!e) return null;
+  const m0 = edgeMid(polygon, e.s), m1 = edgeMid(polygon, e.s + 2);
+  const [dx, dy] = [m1[0] - m0[0], m1[1] - m0[1]];
+  const L = Math.hypot(dx, dy);
+  const half = e.width / 2 - inset;
+  if (L <= 2 * inset || half <= 0) return null; // 內縮後退化
+  const [ux, uy] = [dx / L, dy / L];
+  const [px, py] = [-uy * half, ux * half]; // 左法向 × 半寬
+  const a: Vec2 = [m0[0] + ux * inset, m0[1] + uy * inset];
+  const b: Vec2 = [m1[0] - ux * inset, m1[1] - uy * inset];
+  return [
+    [a[0] + px, a[1] + py], [b[0] + px, b[1] + py],
+    [b[0] - px, b[1] - py], [a[0] - px, a[1] - py],
+  ];
+}
+
+/** 軌道凹槽的四面溝壁：外環為軌道帶略外擴、內環為內縮 TRENCH_WALL_INSET，
+ *  自道床頂面往上封到 slab 頂面（+1cm 免共面）——沒有這圈壁，下沉的道床側視會是懸空黑縫。
+ *  用環狀 extrude（外環 ccw + 內環 cw）一次成形，四角不留縫；材質即 slab 自身（看起來是切開樓板）。 */
+function trenchWall(polygon: Vec2[], elevation: number, material: THREE.Material[]): THREE.Mesh | null {
+  const inner = trackHole(polygon, TRENCH_WALL_INSET);
+  const outer = trackHole(polygon, TRENCH_WALL_LIP);
+  if (!inner || !outer) return null;
+  const bedTop = elevation - THEME.trackSunk + 0.05;
+  return extrudeMesh(outer.slice().reverse(), [inner], elevation + 0.01 - bedTop, bedTop,
+    material, 'track-wall'); // outer 反轉成 ccw（trackHole 回 cw）
+}
+
+/** 軌道鋼軌：沿中軸鋪兩根標準軌距鋼軌，底面貼道床頂面 → 軌頂 = elevation − 1.25。
+ *  非四邊形的軌道帶略過——目前資料全為四邊形。 */
+function railGeometries(quad: Vec2[], topY: number): THREE.BufferGeometry[] {
+  const axis = trackAxis(quad);
+  if (!axis) return [];
+  const R = THEME.materials.rail;
+  const [a, b] = axis;
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return [];
+  const nx = -dy / len, ny = dx / len;
+  const out: THREE.BufferGeometry[] = [];
+  const offset = (R.gauge + R.w) / 2; // 內側面基準要外推半個軌寬，才是中心偏移
+  for (const s of [-offset, offset]) {
+    const g = new THREE.BoxGeometry(len, R.h, R.w);
+    g.rotateY(Math.atan2(dy, dx));
+    g.translate((a[0] + b[0]) / 2 + nx * s, topY + R.h / 2, -((a[1] + b[1]) / 2 + ny * s));
+    out.push(g);
+  }
+  return out;
+}
+
+function distPtLine(p: Vec2, a: Vec2, b: Vec2): number {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  return Math.abs((p[0] - a[0]) * dy - (p[1] - a[1]) * dx) / Math.hypot(dx, dy);
+}
+
+/** 月台邊緣警戒帶：月台長邊兩端點都貼著（<1.2m）某條軌道長邊時，取兩者在月台邊參數軸上的
+ *  重疊區間鋪帶（裁掉不重疊/僅端點擦邊的部分，重疊 <1m 略過），避免共線但不重疊的邊誤鋪、
+ *  或部分重疊的邊鋪過頭。同一月台邊可能鄰接多條軌道邊，逐條軌道邊各鋪各的重疊段。
+ *  內縮方向以月台質心判定。B4 實測鄰接誤差 <0.1m，1.2m 門檻很寬裕。 */
+function platformEdgeStrips(
+  plats: { polygon: Vec2[]; topY: number }[], trackEdges: [Vec2, Vec2][],
+): THREE.BufferGeometry[] {
+  const E = THEME.materials.platformEdge;
+  const out: THREE.BufferGeometry[] = [];
+  for (const p of plats) {
+    const cx = p.polygon.reduce((s, q) => s + q[0], 0) / p.polygon.length;
+    const cy = p.polygon.reduce((s, q) => s + q[1], 0) / p.polygon.length;
+    for (let i = 0; i < p.polygon.length; i++) {
+      const a = p.polygon[i], b = p.polygon[(i + 1) % p.polygon.length];
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy);
+      if (len < 10) continue;
+      let nx = -dy / len, ny = dx / len; // 邊法向，翻向月台內側（質心側）
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      if (nx * (cx - mx) + ny * (cy - my) < 0) { nx = -nx; ny = -ny; }
+      for (const [c, e] of trackEdges) {
+        if (!(distPtLine(a, c, e) < 1.2 && distPtLine(b, c, e) < 1.2)) continue;
+        // 軌道端點投影到月台邊參數軸（0..len）；ring 繞向不保證同向，故 tLo/tHi 要 min/max 正規化
+        const tc = ((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / len;
+        const te = ((e[0] - a[0]) * dx + (e[1] - a[1]) * dy) / len;
+        const tLo = Math.max(0, Math.min(tc, te));
+        const tHi = Math.min(len, Math.max(tc, te));
+        const overlap = tHi - tLo;
+        if (overlap < 1) continue; // 端點擦邊，重疊太短不鋪
+        const tMid = (tLo + tHi) / 2;
+        const scx = a[0] + (dx * tMid) / len, scy = a[1] + (dy * tMid) / len; // 重疊段中點
+        const g = new THREE.BoxGeometry(overlap, 0.02, E.width);
+        g.rotateY(Math.atan2(dy, dx));
+        g.translate(scx + nx * E.inset, p.topY + 0.015, -(scy + ny * E.inset));
+        out.push(g);
+      }
+    }
+  }
+  return out;
+}
+
+/** 樓梯/手扶梯寫實幾何：水平踏步＋斜底座，手扶梯另加側裙帶與上下出入口平台，
+ *  全部合併成單一 geometry——「一座＝一顆 mesh」的結構不變，調暗/陰影/GLB parity 都不受影響。
+ *  local 座標：x＝0..runH 沿水平行進向、y＝0..rise、z 置中；建完 rotateY 對齊再平移到低端。 */
+function runGeometry(lo: THREE.Vector3, hi: THREE.Vector3, kind: 'stair' | 'escalator'): THREE.BufferGeometry {
+  const W = kind === 'escalator' ? 1.2 : 1.4;
+  const dx = hi.x - lo.x, dz = hi.z - lo.z;
+  const runH = Math.hypot(dx, dz);
+  const rise = hi.y - lo.y;
+  const slant = Math.hypot(runH, rise);
+  const theta = Math.atan2(rise, Math.max(runH, 1e-6));
+  const parts: THREE.BufferGeometry[] = [];
+  const box = (sx: number, sy: number, sz: number, cx: number, cy: number, cz: number, rotZ = 0): void => {
+    const g = new THREE.BoxGeometry(sx, sy, sz);
+    if (rotZ) g.rotateZ(rotZ);
+    g.translate(cx, cy, cz);
+    parts.push(g);
+  };
+  box(slant, 0.18, W, runH / 2, rise / 2 - 0.14, 0, theta); // 梯級下的斜封板
+  // 水平踏步：階高鎖 ~0.16m，踏深隨 run 均分；手扶梯踏步內縮讓出側裙帶
+  const stepW = kind === 'escalator' ? W - 0.24 : W;
+  const n = Math.max(2, Math.round(rise / 0.16));
+  const treadD = runH / n, stepH = rise / n;
+  for (let i = 0; i < n; i++)
+    box(treadD, 0.06, stepW, (i + 0.5) * treadD, (i + 1) * stepH - 0.03, 0);
+  if (kind === 'escalator') {
+    for (const s of [-1, 1])
+      box(slant * 0.94, 0.72, 0.08, runH / 2, rise / 2 + 0.52, s * (W / 2 - 0.04), theta); // 側裙帶
+    box(0.7, 0.06, W, 0.35, 0.03, 0); // 下出入口平台
+    box(0.7, 0.06, W, runH - 0.35, rise + 0.03, 0); // 上出入口平台
+  }
+  const merged = mergeGeometries(parts);
+  for (const p of parts) p.dispose();
+  merged.translate(-runH / 2, -rise / 2, 0); // 原點移到中點：mesh.position 維持「位移後中點」的既有契約
+  merged.rotateY(Math.atan2(-dz, dx)); // local +x → 水平行進向
+  return merged;
+}
+
 // connectors：斜坡（stair/escalator）與豎井（elevator）。
 // offsetY 供爆炸圖重建：各樓層錨點 y 加位移，豎井/斜坡自然拉伸。
 export function buildConnectorsGroup(
   model: StationModel,
   offsetY: (floorId: string) => number = () => 0,
+  detail = true, // 爆炸動畫逐幀重建走 false（簡化斜板）——踏步合併幾何每幀重算會拖慢弱手機
 ): THREE.Group {
   const M = THEME.materials;
   const connGroup = new THREE.Group();
@@ -153,12 +328,17 @@ export function buildConnectorsGroup(
       if (c.kind === 'elevator') {
         mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, Math.abs(b.y - a.y), 16), mat(c2.color, c2.opacity));
         mesh.position.set(a.x, (a.y + b.y) / 2, a.z);
-      } else {
+      } else if (!detail) {
         const len = a.distanceTo(b);
         mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 1.4), mat(c2.color, c2.opacity));
         mesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
         mesh.lookAt(b);
         mesh.rotateY(Math.PI / 2); // BoxGeometry 長軸為 x，lookAt 對齊 z 後轉回
+      } else {
+        const lo = a.y <= b.y ? a : b;
+        const hi = a.y <= b.y ? b : a;
+        mesh = new THREE.Mesh(runGeometry(lo, hi, c.kind), mat(c2.color, c2.opacity));
+        mesh.position.copy(lo.clone().add(hi).multiplyScalar(0.5));
       }
       // 同錨點梯群純視覺錯開，nav 資料不動
       const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x);
@@ -188,75 +368,6 @@ export function buildConnectorsGroup(
   }
   applyShadowFlags(connGroup);
   return connGroup;
-}
-
-function edgeMid(polygon: Vec2[], i: number): Vec2 {
-  const a = polygon[i % 4], b = polygon[(i + 1) % 4];
-  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-}
-
-/** 四邊形短邊對：起始索引 s（(0,2) 與 (1,3) 中總長較小者）＋兩短邊平均長（＝軌道帶實寬）。 */
-function shortEdgePair(polygon: Vec2[]): { s: number; width: number } | null {
-  if (polygon.length !== 4) return null;
-  const len = (i: number): number => {
-    const a = polygon[i % 4], b = polygon[(i + 1) % 4];
-    return Math.hypot(b[0] - a[0], b[1] - a[1]);
-  };
-  const s = len(0) + len(2) <= len(1) + len(3) ? 0 : 1;
-  return { s, width: (len(s) + len(s + 2)) / 2 };
-}
-
-/** 軌道中軸：四邊形兩條短邊的中點連線。不假設軸對齊——B4 軌道為斜置四邊形。非四邊形回 null。 */
-export function trackAxis(polygon: Vec2[]): [Vec2, Vec2] | null {
-  const e = shortEdgePair(polygon);
-  if (!e) return null;
-  return [edgeMid(polygon, e.s), edgeMid(polygon, e.s + 2)];
-}
-
-/** hole 四邊各內縮的公尺數：B2 軌道 x 貼滿 ±175 與 slab 邊重合、B4 短邊直接落在 slab outline 上，
- *  不內縮會生出邊貼邊的退化 hole。 */
-export const TRACK_HOLE_INSET = 0.1;
-
-/** slab 開洞用的軌道輪廓：中軸兩端內縮、側向半寬 = 實寬/2 − inset 的平行四邊形。
- *  繞向恆為 cw（signed area = −2·軸長·半寬），符合 hole 慣例（見 validate.ts iterRings）。 */
-export function trackHole(polygon: Vec2[]): Vec2[] | null {
-  const e = shortEdgePair(polygon);
-  if (!e) return null;
-  const m0 = edgeMid(polygon, e.s), m1 = edgeMid(polygon, e.s + 2);
-  const [dx, dy] = [m1[0] - m0[0], m1[1] - m0[1]];
-  const L = Math.hypot(dx, dy);
-  const half = e.width / 2 - TRACK_HOLE_INSET;
-  if (L <= 2 * TRACK_HOLE_INSET || half <= 0) return null; // 內縮後退化
-  const [ux, uy] = [dx / L, dy / L];
-  const [px, py] = [-uy * half, ux * half]; // 左法向 × 半寬
-  const a: Vec2 = [m0[0] + ux * TRACK_HOLE_INSET, m0[1] + uy * TRACK_HOLE_INSET];
-  const b: Vec2 = [m1[0] - ux * TRACK_HOLE_INSET, m1[1] - uy * TRACK_HOLE_INSET];
-  return [
-    [a[0] + px, a[1] + py], [b[0] + px, b[1] + py],
-    [b[0] - px, b[1] - py], [a[0] - px, a[1] - py],
-  ];
-}
-
-/** 兩條鋼軌：沿軌道中軸、垂直偏移 ±gauge/2，底面貼軌道床頂面 → 軌條頂面 = elevation − 1.25。 */
-function buildRails(polygon: Vec2[], elevation: number): THREE.Mesh[] {
-  const axis = trackAxis(polygon);
-  if (!axis) return [];
-  const R = THEME.rail;
-  const centerY = elevation - THEME.trackSunk + 0.05 + R.h / 2; // 床頂 + 半個軌高
-  const a = toWorld(axis[0], centerY);
-  const b = toWorld(axis[1], centerY);
-  const len = a.distanceTo(b);
-  if (len < 1e-6) return [];
-  const lateral = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x).normalize();
-  const mid = a.clone().add(b).multiplyScalar(0.5);
-  const material = mat(R.color, 1);
-  return [-1, 1].map((sign) => {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(len, R.h, R.w), material);
-    rail.position.copy(mid).addScaledVector(lateral, (sign * R.gauge) / 2);
-    rail.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x); // Box 長軸為 x，同牆帶慣例
-    rail.userData.kind = 'rail';
-    return rail;
-  });
 }
 
 /** 付費區表現：半透明染 overlay（貼在付費地面略上）＋虛線邊界框。 */
@@ -294,8 +405,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       .filter((a) => a.kind === 'track')
       .map((a) => trackHole(a.polygon))
       .filter((h): h is Vec2[] => h !== null);
+    const slabMat = matPair(M.slab.color, M.slab.opacity); // 溝壁共用同一材質：視覺上就是樓板被切開
     g.add(extrudeMesh(floor.slab.outline, [...(floor.slab.holes ?? []), ...trackHoles],
-      0.3, meta.elevation - 0.3, matPair(M.slab.color, M.slab.opacity), 'slab'));
+      0.3, meta.elevation - 0.3, slabMat, 'slab'));
 
     // 程序化周界牆帶：沿 slab 外框逐段生實心矮牆（massHeight）——非可走周界「fake wall」，nav 中隱藏
     const shellPts = [...floor.slab.outline, floor.slab.outline[0]];
@@ -303,8 +415,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       const a = toWorld(shellPts[i], meta.elevation);
       const b = toWorld(shellPts[i + 1], meta.elevation);
       const len = a.distanceTo(b);
-      const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(len, THEME.body.massHeight, 0.4), mat(M.shell.color, M.shell.opacity));
+      const shellGeo = new THREE.BoxGeometry(len, THEME.body.massHeight, 0.4);
+      scaleWallUV(shellGeo, len, THEME.body.massHeight);
+      const wall = new THREE.Mesh(shellGeo, mat(M.shell.color, M.shell.opacity));
       wall.position.copy(a.clone().add(b).multiplyScalar(0.5));
       wall.position.y = meta.elevation + THEME.body.massHeight / 2;
       wall.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
@@ -312,6 +425,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
       g.add(wall);
     }
 
+    const railParts: THREE.BufferGeometry[] = [];
+    const trackEdges: [Vec2, Vec2][] = [];
+    const plats: { polygon: Vec2[]; topY: number }[] = [];
     for (const [i, a] of (floor.areas ?? []).entries()) {
       // 每個 area 疊加微小高度差，避免重疊區域 z-fight（如 B3 臺鐵轉乘區疊在非付費區上）
       const sunk = a.kind === 'track' ? -THEME.trackSunk : 0.01 + i * 0.01;
@@ -321,8 +437,32 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         ? mixHex(sys, '#ffffff', THEME.materials.platformWhiten) : M.area[a.kind];
       g.add(extrudeMesh(
         a.polygon, [], 0.05, meta.elevation + sunk, mat(base, M.areaOpacity), a.kind));
+      if (a.kind === 'track' && a.polygon.length === 4) {
+        railParts.push(...railGeometries(a.polygon, meta.elevation + sunk + 0.05));
+        const wall = trenchWall(a.polygon, meta.elevation, slabMat);
+        if (wall) g.add(wall);
+        for (let j = 0; j < 4; j++) { // 供警戒帶鄰接判定的軌道長邊
+          const c = a.polygon[j], e = a.polygon[(j + 1) % 4];
+          if (Math.hypot(e[0] - c[0], e[1] - c[1]) >= 10) trackEdges.push([c, e]);
+        }
+      }
+      if (a.kind === 'platform') plats.push({ polygon: a.polygon, topY: meta.elevation + sunk + 0.05 });
       if (a.kind === 'paid') for (const o of buildPaidOverlay(a.polygon, meta.elevation)) g.add(o);
-      if (a.kind === 'track') for (const r of buildRails(a.polygon, meta.elevation)) g.add(r);
+    }
+    if (railParts.length) { // 全樓層鋼軌合併單 mesh（每層 +1 draw call）
+      const merged = mergeGeometries(railParts);
+      for (const p of railParts) p.dispose();
+      const rails = new THREE.Mesh(merged, mat(M.rail.color, 1));
+      rails.userData.kind = 'rail';
+      g.add(rails);
+    }
+    const stripParts = platformEdgeStrips(plats, trackEdges);
+    if (stripParts.length) { // 全樓層警戒帶合併單 mesh（每層 +1 draw call）
+      const merged = mergeGeometries(stripParts);
+      for (const p of stripParts) p.dispose();
+      const strips = new THREE.Mesh(merged, mat(M.platformEdge.color, 1));
+      strips.userData.kind = 'platform-edge';
+      g.add(strips);
     }
     for (const u of floor.units ?? []) {
       const u2 = M.unit[u.kind];
@@ -338,8 +478,9 @@ export function buildStationGroup(model: StationModel): THREE.Group {
         const a = toWorld(w.polyline[i], meta.elevation);
         const b = toWorld(w.polyline[i + 1], meta.elevation);
         const len = a.distanceTo(b);
-        const wallMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(len, w.height, w.width ?? 0.3), mat(M.wall.color, M.wall.opacity));
+        const wallGeo = new THREE.BoxGeometry(len, w.height, w.width ?? 0.3);
+        scaleWallUV(wallGeo, len, w.height);
+        const wallMesh = new THREE.Mesh(wallGeo, mat(M.wall.color, M.wall.opacity));
         wallMesh.position.copy(a.clone().add(b).multiplyScalar(0.5));
         wallMesh.position.y = meta.elevation + w.height / 2;
         wallMesh.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
@@ -350,10 +491,13 @@ export function buildStationGroup(model: StationModel): THREE.Group {
     for (const gate of floor.gates ?? []) {
       const color = gate.accessible ? M.gate.accessible : M.gate.standard;
       const [p1, p2] = gate.line.map((p) => toWorld(p, meta.elevation));
+      const yaw = Math.atan2(-(p2.z - p1.z), p2.x - p1.x);
       for (const p of [p1, p2]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.1, 0.25), mat(color, 1));
+        // 閘門櫃體：x 沿閘門線、z 沿通行向拉長——比等寬方柱更接近實物
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.0, 1.3), mat(color, 1));
         post.position.copy(p);
-        post.position.y = meta.elevation + 0.55;
+        post.position.y = meta.elevation + 0.5;
+        post.rotation.y = yaw;
         post.userData.kind = 'gate';
         g.add(post);
       }

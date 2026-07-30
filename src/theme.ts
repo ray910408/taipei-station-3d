@@ -18,13 +18,14 @@ export const THEME = {
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
   body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7, massHeight: 0.9, escalatorRun: 8 },
-  // 程序化地磚（Phase 6 去塑膠）：白底單磚 × 材質底色相乘；強度刻意壓低——要「有材質的白」不要照片地板
-  textures: { tileMeters: 2, noiseAlpha: 0.05, groutAlpha: 0.1 },
-  // 軌道床下沉深度：床頂面 = elevation − trackSunk + 0.05（area 厚度）= −1.40，
-  // 加 rail.h 後軌條頂面 = elevation − 1.25，即月台面與軌面的高差
+  // 程序化地磚（Phase 6 去塑膠）：白底磚格 × 材質底色相乘；要「有材質的白」不要照片地板。
+  // tileGrid：單張 canvas 內磚數（每磚一個亮度微差，打破大片純白）；floorRoughness：
+  // 地板類單獨壓低走拋光石英磚（env 反射），其餘材質維持全域 roughness。
+  // panelMeters：牆帶/柱面的面板接縫間距（牆 UV 已在 builder 換算成公尺）
+  textures: { tileMeters: 2, tileGrid: 4, noiseAlpha: 0.05, groutAlpha: 0.22, tileTintAlpha: 0.05, floorRoughness: 0.5, panelMeters: 2.4 },
+  // 軌道凹槽深度：床頂面 = elevation − trackSunk + 0.05（area 厚度）= −1.40，
+  // 加 materials.rail.h 後軌條頂面 = elevation − 1.25，即月台面與軌面的高差
   trackSunk: 1.45,
-  // 鋼軌：gauge 為標準軌距（高鐵/臺鐵/北捷同 1435mm）；w/h 為軌條斷面寬高（示意尺度，非實際軌型）
-  rail: { gauge: 1.435, w: 0.08, h: 0.15, color: '#8f969e' },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
   nav: {
     chaseBack: 14, chaseUp: 7,
@@ -39,7 +40,8 @@ export const THEME = {
     wall: { color: '#c8ccd4', opacity: 1 },
     area: {
       platform: '#e9e2cf', paid: '#efe6e6', unpaid: '#e4ebf6',
-      corridor: '#e6efe8', track: '#0f1218', restricted: '#e7e9ee',
+      // track：道床灰——原 #0f1218 在深色場景裡是純黑洞，看不出凹槽也吃掉鋼軌對比
+      corridor: '#e6efe8', track: '#2a2f38', restricted: '#e7e9ee',
     } satisfies Record<AreaKind, string>,
     areaOpacity: 1,
     unit: {
@@ -50,6 +52,10 @@ export const THEME = {
       'stair-void': { color: '#dadce0', opacity: 0.4 },
     } satisfies Record<UnitKind, { color: string; opacity: number }>,
     gate: { accessible: '#37a559', standard: '#7a828f' },
+    // 軌道凹槽內的鋼軌——道床上的亮線。gauge 量的是兩軌內側面間距（標準軌距，高鐵/臺鐵/北捷同 1435mm）；
+    // w/h 為軌條斷面寬高（示意尺度，非實際軌型）。h 與 trackSunk 綁定軌頂 = elevation − 1.25 的語意
+    rail: { color: '#9aa2ae', gauge: 1.435, w: 0.07, h: 0.15 },
+    platformEdge: { color: '#d9b74a', inset: 0.45, width: 0.4 }, // 月台邊緣警戒帶（鄰軌道的長邊）
     paidOverlay: { color: '#e6b45a', opacity: 0.18, dash: '#e6b45a' },
     connector: {
       stair: { color: '#8b93a3', opacity: 0.95 },

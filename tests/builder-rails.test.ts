@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildStationGroup, trackHole, TRACK_HOLE_INSET } from '../src/builder';
+import { buildStationGroup, trackAxis, trackHole, TRACK_HOLE_INSET } from '../src/builder';
 import { ringArea } from '../src/geometry';
 import { THEME } from '../src/theme';
 import type { StationModel, Vec2 } from '../src/types';
 
 // inline 迷你 model：一層＋一個 track area（斜置四邊形，驗通用性——不假設軸對齊）
 const ELEV = 4;
+const TRACK: Vec2[] = [[2, 2], [32, 22], [30, 25], [0, 5]];
 const model = {
   station: { schema: 'station@1', id: 't', name: { zh: 't' },
     frame: { units: 'm', origin_note: '', axis_note: '' }, systems: {},
@@ -14,25 +15,48 @@ const model = {
   floors: new Map([['a', { schema: 'floor@1', id: 'a',
     slab: { outline: [[0, 0], [40, 0], [40, 40], [0, 40]], source: 's', confidence: 2 },
     areas: [{ id: 'a-aa-track-x', kind: 'track', system: 's',
-      polygon: [[2, 2], [32, 22], [30, 25], [0, 5]], source: 's', confidence: 2 }] }]]),
+      polygon: TRACK, source: 's', confidence: 2 }] }]]),
   connectors: [],
 } as unknown as StationModel;
 
-describe('軌道鋼軌：每條 track 生兩條 rail，頂面在 elevation − 1.25', () => {
-  it('恰 2 條 rail，頂面高度＝elevation − 1.25', () => {
-    const g = buildStationGroup(model);
-    const rails: THREE.Mesh[] = [];
-    g.traverse((o) => { if ((o as THREE.Mesh).userData?.kind === 'rail') rails.push(o as THREE.Mesh); });
-    expect(rails.length).toBe(2);
-    for (const r of rails) {
-      const box = r.geometry as THREE.BoxGeometry;
-      expect(box.parameters.height).toBeCloseTo(THEME.rail.h);
-      expect(r.position.y + box.parameters.height / 2).toBeCloseTo(ELEV - 1.25, 2);
-      expect((r.material as THREE.MeshStandardMaterial).opacity).toBe(1);
-      expect((r.material as THREE.MeshStandardMaterial).transparent).toBe(false);
+const floorGroup = buildStationGroup(model).children.find((c) => c.name === 'a') as THREE.Group;
+const meshOf = (kind: string): THREE.Mesh =>
+  floorGroup.children.find((c) => c.userData.kind === kind) as THREE.Mesh;
+
+describe('軌道鋼軌：斜置軌道也對齊「軌頂 = elevation − 1.25」與內側面軌距', () => {
+  const R = THEME.materials.rail;
+
+  it('軌條頂面 = elevation − 1.25，斷面高 = rail.h', () => {
+    const bb = new THREE.Box3().setFromObject(meshOf('rail'));
+    expect(bb.max.y).toBeCloseTo(ELEV - 1.25, 6);
+    expect(bb.max.y - bb.min.y).toBeCloseTo(R.h, 6);
+    const m = meshOf('rail').material as THREE.MeshStandardMaterial;
+    expect(m.opacity).toBe(1);
+    expect(m.transparent).toBe(false);
+  });
+
+  it('兩根鋼軌、跨距（外緣）= 軌距 + 2×軌寬——軌距量的是內側面', () => {
+    const pos = meshOf('rail').geometry.attributes.position;
+    expect(pos.count).toBe(2 * 24); // 兩顆 box 合併，非一根
+    // 斜置：把頂點投影到軌道中軸法向上量跨距（world x/z；toWorld 把 data y 映到 −z）
+    const [a, b] = trackAxis(TRACK)!;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const [nx, nz] = [(b[1] - a[1]) / len, (b[0] - a[0]) / len]; // 世界向 (dx,−dy) 的法向
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const t = pos.getX(i) * nx + pos.getZ(i) * nz;
+      lo = Math.min(lo, t); hi = Math.max(hi, t);
     }
-    // 軌距：兩軌中心距＝gauge（斜置也成立）
-    expect(rails[0].position.distanceTo(rails[1].position)).toBeCloseTo(THEME.rail.gauge, 6);
+    expect(hi - lo).toBeCloseTo(R.gauge + 2 * R.w, 4); // 4 位：position 是 float32
+  });
+});
+
+describe('軌道凹槽：溝壁封住道床，不是懸空的挖洞', () => {
+  it('溝壁自道床頂面接到 slab 頂面（無懸空縫）', () => {
+    const bb = new THREE.Box3().setFromObject(meshOf('track-wall'));
+    const bedTop = ELEV - THEME.trackSunk + 0.05;
+    expect(bb.min.y).toBeCloseTo(bedTop, 6); // 壁腳＝床面，中間不留縫
+    expect(bb.max.y).toBeCloseTo(ELEV + 0.01, 6); // 壁頂封到樓板面（+1cm 免共面）
   });
 });
 

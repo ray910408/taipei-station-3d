@@ -9,7 +9,7 @@ export type LabelKind = 'floor-tag' | 'landmark' | 'platform';
 
 /** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依三級 LOD 進退，preview/nav 隱藏；
  *  L0 大地標常駐、L1 中距顯示、L2 近距顯示；
- *  platform 月台編號不看距離，除 nav/preview 外常駐；
+ *  platform 月台編號同走三級 LOD（預設 tier 1）；
  *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
   kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1 | 2,
@@ -17,7 +17,6 @@ export function labelVisible(
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
   if (mode === 'preview') return false; // landmark／platform：preview 讓位給路線（Phase 4 舊債 2）
-  if (kind === 'platform') return true; // 月台編號：站體尺度資訊，不隨鏡頭距離進退
   if (tier === 0) return true; // L0 大地標常駐
   if (tier === 2) return cameraDist < THEME.labels.landmarkNearDist; // L2 次要：近距才出
   return cameraDist < THEME.labels.landmarkMaxDist; // L1（未標 tier 預設）
@@ -140,7 +139,7 @@ export function createLabelLayer(
       floorGroup.add(pl);
       const leader = leaderAt(c, meta.elevation);
       floorGroup.add(leader);
-      entries.push({ obj: pl, kind: 'platform', floor: meta.id, leader });
+      entries.push({ obj: pl, kind: 'platform', tier: 1, floor: meta.id, leader });
     }
 
     // landmark：具名 nav node 名稱小籤
