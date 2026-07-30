@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { StationModel, Vec2, NavNode, NavEdge } from './types';
+import { ringArea } from './geometry';
 import { THEME, mixHex } from './theme';
 
 export function toWorld(xy: Vec2, y: number): THREE.Vector3 {
@@ -140,36 +141,50 @@ export const TRACK_HOLE_INSET = 0.1;
 const TRENCH_WALL_INSET = 0.16;
 const TRENCH_WALL_LIP = -0.02; // 壁外緣外擴：B4 軌道長邊與 slab outline 共面，不外推會 z-fight
 
-/** 軌道輪廓的等距內縮環（inset 為負則外擴）：中軸兩端內縮、側向半寬 = 實寬/2 − inset。
- *  頂點序恆為 cw（signed area = −2·軸長·半寬），符合 hole 慣例（見 validate.ts iterRings）。 */
+/** 四邊形等距內縮（d < 0 則外擴）：每邊沿內法線平移 d，相鄰兩條平移線求交即新頂點。
+ *  保持輸入的頂點序與繞向。曾用「中軸 ± 平均半寬」的平行四邊形近似，但 B4 軌道是梯形
+ *  （兩短邊 4.18 / 5.00），近似輪廓與實際邊差 ±0.2m：一端在軌道帶外開穿、另一端留下
+ *  懸在溝上的樓板舌片。非四邊形、相鄰邊平行、或內縮到翻面時回 null。
+ *  ponytail: 只對凸四邊形正確（軌道帶全是矩形/梯形）；凹多邊形要換成通用 offset。 */
+export function insetQuad(polygon: Vec2[], d: number): Vec2[] | null {
+  if (polygon.length !== 4) return null;
+  const s = Math.sign(ringArea(polygon)); // ccw(+1)：內側在每條有向邊的左側
+  if (s === 0) return null;
+  // 每邊偏移後的直線：n·p = c，n 為指向多邊形內側的單位法向
+  const lines = polygon.map((a, i): [number, number, number] => {
+    const b = polygon[(i + 1) % 4];
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return [0, 0, 0];
+    const [nx, ny] = [(-dy / len) * s, (dx / len) * s];
+    return [nx, ny, nx * a[0] + ny * a[1] + d];
+  });
+  const out: Vec2[] = [];
+  for (let i = 0; i < 4; i++) {
+    const [ax, ay, ac] = lines[(i + 3) % 4]; // 頂點 i ＝前一邊與本邊的交點
+    const [bx, by, bc] = lines[i];
+    const det = ax * by - ay * bx;
+    if (Math.abs(det) < 1e-9) return null; // 零長邊或相鄰邊平行
+    out.push([(ac * by - bc * ay) / det, (bc * ax - ac * bx) / det]);
+  }
+  return Math.sign(ringArea(out)) === s ? out : null; // 內縮過頭翻面
+}
+
+/** slab 開洞／溝壁內環用的軌道輪廓：insetQuad 反轉成 cw，符合 hole 慣例（見 validate.ts iterRings）。 */
 export function trackHole(polygon: Vec2[], inset = TRACK_HOLE_INSET): Vec2[] | null {
-  const e = shortEdgePair(polygon);
-  if (!e) return null;
-  const m0 = edgeMid(polygon, e.s), m1 = edgeMid(polygon, e.s + 2);
-  const [dx, dy] = [m1[0] - m0[0], m1[1] - m0[1]];
-  const L = Math.hypot(dx, dy);
-  const half = e.width / 2 - inset;
-  if (L <= 2 * inset || half <= 0) return null; // 內縮後退化
-  const [ux, uy] = [dx / L, dy / L];
-  const [px, py] = [-uy * half, ux * half]; // 左法向 × 半寬
-  const a: Vec2 = [m0[0] + ux * inset, m0[1] + uy * inset];
-  const b: Vec2 = [m1[0] - ux * inset, m1[1] - uy * inset];
-  return [
-    [a[0] + px, a[1] + py], [b[0] + px, b[1] + py],
-    [b[0] - px, b[1] - py], [a[0] - px, a[1] - py],
-  ];
+  const ring = insetQuad(polygon, inset);
+  return ring === null ? null : ring.reverse();
 }
 
 /** 軌道凹槽的四面溝壁：外環為軌道帶略外擴、內環為內縮 TRENCH_WALL_INSET，
  *  自道床頂面往上封到 slab 頂面（+1cm 免共面）——沒有這圈壁，下沉的道床側視會是懸空黑縫。
  *  用環狀 extrude（外環 ccw + 內環 cw）一次成形，四角不留縫；材質即 slab 自身（看起來是切開樓板）。 */
 function trenchWall(polygon: Vec2[], elevation: number, material: THREE.Material[]): THREE.Mesh | null {
-  const inner = trackHole(polygon, TRENCH_WALL_INSET);
-  const outer = trackHole(polygon, TRENCH_WALL_LIP);
+  const inner = trackHole(polygon, TRENCH_WALL_INSET); // cw（環的內孔）
+  const outer = insetQuad(polygon, TRENCH_WALL_LIP); // ccw（環的外框，沿用資料繞向）
   if (!inner || !outer) return null;
   const bedTop = elevation - THEME.trackSunk + 0.05;
-  return extrudeMesh(outer.slice().reverse(), [inner], elevation + 0.01 - bedTop, bedTop,
-    material, 'track-wall'); // outer 反轉成 ccw（trackHole 回 cw）
+  return extrudeMesh(outer, [inner], elevation + 0.01 - bedTop, bedTop, material, 'track-wall');
 }
 
 /** 軌道鋼軌：沿中軸鋪兩根標準軌距鋼軌，底面貼道床頂面 → 軌頂 = elevation − 1.25。
