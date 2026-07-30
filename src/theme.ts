@@ -18,8 +18,11 @@ export const THEME = {
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
   body: { sideDarken: 0.72, edge: '#aab3c2', edgeOpacity: 0.7, massHeight: 0.9, escalatorRun: 8 },
-  // 程序化地磚（Phase 6 去塑膠）：白底單磚 × 材質底色相乘；強度刻意壓低——要「有材質的白」不要照片地板
-  textures: { tileMeters: 2, noiseAlpha: 0.05, groutAlpha: 0.1 },
+  // 程序化地磚（Phase 6 去塑膠）：白底磚格 × 材質底色相乘；要「有材質的白」不要照片地板。
+  // tileGrid：單張 canvas 內磚數（每磚一個亮度微差，打破大片純白）；floorRoughness：
+  // 地板類單獨壓低走拋光石英磚（env 反射），其餘材質維持全域 roughness。
+  // panelMeters：牆帶/柱面的面板接縫間距（牆 UV 已在 builder 換算成公尺）
+  textures: { tileMeters: 2, tileGrid: 4, noiseAlpha: 0.05, groutAlpha: 0.22, tileTintAlpha: 0.05, floorRoughness: 0.5, panelMeters: 2.4 },
   // nav 跟隨（Phase 5）：低視角 chase（pitch≈27°）＋marker 滑行＋換層 crossfade
   nav: {
     chaseBack: 14, chaseUp: 7,
@@ -45,6 +48,8 @@ export const THEME = {
       'stair-void': { color: '#dadce0', opacity: 0.4 },
     } satisfies Record<UnitKind, { color: string; opacity: number }>,
     gate: { accessible: '#37a559', standard: '#7a828f' },
+    rail: { color: '#9aa2ae' }, // 軌道溝內的鋼軌——深色溝底上的亮線
+    platformEdge: { color: '#d9b74a', inset: 0.45, width: 0.4 }, // 月台邊緣警戒帶（鄰軌道的長邊）
     paidOverlay: { color: '#e6b45a', opacity: 0.18, dash: '#e6b45a' },
     connector: {
       stair: { color: '#8b93a3', opacity: 0.95 },

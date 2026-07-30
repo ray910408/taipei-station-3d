@@ -15,7 +15,7 @@ import type { GraphEdge } from './nav';
 import { buildRouteObject, tickRouteArrows, makePin } from './path';
 import { applyFloorFade, setShellVisible } from './navview';
 import { attachPoiIcons } from './icons';
-import { attachFloorTextures } from './texture';
+import { attachProceduralTextures } from './texture';
 import { createLabelLayer } from './labels';
 import { attachFpsOverlay } from './fps';
 import { attachCompass } from './compass';
@@ -116,8 +116,8 @@ async function boot(): Promise<void> {
   scene.environmentIntensity = THEME.render.envIntensity;
   pmrem.dispose();
 
-  // 地磚微紋理：runtime 附掛（去塑膠 T4）
-  attachFloorTextures(stationGroup, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
+  // 程序化微紋理（地磚＋牆帶/柱面板）：runtime 附掛（去塑膠 T4）
+  attachProceduralTextures(stationGroup, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
   // AO 管線：?ao=off 走原始路徑（效能降級開關）
   const aoOff = new URLSearchParams(location.search).get('ao') === 'off';
   let composer: EffectComposer | null = null;
@@ -229,7 +229,8 @@ async function boot(): Promise<void> {
     // connectors 豎井/斜坡需隨層距拉伸——重建（幾何小、便宜；舊物件釋放 GPU 資源）
     stationGroup.remove(connObj);
     disposeDeep(connObj);
-    connObj = buildConnectorsGroup(model, offsetAt(explodeFactor));
+    // 動畫幀建簡化斜板（逐幀 merge 踏步會拖慢弱手機）；靜止（含動畫最後一幀）建回細節
+    connObj = buildConnectorsGroup(model, offsetAt(explodeFactor), explodeAnim === null);
     stationGroup.add(connObj);
     refreshRoute();
     if (pickNodeId) placePickPin();
@@ -518,8 +519,8 @@ async function boot(): Promise<void> {
     if (explodeAnim) {
       const t = Math.min(1, (now - explodeAnim.t0) / EXPLODE_MS);
       explodeFactor = explodeAnim.from + (explodeAnim.to - explodeAnim.from) * easeInOutCubic(t);
+      if (t >= 1) explodeAnim = null; // 先收尾再 refresh——最後一幀直接建回細節 connectors
       refreshScene();
-      if (t >= 1) explodeAnim = null;
     }
     if (session && marker) {
       const d = session.frame(now);
