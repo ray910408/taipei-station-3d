@@ -6,19 +6,21 @@ import connectorsDoc from '../data/connectors.json';
 import tc from '../data/floors/tra-concourse-b1.json';
 import tp from '../data/floors/tra-platform-b2.json';
 import rc from '../data/floors/mrt-r-concourse-b3.json';
+import bp from '../data/floors/mrt-bl-platform-b3.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
 const model = assembleModel(stationDoc, {
   'floors/tra-concourse-b1.json': tc,
   'floors/tra-platform-b2.json': tp,
   'floors/mrt-r-concourse-b3.json': rc,
+  'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': rp,
 }, connectorsDoc);
 
 describe('地標池（終審 mutation audit #2：mojibake 回歸鎖）', () => {
-  it('共 31 個地標、Phase 3.5 新增 17 名精確值', () => {
+  it('共 33 個地標、Phase 3.5 新增 17 名精確值', () => {
     const byId = new Map(listLandmarks(model).map((l) => [l.id, l.label]));
-    expect(byId.size).toBe(31);
+    expect(byId.size).toBe(33);
     const expected: Record<string, string> = {
       'n-rp-002': '淡水信義線月台 南端電梯口',
       'n-rp-004': '淡水信義線月台 北梯群口',

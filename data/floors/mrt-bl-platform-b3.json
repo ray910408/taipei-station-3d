@@ -1,0 +1,279 @@
+{
+  "schema": "floor@1",
+  "id": "mrt-bl-platform-b3",
+  "slab": {
+    "outline": [
+      [-14.7, -131.7],
+      [-12.8, -131.9],
+      [-18, -139],
+      [-15.6, -139.2],
+      [-16.6, -148.5],
+      [153, -167.8],
+      [154.1, -158.5],
+      [151.9, -158.3],
+      [156.9, -150.9],
+      [155, -150.7],
+      [156, -141.7],
+      [-13.7, -122.4]
+    ],
+    "source": "trtc-info-b3",
+    "confidence": 2,
+    "status": "traced",
+    "note": "板南線月台帶全幅，含兩側軌道與兩端鋸齒收邊；收邊線形取資訊圖牆中心線，屬示意"
+  },
+  "areas": [
+    {
+      "id": "a-bp-platform",
+      "kind": "platform",
+      "system": "trtc",
+      "name": {
+        "zh": "板南線月台",
+        "en": "Bannan Line Platform"
+      },
+      "sides": {
+        "north": "4",
+        "south": "3"
+      },
+      "polygon": [
+        [-9.6, -145.4],
+        [146.9, -163.1],
+        [149, -144.8],
+        [-7.5, -127.1]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
+    },
+    {
+      "id": "a-bp-track-n",
+      "kind": "track",
+      "system": "trtc",
+      "polygon": [
+        [-13.6, -126.4],
+        [155, -145.5],
+        [155.4, -142.1],
+        [-13.2, -123]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "四月台側軌道（往頂埔）"
+    },
+    {
+      "id": "a-bp-track-s",
+      "kind": "track",
+      "system": "trtc",
+      "polygon": [
+        [-16.1, -148.6],
+        [152.5, -167.7],
+        [153, -163.8],
+        [-15.7, -144.7]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 3,
+      "status": "traced",
+      "note": "三月台側軌道（往南港展覽館）"
+    }
+  ],
+  "units": [
+    {
+      "id": "u-bp-stairs-w",
+      "kind": "stair-void",
+      "height": 0.3,
+      "polygon": [
+        [11.2, -142.8],
+        [22.9, -144.1],
+        [23.9, -135.6],
+        [12.2, -134.2]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "西側梯群開口；資訊圖僅示意外框"
+    },
+    {
+      "id": "u-bp-stairs-cw",
+      "kind": "stair-void",
+      "height": 0.3,
+      "polygon": [
+        [46.8, -146.8],
+        [58.2, -148.1],
+        [59.2, -139.6],
+        [47.7, -138.3]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "中西側梯群開口；資訊圖僅示意外框"
+    },
+    {
+      "id": "u-bp-stairs-ce",
+      "kind": "stair-void",
+      "height": 0.3,
+      "polygon": [
+        [81.9, -150.8],
+        [93.6, -152.1],
+        [94.5, -143.6],
+        [82.8, -142.3]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "中東側梯群開口；資訊圖僅示意外框"
+    },
+    {
+      "id": "u-bp-stairs-e",
+      "kind": "stair-void",
+      "height": 0.3,
+      "polygon": [
+        [117.2, -154.8],
+        [128.9, -156.1],
+        [129.9, -147.6],
+        [118.2, -146.3]
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "東側梯群開口；資訊圖僅示意外框"
+    }
+  ],
+  "pois": [
+    {
+      "id": "p-bp-sign-1",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [18.2, -133.4],
+      "name": {
+        "zh": "西梯群指標"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "示範集：錨定 n-bp-004 西梯群口"
+    },
+    {
+      "id": "p-bp-sign-2",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [71.3, -152.3],
+      "name": {
+        "zh": "中段垂直設施指標"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "示範集：錨定 n-bp-006 中段垂直設施"
+    },
+    {
+      "id": "p-bp-sign-3",
+      "kind": "sign",
+      "system": "trtc",
+      "position": [124.2, -145.5],
+      "name": {
+        "zh": "東梯群指標"
+      },
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "status": "traced",
+      "note": "示範集：錨定 n-bp-008 東梯群口"
+    }
+  ],
+  "nav": {
+    "nodes": [
+      {
+        "id": "n-bp-001",
+        "xy": [68.9, -152],
+        "area": "a-bp-platform",
+        "name": {
+          "zh": "板南線月台（往南港展覽館）"
+        }
+      },
+      {
+        "id": "n-bp-002",
+        "xy": [70.4, -138.4],
+        "area": "a-bp-platform",
+        "name": {
+          "zh": "板南線月台（往頂埔）"
+        }
+      },
+      {
+        "id": "n-bp-003",
+        "xy": [-4.4, -136.8],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-004",
+        "xy": [17.5, -139.3],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-005",
+        "xy": [53.1, -143.3],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-006",
+        "xy": [71.9, -147],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-007",
+        "xy": [88.2, -147.3],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-008",
+        "xy": [123.5, -151.3],
+        "area": "a-bp-platform"
+      },
+      {
+        "id": "n-bp-009",
+        "xy": [144.2, -153.7],
+        "area": "a-bp-platform"
+      }
+    ],
+    "edges": [
+      {
+        "from": "n-bp-003",
+        "to": "n-bp-004",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-004",
+        "to": "n-bp-005",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-005",
+        "to": "n-bp-006",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-006",
+        "to": "n-bp-007",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-007",
+        "to": "n-bp-008",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-008",
+        "to": "n-bp-009",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-001",
+        "to": "n-bp-006",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bp-002",
+        "to": "n-bp-006",
+        "kind": "walk"
+      }
+    ]
+  }
+}
