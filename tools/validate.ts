@@ -74,6 +74,7 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
   const systemIds = new Set([...Object.keys(station.systems), 'shared']);
   const floorMeta = new Map(station.floors.map((f) => [f.id, f]));
   const allIds = new Map<string, string>(); // id -> 所在描述，全域唯一檢查
+  const crossEdges: { where: string; e: { from: string; to: string; kind: string } }[] = [];
   if (station.facts && !sourceIds.has(station.facts.source))
     errors.push(`[ref] station facts source "${station.facts.source}" 不存在於 refs/sources.json`);
 
@@ -151,8 +152,10 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
       if (!inOutline || inHole) errors.push(`[geom] ${where} ${n.id} 不在 slab 範圍內`);
     }
     for (const e of floor.nav?.edges ?? []) {
-      if (!nodeById.has(e.from)) errors.push(`[ref] ${where} edge from "${e.from}" 不存在`);
-      if (!nodeById.has(e.to)) errors.push(`[ref] ${where} edge to "${e.to}" 不存在`);
+      if (!nodeById.has(e.from) || !nodeById.has(e.to)) {
+        crossEdges.push({ where, e });   // 跨樓層檔候選：交給 pass-2 裁決
+        continue;
+      }
       if (e.kind === 'gate') {
         const g = gateById.get(e.gate ?? '');
         if (!g) { errors.push(`[ref] ${where} gate edge 引用不存在的 gate "${e.gate}"`); continue; }
@@ -193,9 +196,37 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
       warnings.push(`[sem] source ${s.id} px_per_m ${cal.px_per_m} 與控制點推導值 ${derived.toFixed(2)} 差逾 2%`);
   }
 
+  // 縫合邊 pass-2：跨樓層檔邊 = walk + 同 elevation + 線段落在兩端 slab 聯集內
+  const nodeInfo = new Map<string, { floor: string; xy: [number, number] }>();
+  for (const [fid, f] of floors) for (const n of f.nav?.nodes ?? []) nodeInfo.set(n.id, { floor: fid, xy: n.xy });
+  const insideSlab = (f: { slab: { outline: [number, number][]; holes?: [number, number][][] } }, p: [number, number]) =>
+    pointInPolygon(p, f.slab.outline) && !(f.slab.holes ?? []).some((h) => pointInPolygon(p, h));
+  for (const { where, e } of crossEdges) {
+    const a = nodeInfo.get(e.from);
+    const b = nodeInfo.get(e.to);
+    if (!a) { errors.push(`[ref] ${where} edge from "${e.from}" 不存在`); continue; }
+    if (!b) { errors.push(`[ref] ${where} edge to "${e.to}" 不存在`); continue; }
+    if (e.kind !== 'walk') { errors.push(`[sem] ${where} 跨樓層檔邊僅限 walk（縫合邊）：${e.from}→${e.to}`); continue; }
+    const ma = floorMeta.get(a.floor);
+    const mb = floorMeta.get(b.floor);
+    if (!ma || !mb || ma.elevation !== mb.elevation) {
+      errors.push(`[sem] ${where} 縫合邊兩端樓層 elevation 不相等：${e.from}(${a.floor})→${e.to}(${b.floor})`);
+      continue;
+    }
+    const fa = floors.get(a.floor)!;
+    const fb = floors.get(b.floor)!;
+    const len = Math.hypot(b.xy[0] - a.xy[0], b.xy[1] - a.xy[1]);
+    const n = Math.max(2, Math.ceil(len));   // 約每 1m 取樣
+    let ok = true;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const p: [number, number] = [a.xy[0] + (b.xy[0] - a.xy[0]) * t, a.xy[1] + (b.xy[1] - a.xy[1]) * t];
+      if (!insideSlab(fa, p) && !insideSlab(fb, p)) { ok = false; break; }
+    }
+    if (!ok) errors.push(`[geom] ${where} 縫合邊 ${e.from}→${e.to} 線段離開兩端樓層 slab 聯集（穿土）`);
+  }
+
   // connectors
-  const nodeFloor = new Map(); // node id -> floor id
-  for (const [fid, floor] of floors) for (const n of floor.nav?.nodes ?? []) nodeFloor.set(n.id, fid);
   for (const c of connectors.connectors) {
     claimId(c.id, 'data/connectors.json');
     checkProv(c, `connector ${c.id}`);
@@ -204,7 +235,7 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
     for (const lv of c.levels) {
       const meta = floorMeta.get(lv.floor);
       if (!meta) { errors.push(`[ref] ${c.id} floor "${lv.floor}" 不存在`); continue; }
-      if (nodeFloor.get(lv.node) !== lv.floor)
+      if (nodeInfo.get(lv.node)?.floor !== lv.floor)
         errors.push(`[ref] ${c.id} node "${lv.node}" 不存在於樓層 ${lv.floor}`);
       if (meta.elevation <= prevElev) errors.push(`[sem] ${c.id} levels 高程須嚴格遞增`);
       prevElev = meta.elevation;
