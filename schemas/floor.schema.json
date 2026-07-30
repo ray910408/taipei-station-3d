@@ -28,7 +28,12 @@
           "id": { "$ref": "#/$defs/eid" },
           "kind": { "enum": ["platform", "paid", "unpaid", "corridor", "track", "restricted"] },
           "system": { "type": "string", "minLength": 1 },
-          "polygon": { "$ref": "#/$defs/ring" }
+          "polygon": { "$ref": "#/$defs/ring" },
+          "name": { "type": "object", "required": ["zh"], "additionalProperties": false,
+            "properties": { "zh": { "type": "string", "minLength": 1 }, "en": { "type": "string" } } },
+          "sides": { "type": "object", "minProperties": 1, "additionalProperties": false,
+            "properties": { "north": { "type": "string" }, "south": { "type": "string" },
+              "east": { "type": "string" }, "west": { "type": "string" } } }
         }
       }
     },

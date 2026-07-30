@@ -40,4 +40,11 @@ describe('labelVisible gate（nav 全隱；floor tag 看爆炸；landmark 看距
   it('tier 2 中距（<landmarkMaxDist）仍隱藏——與 L1 有別', () => {
     expect(labelVisible('landmark', 'overview', 1, THEME.labels.landmarkMaxDist - 1, 2)).toBe(false);
   });
+
+  it('platform：nav/preview 隱藏，其餘走三級 LOD（預設 L1 看中距）', () => {
+    expect(labelVisible('platform', 'nav', 1, 10, 1)).toBe(false);
+    expect(labelVisible('platform', 'preview', 1, 10, 1)).toBe(false);
+    expect(labelVisible('platform', 'overview', 0, THEME.labels.landmarkMaxDist - 1, 1)).toBe(true);
+    expect(labelVisible('platform', 'overview', 0, THEME.labels.landmarkMaxDist + 1, 1)).toBe(false);
+  });
 });

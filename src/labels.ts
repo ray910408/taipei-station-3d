@@ -1,21 +1,22 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { THEME } from './theme';
-import { toWorld } from './builder';
-import type { StationModel } from './types';
+import { toWorld, trackAxis } from './builder';
+import type { Area, LocalizedName, StationModel, Vec2 } from './types';
 import type { Mode } from './mode';
 
-export type LabelKind = 'floor-tag' | 'landmark';
+export type LabelKind = 'floor-tag' | 'landmark' | 'platform';
 
 /** 能見度 gate（純函數，node 可測）：landmark 只在 overview 依三級 LOD 進退，preview/nav 隱藏；
  *  L0 大地標常駐、L1 中距顯示、L2 近距顯示；
+ *  platform 月台編號同走三級 LOD（預設 tier 1）；
  *  floor tag 依爆炸程度顯示（nav 仍全隱，資訊由 DOM banner 承載）。 */
 export function labelVisible(
   kind: LabelKind, mode: Mode, explodeFactor: number, cameraDist: number, tier?: 0 | 1 | 2,
 ): boolean {
   if (mode === 'nav') return false;
   if (kind === 'floor-tag') return explodeFactor > THEME.labels.floorTagMinExplode;
-  if (mode === 'preview') return false; // landmark：preview 讓位給路線（Phase 4 舊債 2）
+  if (mode === 'preview') return false; // landmark／platform：preview 讓位給路線（Phase 4 舊債 2）
   if (tier === 0) return true; // L0 大地標常駐
   if (tier === 2) return cameraDist < THEME.labels.landmarkNearDist; // L2 次要：近距才出
   return cameraDist < THEME.labels.landmarkMaxDist; // L1（未標 tier 預設）
@@ -60,7 +61,23 @@ function el(text: string, css: Partial<CSSStyleDeclaration>): HTMLDivElement {
   return div;
 }
 
-/** 場景內標籤層：floor tag（樓層＋系統品牌色條）與 landmark 名稱。
+/** 引線＋錨點 dot：釘住 label 對應的地面點，避免自由飄浮感（landmark／platform 共用）。 */
+function leaderAt(xy: Vec2, elevation: number): THREE.Group {
+  const foot = toWorld(xy, elevation + 0.1);
+  const head = toWorld(xy, elevation + 3);
+  const leader = new THREE.Group();
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([foot, head]),
+    new THREE.LineBasicMaterial({ color: THEME.body.edge, transparent: true, opacity: 0.75 }));
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35, 8, 6),
+    new THREE.MeshBasicMaterial({ color: THEME.body.edge, toneMapped: false }));
+  dot.position.copy(foot);
+  leader.add(line, dot);
+  return leader;
+}
+
+/** 場景內標籤層：floor tag（樓層＋系統品牌色條）、月台編號與 landmark 名稱。
  *  CSS2DObject parent 進樓層 group → local 座標自動跟爆炸位移。 */
 export function createLabelLayer(
   container: HTMLElement, stationGroup: THREE.Group, model: StationModel,
@@ -96,6 +113,35 @@ export function createLabelLayer(
     floorGroup.add(tag);
     entries.push({ obj: tag, kind: 'floor-tag', floor: meta.id });
 
+    // platform：月台名＋側別編號（B2「高鐵第1月台 1A/1B」、B4「淡水信義線月台 1/2」）
+    const platforms = (floor.areas ?? []).filter(
+      (a): a is Area & { name: LocalizedName } => a.kind === 'platform' && a.name !== undefined);
+    for (const [pi, a] of platforms.entries()) {
+      const s = a.sides ?? {};
+      const sides = [s.south, s.north, s.east, s.west].filter((v): v is string => !!v).sort();
+      const pl = new CSS2DObject(el(sides.length ? `${a.name.zh} ${sides.join('/')}` : a.name.zh, {
+        background: THEME.labels.platform.bg, color: THEME.labels.platform.fg,
+        fontSize: '11px', fontWeight: '600',
+        padding: '1px 6px', borderRadius: '6px', boxShadow: '0 1px 2px #00000022',
+      }));
+      const n = a.polygon.length; // 質心近似：頂點平均（月台為近矩形，足夠）
+      const c: Vec2 = [a.polygon.reduce((t, p) => t + p[0], 0) / n, a.polygon.reduce((t, p) => t + p[1], 0) / n];
+      // 同層多月台的質心會落在同一條橫向線上（B2 四座 x 皆 0）→ 沿月台長軸錯開，否則 declutter 只留得住 2 個
+      const axis = trackAxis(a.polygon);
+      const off = (pi - (platforms.length - 1) / 2) * THEME.labels.platformStagger;
+      if (axis && off !== 0) {
+        const [dx, dy] = [axis[1][0] - axis[0][0], axis[1][1] - axis[0][1]];
+        const L = Math.hypot(dx, dy) || 1;
+        c[0] += (dx / L) * off;
+        c[1] += (dy / L) * off;
+      }
+      pl.position.copy(toWorld(c, meta.elevation + 3));
+      floorGroup.add(pl);
+      const leader = leaderAt(c, meta.elevation);
+      floorGroup.add(leader);
+      entries.push({ obj: pl, kind: 'platform', tier: 1, floor: meta.id, leader });
+    }
+
     // landmark：具名 nav node 名稱小籤
     for (const n of floor.nav?.nodes ?? []) {
       if (!n.name) continue;
@@ -107,19 +153,7 @@ export function createLabelLayer(
       lm.position.copy(toWorld(n.xy, meta.elevation + 3));
       floorGroup.add(lm);
 
-      // 引線＋錨點：釘住 label 對應的樓層節點，避免自由飄浮感
-      const anchorXY = n.xy;
-      const foot = toWorld(anchorXY, meta.elevation + 0.1);
-      const head = toWorld(anchorXY, meta.elevation + 3);
-      const leader = new THREE.Group();
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([foot, head]),
-        new THREE.LineBasicMaterial({ color: THEME.body.edge, transparent: true, opacity: 0.75 }));
-      const dot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 8, 6),
-        new THREE.MeshBasicMaterial({ color: THEME.body.edge, toneMapped: false }));
-      dot.position.copy(foot);
-      leader.add(line, dot);
+      const leader = leaderAt(n.xy, meta.elevation); // 引線＋錨點：釘住 label 對應的樓層節點
       floorGroup.add(leader);
 
       entries.push({ obj: lm, kind: 'landmark', tier: n.tier, floor: meta.id, leader });
@@ -130,15 +164,16 @@ export function createLabelLayer(
   const proj = new THREE.Vector3(); // 重用投影暫存，避免每 frame×label clone（手機 GC 抖動）
   let vw = container.clientWidth, vh = container.clientHeight;
   const priorityOf = (e: Entry): number =>
-    e.kind === 'floor-tag' ? 4 : e.tier === 0 ? 3 : e.tier === 2 ? 1 : 2;
+    e.kind === 'floor-tag' ? 4 : e.kind === 'platform' ? 3 // platform 與 tier-0 landmark 同級
+      : e.tier === 0 ? 3 : e.tier === 2 ? 1 : 2;
   return {
     update(camera, mode, explodeFactor, focusFloor = null, inTransit = false) {
       const cand: { e: Entry; x: number; y: number; w: number; h: number; priority: number }[] = [];
       for (const e of entries) {
         // 樓層聚焦：非聚焦樓層標籤直接隱藏（半透明仍佔位——不採用）
         if (focusFloor !== null && e.floor !== focusFloor) { e.obj.visible = false; continue; }
-        // 鏡頭滑行中 landmark 不參與（距離掃過閾值會大量閃現）；floor tag 不受影響
-        if (e.kind === 'landmark' && inTransit) { e.obj.visible = false; continue; }
+        // 鏡頭滑行中 landmark／platform 不參與（距離掃過 LOD 閾值會大量閃現）；floor tag 不受影響
+        if ((e.kind === 'landmark' || e.kind === 'platform') && inTransit) { e.obj.visible = false; continue; }
         const world = e.obj.getWorldPosition(tmp);
         const dist = world.distanceTo(camera.position);
         if (!labelVisible(e.kind, mode, explodeFactor, dist, e.tier)) { e.obj.visible = false; continue; }
