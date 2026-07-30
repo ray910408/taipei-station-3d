@@ -118,7 +118,7 @@ describe('buildStationGroup', () => {
     const a = nodePosition('n-rp-002');
     const b = nodePosition('n-rc-010');
     const expected = new THREE.Vector3(a.x, (a.y + b.y) / 2, a.z);
-    expect(connectorPosition(fullGroup, 'c-elv-rprc-1').distanceTo(expected)).toBeLessThan(1e-6);
+    expect(connectorPosition(fullGroup, 'c-elv-rpbc-1').distanceTo(expected)).toBeLessThan(1e-6);
   });
 
   it('slab 為頂亮側暗雙材質（side = cap × sideDarken）', () => {
