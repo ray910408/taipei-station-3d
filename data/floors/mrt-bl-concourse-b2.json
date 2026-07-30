@@ -47,13 +47,34 @@
         [90.1, -135.2],
         [114.9, -86.4],
         [92.3, -80.9],
+        [102.2, -92.2],
+        [81.8, -88.2],
+        [74.8, -78.5],
         [66, -77.6],
         [46.3, -76.9]
       ],
       "source": "trtc-info-b2",
       "confidence": 2,
       "status": "traced",
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；閘門線間的黃色帶依圖描入"
+      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
+    },
+    {
+      "id": "a-bc-unpaid-link",
+      "kind": "unpaid",
+      "system": "trtc",
+      "name": {
+        "zh": "B1 連通道 B2 非付費口袋"
+      },
+      "polygon": [
+        [75.2, -78.8],
+        [82.2, -87.8],
+        [101.8, -91.8],
+        [92.1, -81.2]
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
     },
     {
       "id": "a-bc-unpaid-n",
@@ -220,6 +241,63 @@
       "confidence": 2,
       "status": "traced",
       "note": "詢問處3側較寬通道，依鄰近電梯7無障礙動線判為雙向無障礙閘門"
+    },
+    {
+      "id": "g-bc-link-in",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "in",
+      "accessible": false,
+      "line": [
+        [92.8, -81.7],
+        [95, -84.2]
+      ],
+      "connects": [
+        "a-bc-paid",
+        "a-bc-unpaid-link"
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "資訊圖未繪閘門；依票務語意推定——B1 連通道落點非付費、電梯1 落點付費"
+    },
+    {
+      "id": "g-bc-link-out",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "out",
+      "accessible": false,
+      "line": [
+        [95.5, -84.7],
+        [97.7, -87.2]
+      ],
+      "connects": [
+        "a-bc-paid",
+        "a-bc-unpaid-link"
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "資訊圖未繪閘門；依票務語意推定——B1 連通道落點非付費、電梯1 落點付費"
+    },
+    {
+      "id": "g-bc-link-acc",
+      "kind": "faregate",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": true,
+      "line": [
+        [98.2, -87.7],
+        [101.4, -91.3]
+      ],
+      "connects": [
+        "a-bc-paid",
+        "a-bc-unpaid-link"
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "status": "estimated",
+      "note": "資訊圖未繪閘門；依票務語意推定——B1 連通道落點非付費、電梯1 落點付費"
     }
   ],
   "units": [
@@ -430,6 +508,23 @@
         "id": "n-bc-014",
         "xy": [149.4, -147.6],
         "area": "a-bc-unpaid-s"
+      },
+      {
+        "id": "n-bc-015",
+        "xy": [85.5, -84.3],
+        "tier": 2,
+        "area": "a-bc-unpaid-link"
+      },
+      {
+        "id": "n-bc-016",
+        "xy": [98.3, -89],
+        "tier": 2,
+        "area": "a-bc-unpaid-link"
+      },
+      {
+        "id": "n-bc-017",
+        "xy": [104, -93],
+        "area": "a-bc-paid"
       }
     ],
     "edges": [
@@ -455,6 +550,11 @@
       },
       {
         "from": "n-bc-009",
+        "to": "n-bc-017",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bc-017",
         "to": "n-bc-010",
         "kind": "walk"
       },
@@ -528,6 +628,32 @@
         "to": "n-bc-014",
         "kind": "gate",
         "gate": "g-bc-s-acc",
+        "bidir": true
+      },
+      {
+        "from": "n-bc-015",
+        "to": "n-bc-016",
+        "kind": "walk"
+      },
+      {
+        "from": "n-bc-016",
+        "to": "n-bc-017",
+        "kind": "gate",
+        "gate": "g-bc-link-in",
+        "bidir": false
+      },
+      {
+        "from": "n-bc-017",
+        "to": "n-bc-016",
+        "kind": "gate",
+        "gate": "g-bc-link-out",
+        "bidir": false
+      },
+      {
+        "from": "n-bc-017",
+        "to": "n-bc-016",
+        "kind": "gate",
+        "gate": "g-bc-link-acc",
         "bidir": true
       }
     ]
