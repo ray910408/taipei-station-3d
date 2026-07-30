@@ -125,8 +125,11 @@ function railGeometries(quad: Vec2[], topY: number): THREE.BufferGeometry[] {
   if (len < 1e-6) return [];
   const nx = -dy / len, ny = dx / len;
   const out: THREE.BufferGeometry[] = [];
-  for (const s of [-0.7175, 0.7175]) {
-    const g = new THREE.BoxGeometry(len, 0.12, 0.07);
+  const GAUGE = 1.435; // 標準軌距——量的是兩軌「內側面」間距，非中心距
+  const RAIL_WIDTH = 0.07; // 單軌斷面寬（BoxGeometry z 尺寸）
+  const RAIL_OFFSET = (GAUGE + RAIL_WIDTH) / 2; // 內側面基準要外推半個軌寬，才是中心偏移
+  for (const s of [-RAIL_OFFSET, RAIL_OFFSET]) {
+    const g = new THREE.BoxGeometry(len, 0.12, RAIL_WIDTH);
     g.rotateY(Math.atan2(dy, dx));
     g.translate((a[0] + b[0]) / 2 + nx * s, topY + 0.06, -((a[1] + b[1]) / 2 + ny * s));
     out.push(g);
@@ -139,7 +142,9 @@ function distPtLine(p: Vec2, a: Vec2, b: Vec2): number {
   return Math.abs((p[0] - a[0]) * dy - (p[1] - a[1]) * dx) / Math.hypot(dx, dy);
 }
 
-/** 月台邊緣警戒帶：月台長邊兩端點都貼著（<1.2m）某條軌道長邊時，沿該邊內縮鋪帶。
+/** 月台邊緣警戒帶：月台長邊兩端點都貼著（<1.2m）某條軌道長邊時，取兩者在月台邊參數軸上的
+ *  重疊區間鋪帶（裁掉不重疊/僅端點擦邊的部分，重疊 <1m 略過），避免共線但不重疊的邊誤鋪、
+ *  或部分重疊的邊鋪過頭。同一月台邊可能鄰接多條軌道邊，逐條軌道邊各鋪各的重疊段。
  *  內縮方向以月台質心判定。B4 實測鄰接誤差 <0.1m，1.2m 門檻很寬裕。 */
 function platformEdgeStrips(
   plats: { polygon: Vec2[]; topY: number }[], trackEdges: [Vec2, Vec2][],
@@ -154,14 +159,25 @@ function platformEdgeStrips(
       const dx = b[0] - a[0], dy = b[1] - a[1];
       const len = Math.hypot(dx, dy);
       if (len < 10) continue;
-      if (!trackEdges.some(([c, e]) => distPtLine(a, c, e) < 1.2 && distPtLine(b, c, e) < 1.2)) continue;
       let nx = -dy / len, ny = dx / len; // 邊法向，翻向月台內側（質心側）
       const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
       if (nx * (cx - mx) + ny * (cy - my) < 0) { nx = -nx; ny = -ny; }
-      const g = new THREE.BoxGeometry(len, 0.02, E.width);
-      g.rotateY(Math.atan2(dy, dx));
-      g.translate(mx + nx * E.inset, p.topY + 0.015, -(my + ny * E.inset));
-      out.push(g);
+      for (const [c, e] of trackEdges) {
+        if (!(distPtLine(a, c, e) < 1.2 && distPtLine(b, c, e) < 1.2)) continue;
+        // 軌道端點投影到月台邊參數軸（0..len）；ring 繞向不保證同向，故 tLo/tHi 要 min/max 正規化
+        const tc = ((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / len;
+        const te = ((e[0] - a[0]) * dx + (e[1] - a[1]) * dy) / len;
+        const tLo = Math.max(0, Math.min(tc, te));
+        const tHi = Math.min(len, Math.max(tc, te));
+        const overlap = tHi - tLo;
+        if (overlap < 1) continue; // 端點擦邊，重疊太短不鋪
+        const tMid = (tLo + tHi) / 2;
+        const scx = a[0] + (dx * tMid) / len, scy = a[1] + (dy * tMid) / len; // 重疊段中點
+        const g = new THREE.BoxGeometry(overlap, 0.02, E.width);
+        g.rotateY(Math.atan2(dy, dx));
+        g.translate(scx + nx * E.inset, p.topY + 0.015, -(scy + ny * E.inset));
+        out.push(g);
+      }
     }
   }
   return out;

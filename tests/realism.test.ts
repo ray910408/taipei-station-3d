@@ -86,7 +86,7 @@ describe('軌道鋼軌與閘門櫃體', () => {
     const bb = new THREE.Box3().setFromObject(rails[0]);
     const size = bb.getSize(new THREE.Vector3());
     expect(size.x).toBeCloseTo(40, 5); // 沿軌道溝長軸
-    expect(size.z).toBeCloseTo(1.435 + 0.07, 5); // 軌距＋單軌寬
+    expect(size.z).toBeCloseTo(1.435 + 2 * 0.07, 5); // 軌距量的是內側面，外緣寬＝軌距＋兩倍軌寬
     expect(bb.max.y).toBeLessThan(0); // 沉在軌道溝內，低於樓板面
   });
 
@@ -98,6 +98,53 @@ describe('軌道鋼軌與閘門櫃體', () => {
     expect(size.x).toBeCloseTo(40, 5); // 僅共邊那條，另外三邊不生
     expect(size.z).toBeCloseTo(0.4, 5);
     // 共邊 y=4，內縮 0.45 往月台側（+y）→ world z = -(4+0.45)
+    expect((bb.min.z + bb.max.z) / 2).toBeCloseTo(-4.45, 5);
+  });
+
+  it('月台邊與軌道邊共線但區間零重疊——不生警戒帶', () => {
+    const noOverlapModel = {
+      station: { schema: 'station@1', id: 't', name: { zh: 't' },
+        frame: { units: 'm', origin_note: '', axis_note: '' }, systems: {},
+        floors: [
+          { id: 'a', short: 'a', file: '', name: { zh: 'a' }, labels: {}, elevation: 0, height: 4, estimated: true },
+        ] },
+      floors: new Map([
+        ['a', { schema: 'floor@1', id: 'a', slab: { outline: [[0, 0], [90, 0], [90, 10], [0, 10]], source: 's', confidence: 2 },
+          areas: [
+            { kind: 'track', system: 't', polygon: [[0, 0], [40, 0], [40, 4], [0, 4]], source: 's', confidence: 2 },
+            // 與軌道支撐線共線（y=4），但 x 區間 [50,90] 對 [0,40] 零重疊
+            { kind: 'platform', system: 't', polygon: [[50, 4], [90, 4], [90, 10], [50, 10]], source: 's', confidence: 2 },
+          ] }],
+      ]),
+      connectors: [],
+    } as unknown as StationModel;
+    const g = buildStationGroup(noOverlapModel).children.find((c) => c.name === 'a') as THREE.Group;
+    expect(g.children.filter((c) => c.userData.kind === 'platform-edge').length).toBe(0);
+  });
+
+  it('月台邊與軌道邊部分重疊——警戒帶僅鋪重疊段', () => {
+    const partialOverlapModel = {
+      station: { schema: 'station@1', id: 't', name: { zh: 't' },
+        frame: { units: 'm', origin_note: '', axis_note: '' }, systems: {},
+        floors: [
+          { id: 'a', short: 'a', file: '', name: { zh: 'a' }, labels: {}, elevation: 0, height: 4, estimated: true },
+        ] },
+      floors: new Map([
+        ['a', { schema: 'floor@1', id: 'a', slab: { outline: [[0, 0], [70, 0], [70, 10], [0, 10]], source: 's', confidence: 2 },
+          areas: [
+            { kind: 'track', system: 't', polygon: [[0, 0], [40, 0], [40, 4], [0, 4]], source: 's', confidence: 2 },
+            // 月台 x∈[30,70] 與軌道 x∈[0,40] 只有 [30,40] 重疊
+            { kind: 'platform', system: 't', polygon: [[30, 4], [70, 4], [70, 10], [30, 10]], source: 's', confidence: 2 },
+          ] }],
+      ]),
+      connectors: [],
+    } as unknown as StationModel;
+    const g = buildStationGroup(partialOverlapModel).children.find((c) => c.name === 'a') as THREE.Group;
+    const strips = g.children.filter((c) => c.userData.kind === 'platform-edge');
+    expect(strips.length).toBe(1);
+    const bb = new THREE.Box3().setFromObject(strips[0]);
+    expect(bb.min.x).toBeCloseTo(30, 5);
+    expect(bb.max.x).toBeCloseTo(40, 5);
     expect((bb.min.z + bb.max.z) / 2).toBeCloseTo(-4.45, 5);
   });
 
