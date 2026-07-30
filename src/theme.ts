@@ -13,7 +13,9 @@ export const THEME = {
       color: '#ffffff', intensity: 1.6,
       position: [150, 250, 120] as [number, number, number],
       target: [60, -20, 0] as [number, number, number],
-      shadow: { mapSize: 2048, bounds: 180, near: 10, far: 600, bias: -0.0005, normalBias: 0.5 },
+      // bounds 240：B2 slab 延展 ±175 後，角點在 light camera 橫軸投影至 [−233, 137]、
+      // 縱軸 [−110, 179]——舊值 180 會截掉西端 53m 的影子
+      shadow: { mapSize: 2048, bounds: 240, near: 10, far: 600, bias: -0.0005, normalBias: 0.5 },
     },
   },
   // 體塊語言（Phase 5）：頂亮側暗＋描邊
