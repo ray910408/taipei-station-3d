@@ -95,7 +95,7 @@ export function createLabelLayer(
     if (!floorGroup || !floor) continue;
 
     // floor tag：置於 slab 西側外緣；品牌色條讀資料（systems），不進 THEME
-    const sysKey = meta.id.startsWith('tra') ? 'tra' : 'trtc';
+    const sysKey = meta.id.startsWith('tra') ? 'tra' : meta.id.startsWith('mrt-bl') ? 'trtc-bl' : 'trtc';
     const sysColor = model.station.systems[sysKey]?.color ?? '#5f6368';
     const xs = floor.slab.outline.map((p) => p[0]);
     const zs = floor.slab.outline.map((p) => p[1]);

@@ -25,7 +25,7 @@
     {
       "id": "a-bp-platform",
       "kind": "platform",
-      "system": "trtc",
+      "system": "trtc-bl",
       "name": {
         "zh": "板南線月台",
         "en": "Bannan Line Platform"
