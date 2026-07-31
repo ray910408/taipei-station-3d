@@ -17,9 +17,10 @@
 
 ## Phase 3 增補（轉乘 nav 與 rctp connectors）
 
-- nav 四節點：P4 落點 n-tp-001 (92.8,30.5)、候車 n-tp-002 (77.8,26)；P3 落點 n-tp-003 (91.7,9)、
-  候車 n-tp-004 (76.7,4.5)。落點 xy 取 B3 前廳（n-rc-017/018）垂直投影 clamp 進帶內（距帶緣 1m）——
-  與 B3 量測位置的 y 錯位 P4=8.3m、P3=13.6m，歸因 tra-b2-map 帶位置等距示意
+- nav 四節點：P4 落點 n-tp-001 (92.8,30)、候車 n-tp-002 (77.8,26)；P3 落點 n-tp-003 (91.7,8.5)、
+  候車 n-tp-004 (76.7,4.5)。落點 xy 取 B3 前廳（n-rc-017/018）垂直投影 clamp 進帶內（距帶緣 0.5m，
+  330×9 改寫後帶緣由 31.5/10 收到 30.5/9）——
+  與 B3 量測位置的 y 錯位 P4=8.8m、P3=14.1m，歸因 tra-b2-map 帶位置等距示意
   （詳 mrt-r-concourse-b3.md Phase 3 增補）。
 - connectors c-{stair,esc,elv}-rctp-*×8（P4 經 n-rc-017、P3 經 n-rc-018）；電梯 accessible:true、
   位置語意推定 conf 2（tra-b3-map 各月台群含電梯、trtc-section 無障礙符號）。
