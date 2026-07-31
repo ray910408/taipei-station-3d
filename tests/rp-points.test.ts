@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { pointInPolygon } from '../src/geometry'
 import { chainRows, distToPolygonEdge, type Pt } from '../tools/rp-geometry'
-import { generateFloorPoints } from '../tools/gen-rp-points'
+import { canOverwrite, generateFloorPoints } from '../tools/gen-rp-points'
 import rpList from '../rp/rp-points.json'
 
 const square: Pt[] = [[0, 0], [10, 0], [10, 10], [0, 10]]
@@ -21,6 +21,20 @@ describe('rp-points.json', () => {
       'mrt-r-platform-b4': 10,
     })
     expect(rpList.points).toHaveLength(353)
+  })
+})
+
+describe('canOverwrite', () => {
+  it('目標存在＋無 force → 拒絕', () => {
+    expect(canOverwrite(true, false)).toBe(false)
+  })
+
+  it('目標存在＋force → 允許', () => {
+    expect(canOverwrite(true, true)).toBe(true)
+  })
+
+  it('目標不存在 → 允許', () => {
+    expect(canOverwrite(false, false)).toBe(true)
   })
 })
 

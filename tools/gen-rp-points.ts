@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { distPointSeg, pointInPolygon } from '../src/geometry'
@@ -123,6 +123,12 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
   }))
 }
 
+/** 覆寫閘門:目標不存在、或帶 --force 才允許寫檔。純函式(吃 existsSync 的結果),
+ *  測試不用真的碰檔案系統。 */
+export function canOverwrite(targetExists: boolean, force: boolean): boolean {
+  return !targetExists || force
+}
+
 export function floorSvg(floor: FloorJson, points: RpPoint[]): string {
   const outline = floor.slab.outline
   const xs = outline.map(p => p[0]); const ys = outline.map(p => p[1])
@@ -148,6 +154,7 @@ function main() {
   const { values } = parseArgs({ options: {
     spacing: { type: 'string' }, clearance: { type: 'string' }, out: { type: 'string' },
     n: { type: 'string' }, floors: { type: 'string' }, svg: { type: 'boolean' },
+    force: { type: 'boolean' },
   } })
   // --spacing 支援逐層覆寫:`12,tra-platform-b2=20`。月台是長條一維空間、
   // PDR 在那裡最準,不需要跟大廳一樣密。
@@ -176,6 +183,13 @@ function main() {
   const ids = new Set(station.floors.map((f: { id: string }) => f.id))
   for (const id of byFloor.keys()) if (!ids.has(id)) { console.error(`--spacing 覆寫的樓層不存在:${id}(可用:${[...ids].join(', ')})`); process.exit(1) }
 
+  // 覆寫閘門:既有清單多半是校準過的正式版本,重產前先擋下來(見 README 的正式參數)
+  const outPath = join(outDir, 'rp-points.json')
+  if (!canOverwrite(existsSync(outPath), Boolean(values.force))) {
+    console.error(`${outPath} 已存在,重產會覆寫既有清單。確定要覆寫請加 --force`)
+    process.exit(1)
+  }
+
   const all: RpPoint[] = []
   mkdirSync(join(outDir, 'maps'), { recursive: true })
   for (const f of floors) {
@@ -188,14 +202,14 @@ function main() {
     if (values.svg) writeFileSync(join(outDir, 'maps', `${floor.id}.svg`), floorSvg(floor, pts))
   }
   if (all.length === 0) { console.error('產出 0 點——檢查 --floors 或樓層資料'); process.exit(1) }
-  writeFileSync(join(outDir, 'rp-points.json'), JSON.stringify({
+  writeFileSync(outPath, JSON.stringify({
     schema: 'rp-list@1', station: station.id, coordSystem: 'model',
     generated: new Date().toISOString(), spacing,
     ...(byFloor.size ? { spacingByFloor: Object.fromEntries(byFloor) } : {}),
     points: all,
   }, null, 2))
   const totalH = (all.length * (n * 4.5 + 15)) / 3600
-  console.log(`共 ${all.length} 點 · 預估 ${totalH.toFixed(1)} h → ${join(outDir, 'rp-points.json')}`)
+  console.log(`共 ${all.length} 點 · 預估 ${totalH.toFixed(1)} h → ${outPath}`)
 }
 
 // 見 fp-sim.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準

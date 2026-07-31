@@ -48,7 +48,8 @@ npm run dev
 
 **WiFi 指紋定位（離線工具鏈，不影響 viewer）**
 
-- `npm run gen:rp`——由樓層 JSON 產參考點清單與找點 SVG（`-- --spacing 6 --svg`）
+- `npm run gen:rp`——由樓層 JSON 產參考點清單與找點 SVG（`-- --spacing 12,tra-platform-b2=14,mrt-r-platform-b4=14 --svg`）；
+  重產會覆寫既有清單，需帶 `--force`
 - `npm run sim:fp`——指紋模擬器：沒有現場資料時產生合成採集檔（`-- --seed 1`）
 - `npm run build:fp`——離線 pipeline：採集檔（真的或合成的）→ 指紋庫 `public/fp/<站>.json`
 - `npm run analyze:spacing`——由採集檔估算「兩點要隔多遠才分得出來」
