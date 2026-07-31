@@ -49,6 +49,19 @@
             "floors_below": { "type": "integer", "minimum": 0 }
           }
         },
+        "platform_totals": {
+          "$comment": "全站合計，刻意與 platforms 分開——同一個 map 裡混合計與分項，任何加總都會重複計算",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "form": { "type": "string" },
+            "count": { "type": "integer", "minimum": 1 },
+            "length_m": { "type": "number", "exclusiveMinimum": 0 },
+            "width_m": { "type": "number", "exclusiveMinimum": 0 },
+            "tracks": { "type": "integer", "minimum": 1 },
+            "note": { "type": "string" }
+          }
+        },
         "platforms": {
           "type": "object",
           "propertyNames": { "pattern": "^[a-z0-9-]+$" },

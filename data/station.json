@@ -15,7 +15,7 @@
       "lat": 25.04771,
       "lon": 121.51784,
       "status": "estimated",
-      "note": "臺鐵車站基本資料集 stationCode=1000 的官方 gps（lat lon）；資料集未明載 CRS，且代表點不等於模型的臺鐵站體中心，僅供 GPS 粗定位錨定"
+      "note": "臺鐵車站基本資料集 stationCode=1000 的官方 gps（lat lon）：資料集頁 https://data.gov.tw/dataset/33425 、資源檔 https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/0518b833e8964d53bfea3f7691aea0ee ，2026-07-31 重取仍為此值（原檔未存進 refs/：全臺 240 餘站、僅用其中一列）。資料集未明載 CRS，且代表點不等於模型的臺鐵站體中心，僅供 GPS 粗定位錨定"
     }
   },
   "systems": {
@@ -39,15 +39,15 @@
       "floors_above": 6,
       "floors_below": 4
     },
+    "platform_totals": {
+      "form": "島式",
+      "count": 4,
+      "length_m": 330,
+      "width_m": 9,
+      "tracks": 9,
+      "note": "臺鐵＋高鐵合計，S1 原文「4座島式月台9股道，每座寬9公尺，長330公尺」。與 platforms 分項是同一批月台的兩種切法，不可相加——放在 platforms 之外就是為了讓分項可以直接加總"
+    },
     "platforms": {
-      "tra-hsr-total": {
-        "form": "島式",
-        "count": 4,
-        "length_m": 330,
-        "width_m": 9,
-        "tracks": 9,
-        "note": "交通部鐵道局官方工程出版品的臺鐵＋高鐵合計值；不要與下列營運者分項重複加總"
-      },
       "tra": {
         "form": "島式",
         "count": 2,
@@ -74,13 +74,12 @@
       }
     },
     "exits": {
-      "building": 12,
       "metro": 8,
       "metro_accessible": [
         "M2",
         "M4"
       ],
-      "note": "站體東南西北各 3 座；捷運出口 M1–M8，其中 M2、M4 為無障礙出口"
+      "note": "捷運出口 M1–M8，其中 M2、M4 為無障礙出口（北捷站頁＋出入口 GPS 開放資料交叉核對）。站體門數（舊值 12＝東南西北各 3）只有 Wikipedia 及其轉載，一手來源未列，比照 149×110×48 移除"
     },
     "accessibility": {
       "metro_elevators": 7,

@@ -175,13 +175,16 @@ main_building_dimensions:
 
 - `data/station.json` 原有 `building.length_m=149`、`width_m=110`、`height_m=48` 的來源明列為 Wikipedia；本次因無法由一手來源確認而移除。
 - `data/station.json` 的臺鐵／高鐵月台長 330 m、寬 9 m 已改引 S1；這兩個數值有官方工程出版品支持。
-- `docs/floor-notes/tra-platform-b2.md` 的「帶寬 11m」是模型／描圖假設，與 S1 的官方月台寬 9 m 不同。兩者定義不可混用：事實欄位用 9 m；模型若保留 11 m，需明寫為視覺／導航幾何補償。
+- `docs/floor-notes/tra-platform-b2.md` 的「帶寬 11m」是 Phase 2 的舊文，資料早在 `60a2e8d` 就改成 330×9（`data/floors/tra-platform-b2.json` 四條帶實測皆 330.0×9.0，帶中心不變）——**模型與 S1 一致，不存在 9 vs 11 的衝突**，待辦是把那份 floor-note 同步（2026-07-31 已補）。
 - 專案目前估算的各層 `elevation`／`height` 不能從 S4 剖面圖升級；圖面沒有尺寸且自註僅供參考。
+- `data/station.json` 原有 `facts.exits.building=12`（「站體東南西北各 3 座」）同樣只有 Wikipedia 與其轉載，臺鐵官方站頁未列出入口清單；比照 149×110×48 於 2026-07-31 移除。
+- `data/station.json` 的 `frame.origin_wgs84` 引臺鐵車站基本資料集 `stationCode=1000` 的 `gps`（資料集頁 https://data.gov.tw/dataset/33425 、資源檔 https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/0518b833e8964d53bfea3f7691aea0ee ）；2026-07-31 重取仍為 `25.04771 121.51784`。原檔未存進 `refs/`（全臺 240 餘站、只用其中一列），欲重驗請重新下載。
 
 ## 出入口與無障礙（第二代理複核）
 
 - 北捷官方站頁列 `M1–M8` 共 8 個出口；其中 `M2`、`M4` 有電梯並標為無障礙出口。
-- 同頁列出 7 部無障礙電梯：B2→B4、B3→B4、地面→B3、B1→B2、M4→B1、B2→B3，以及 B1→B2。
+- 同頁列出 7 部無障礙電梯：B2→B4、B3→B4、地面→B3、B1→B2、M4→B1、B2→B3，以及 B1→B2（最後兩部同為 B1↔B2，分別在誠品側與 M4／M5 側，不是重複轉錄；與 `refs/opendata/elevator-locations.csv` 的 1–7 號逐條對得上）。
+  **建 connector 前必看：** 官方寫法是「起點層>迄點層」，**不保證中間不停靠**（例：1 號電梯記為 B2>B4，中間層是否開門要另外核）。要落成 `connectors.json` 的 `levels` 陣列，每部都得以平面圖或現場逐層確認，不能直接把這兩層當成全部。
 - 臺鐵官方站頁列北一門、北二門設無障礙坡道；另有月臺電梯。
 
 以上資料直接影響出入口、垂直動線與無障礙路徑建模。來源：[北捷台北車站現行頁](https://web.metro.taipei/pages2026/WebStation/051)、[臺鐵臺北站現行頁](https://www.railway.gov.tw/tra-tip-web/tip/tip00H/tipH41/viewStaInfo/1000)，於 2026-07-30 重新核對。

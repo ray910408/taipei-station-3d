@@ -67,6 +67,8 @@ export interface StationFacts {
   source: string;
   verified?: string;
   building?: { length_m?: number; width_m?: number; height_m?: number; floors_above?: number; floors_below?: number };
+  /** 全站合計；與 platforms 分項是同一批月台的兩種切法，兩者不可相加 */
+  platform_totals?: { form?: string; count?: number; length_m?: number; width_m?: number; tracks?: number; note?: string };
   platforms?: Record<string, { form: string; count: number; length_m?: number; width_m?: number; tracks?: number; note?: string }>;
   exits?: { building?: number; metro?: number; metro_accessible?: string[]; note?: string };
   accessibility?: { metro_elevators?: number; tra_ramps?: string[]; note?: string };

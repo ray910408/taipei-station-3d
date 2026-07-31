@@ -34,10 +34,12 @@ describe('validateDocs', () => {
     expect(errors.some((e) => e.includes('station facts') && e.includes('nope'))).toBe(true);
   });
 
-  it.each(['station_records', 'ridership', 'opened'])('schema 違規：facts 不接受非建模欄位 %s', (field) => {
+  // facts 是「建模用的一手數值」，不是車站百科：additionalProperties:false 擋掉營運類欄位
+  // （opened／ridership／station_records…）。三個欄位測的是同一條 schema 規則，一個就夠。
+  it('schema 違規：facts 不接受非建模欄位', () => {
     const docs = freshDocs();
     const source = docs.sources.sources[0].id;
-    (docs.station as any).facts = { source, [field]: {} };
+    (docs.station as any).facts = { source, opened: {} };
     const { errors } = validateDocs(docs);
     expect(errors.some((e) => e.includes('station.json'))).toBe(true);
   });
