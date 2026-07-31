@@ -26,12 +26,13 @@ locality / leverage）依 `/codebase-design` 定義，不在此重複。
 - **路網（nav graph）**：節點＋邊的尋路圖，`nav.ts` 以 A* 尋路；邊分
   walk / gate / platform-edge / stair / escalator / elevator。
 - **樓層（floor）**：模型單位＝「站體×深度」，非純深度——同一深度標籤可有多個樓層
-  （臺鐵月台 B2 與板南線大廳 B2 同深、不同站體）。
+  （臺鐵月台 B2 與板南線大廳 B2 同深、不同站體）。定義見 ADR 0002；同深實例在
+  `feat/bannan-line-expansion`，`main` 目前 4 個樓層檔的 elevation 互異。
 - **站體（station body）**：一個系統/路線在站內的連續結構體（臺鐵站體、紅線站體、
   板南線站體）；樓層檔屬於恰一個站體，例外的小舌片（如連通道 stub）以 note 明記歸屬妥協。
 - **縫合邊（seam edge）**：同深、不同樓層檔之間的 walk 邊——兩站體樓板在開口相接處的
   水平直通（如板南線月台 B3 ↔ 紅線大廳 B3 付費區內轉乘）。屬步行、非垂直設施；
-  過縫時導航明示進入新樓層。
+  過縫時導航明示進入新樓層。實作在 `feat/bannan-line-expansion`；`main` 的 validator 只認同檔 edge。
 - **地標（landmark）**：有中文名的路網節點，搜尋與選點的單位。
 - **垂直設施（connector）**：跨樓層的樓梯／電扶梯／電梯；導航中「梯前暫停、
   手動確認過梯」。
