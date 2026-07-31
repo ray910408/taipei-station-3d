@@ -43,6 +43,39 @@ describe('buildConnectorsGroup 三型分明', () => {
   });
 });
 
+describe('板南線月台梯群連通器（四組×上下行，開口手描）', () => {
+  const nodes = new Map(
+    [bc, bp].flatMap((floor) => floor.nav.nodes.map((node) => [node.id, node.xy] as const)),
+  );
+  // [上行 id, 下行 id, B2 口相對井位方向]：西/中西口朝東（+1）、中東/東口朝西（-1）——皆朝站體中央
+  const groups: [string, string, number][] = [
+    ['c-esc-bpbc-5', 'c-esc-bpbc-6', 1],
+    ['c-esc-bpbc-1', 'c-esc-bpbc-2', 1],
+    ['c-esc-bpbc-3', 'c-esc-bpbc-4', -1],
+    ['c-esc-bpbc-7', 'c-esc-bpbc-8', -1],
+  ];
+  it('上下行成對共用兩端節點', () => {
+    for (const [up, down] of groups) {
+      const cu = connectorsDoc.connectors.find((c) => c.id === up)!;
+      const cd = connectorsDoc.connectors.find((c) => c.id === down)!;
+      expect(cu.direction).toBe('up');
+      expect(cd.direction).toBe('down');
+      expect(cd.levels.map((l) => l.node)).toEqual(cu.levels.map((l) => l.node));
+    }
+  });
+  it('B2 口朝站體中央、斜程 ~12m（非退化垂直棒）', () => {
+    for (const [up, , sign] of groups) {
+      const levels = connectorsDoc.connectors.find((c) => c.id === up)!.levels;
+      const lo = nodes.get(levels[0].node)!; // bp（B3 低端）
+      const hi = nodes.get(levels[1].node)!; // bc（B2 高端）
+      expect(Math.sign(hi[0] - lo[0]), up).toBe(sign);
+      const run = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]);
+      expect(run, up).toBeGreaterThan(10);
+      expect(run, up).toBeLessThan(14);
+    }
+  });
+});
+
 describe('真實資料電梯豎井對齊', () => {
   it('指定電梯的相鄰停靠 xy 差全為 0', () => {
     const nodes = new Map(

@@ -613,6 +613,86 @@
       "note": "板南線月台中東梯群下行"
     },
     {
+      "id": "c-esc-bpbc-5",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-004"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-004"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台西梯群上行；B2 口朝東（站體中央）、B3 口朝月台西端，依 trtc-info-b2 開口罩與淨空斜線判讀"
+    },
+    {
+      "id": "c-esc-bpbc-6",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-004"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-004"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台西梯群下行"
+    },
+    {
+      "id": "c-esc-bpbc-7",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-008"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-007"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台東梯群上行；B2 口朝西（站體中央）、B3 口朝月台東端，與西梯群鏡像"
+    },
+    {
+      "id": "c-esc-bpbc-8",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-008"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-007"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台東梯群下行"
+    },
+    {
       "id": "c-elv-bpbc-1",
       "kind": "elevator",
       "system": "trtc",

@@ -327,9 +327,9 @@ export function buildConnectorsGroup(
       // a0/b0 是 nodePos map 內共用的 Vector3 參照（同錨點梯群共用）；clone 後才可安全位移，否則污染 map
       const a = a0.clone();
       const b = b0.clone();
-      // 手扶梯/樓梯合成斜向：把較高端沿其樓層相鄰走道方向平移，避免上下端重合退化成垂直棒
-      // ponytail: 合成斜向近似, 真實方位需手描 connectors
-      if (c.kind !== 'elevator') {
+      // 手扶梯/樓梯合成斜向：僅上下端重合（未手描開口）時把較高端沿走道方向平移，
+      // 避免退化成垂直棒；兩端已手描真實開口者用真實幾何，不再疊加近似位移
+      if (c.kind !== 'elevator' && Math.hypot(b.x - a.x, b.z - a.z) < 1) {
         const hi = a.y >= b.y ? a : b;
         const hiLevel = a.y >= b.y ? c.levels[i] : c.levels[i + 1];
         const hf = model.floors.get(hiLevel.floor);
