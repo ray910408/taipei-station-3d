@@ -25,6 +25,12 @@
       },
       "color": "#e3002c"
     },
+    "trtc-bl": {
+      "name": {
+        "zh": "台北捷運板南線"
+      },
+      "color": "#004b87"
+    },
     "tra": {
       "name": {
         "zh": "臺鐵"
@@ -70,7 +76,7 @@
       "trtc-bl": {
         "form": "島式",
         "count": 1,
-        "note": "板南線三/四月台；月台不在本模型範圍"
+        "note": "板南線三/四月台；月台幾何依 trtc-info-b3 描圖入模"
       }
     },
     "exits": {
@@ -118,7 +124,22 @@
       },
       "labels": {
         "complex": "B2",
-        "tra": "B2 月台層",
+        "tra": "B2 月台層"
+      },
+      "elevation": -14,
+      "height": 4.5,
+      "estimated": true
+    },
+    {
+      "id": "mrt-bl-concourse-b2",
+      "short": "bc",
+      "file": "floors/mrt-bl-concourse-b2.json",
+      "name": {
+        "zh": "板南線大廳層",
+        "en": "Bannan Line Concourse"
+      },
+      "labels": {
+        "complex": "BL2",
         "trtc": "B2 板南線大廳層"
       },
       "elevation": -14,
@@ -137,6 +158,22 @@
         "complex": "B3",
         "trtc": "B3 淡水信義線大廳層",
         "tra": "B3 轉乘層"
+      },
+      "elevation": -21,
+      "height": 4.5,
+      "estimated": true
+    },
+    {
+      "id": "mrt-bl-platform-b3",
+      "short": "bp",
+      "file": "floors/mrt-bl-platform-b3.json",
+      "name": {
+        "zh": "板南線月台層",
+        "en": "Bannan Line Platform"
+      },
+      "labels": {
+        "complex": "BL3",
+        "trtc": "B3 板南線月台層"
       },
       "elevation": -21,
       "height": 4.5,

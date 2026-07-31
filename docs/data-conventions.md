@@ -72,9 +72,10 @@ L2=701.2 m）按弦長加權內插（見下）得 N17.49°
 | nav node | `n-{short}-{三位數}` | `n-rp-003` |
 | connector | `c-{esc|stair|elv}-{低short}{高short}-{n}` | `c-esc-rprc-1` |
 
-短碼：tc=臺鐵穿堂層(B1)、tp=臺鐵月台層(B2)、rc=R線大廳層(B3)、rp=R線月台層(B4)。
+短碼：tc=臺鐵穿堂層(B1)、tp=臺鐵月台層(B2)、bc=板南線大廳層(B2)、rc=R線大廳層(B3)、bp=板南線月台層(B3)、rp=R線月台層(B4)。
 
 ## 語意規則
+- 縫合邊＝跨樓層檔、同 elevation 的 walk 邊（ADR 0002）；新檔持縫。
 - polygon 開環；outline/polygon 逆時針、holes 順時針。
 - gate `connects = [付費側, 非付費側]`；`in`=僅進、`out`=僅出、`both`=雙向；非 both 的 gate edge 必須 `bidir:false`。
 - 每個幾何元素必填 `source` + `confidence`；不確定就 confidence 2 並寫 `note`。

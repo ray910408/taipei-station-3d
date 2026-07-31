@@ -6,22 +6,26 @@ import stationDoc from '../data/station.json';
 import connectorsDoc from '../data/connectors.json';
 import tc from '../data/floors/tra-concourse-b1.json';
 import tp from '../data/floors/tra-platform-b2.json';
+import bc from '../data/floors/mrt-bl-concourse-b2.json';
 import rc from '../data/floors/mrt-r-concourse-b3.json';
+import bp from '../data/floors/mrt-bl-platform-b3.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
 const model = assembleModel(stationDoc, {
   'floors/tra-concourse-b1.json': tc,
   'floors/tra-platform-b2.json': tp,
+  'floors/mrt-bl-concourse-b2.json': bc,
   'floors/mrt-r-concourse-b3.json': rc,
+  'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': rp,
 }, connectorsDoc);
 const landmarks = listLandmarks(model);
 
 describe('groupLandmarks（B4 起始點不見了——12 筆截斷修復）', () => {
-  it('空 query：全 31 筆、4 組、樓層保序、無截斷', () => {
+  it('空 query：全 34 筆、6 組、樓層保序、無截斷', () => {
     const groups = groupLandmarks(landmarks, '');
-    expect(groups.length).toBe(4);
-    expect(groups.reduce((n, g) => n + g.items.length, 0)).toBe(31);
+    expect(groups.length).toBe(6);
+    expect(groups.reduce((n, g) => n + g.items.length, 0)).toBe(34);
     expect(groups.map((g) => g.floorLabel)).toEqual(
       [...new Set(landmarks.map((l) => l.floorLabel))]);
   });

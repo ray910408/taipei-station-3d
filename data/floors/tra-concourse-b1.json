@@ -4,6 +4,10 @@
   "slab": {
     "outline": [
       [-105, -75],
+      [83, -75],
+      [83, -91],
+      [101, -91],
+      [101, -75],
       [105, -75],
       [105, -10],
       [151, 2],
@@ -60,6 +64,21 @@
       "confidence": 2,
       "status": "traced",
       "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
+    },
+    {
+      "id": "a-tc-mrt-link",
+      "kind": "corridor",
+      "system": "shared",
+      "polygon": [
+        [83, -75],
+        [83, -91],
+        [101, -91],
+        [101, -75]
+      ],
+      "source": "trtc-info-b1",
+      "confidence": 2,
+      "status": "traced",
+      "note": "北捷穿堂域，暫掛臺鐵檔；北捷 B1 全幅入模時遷移（ADR 0002 站體歸屬妥協）"
     }
   ],
   "units": [
@@ -314,6 +333,18 @@
         "name": {
           "zh": "B1 出口（往中山地下街）"
         }
+      },
+      {
+        "id": "n-tc-011",
+        "xy": [85.5, -84.3],
+        "tier": 2,
+        "area": "a-tc-mrt-link"
+      },
+      {
+        "id": "n-tc-012",
+        "xy": [98.3, -89],
+        "tier": 2,
+        "area": "a-tc-mrt-link"
       }
     ],
     "edges": [
@@ -381,6 +412,16 @@
       {
         "from": "n-tc-004",
         "to": "n-tc-010",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-011",
+        "to": "n-tc-002",
+        "kind": "walk"
+      },
+      {
+        "from": "n-tc-012",
+        "to": "n-tc-002",
         "kind": "walk"
       }
     ]

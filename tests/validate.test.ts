@@ -7,6 +7,28 @@ function freshDocs() {
   return loadRepoDocs(FIXTURE);
 }
 
+// 縫合邊測試用：在 mini fixture 加一個與 plat-b2 同深(-9)的附樓
+// annexOutline 與 plat-b2 slab [[-10,-5],[10,-5],[10,5],[-10,5]] 在 x=10 相接
+function withAnnex(docs: ReturnType<typeof freshDocs>, opts: {
+  elevation?: number; outline?: [number, number][]; seamTo?: string; seamKind?: string;
+} = {}) {
+  const outline = opts.outline ?? [[10, -5], [20, -5], [20, 5], [10, 5]];
+  (docs.station as any).floors.push({
+    id: 'anx-b2', short: 'ax', file: 'floors/anx-b2.json',
+    name: { zh: '附樓' }, labels: { complex: 'X2' },
+    elevation: opts.elevation ?? -9, height: 3, estimated: true,
+  });
+  (docs.floors as any).set('anx-b2', {
+    schema: 'floor@1', id: 'anx-b2',
+    slab: { outline, source: 'test-src', confidence: 5 },
+    nav: {
+      nodes: [{ id: 'n-ax-001', xy: [15, 0] }],
+      edges: [{ from: 'n-ax-001', to: opts.seamTo ?? 'n-pl-002', kind: opts.seamKind ?? 'walk' }],
+    },
+  });
+  return docs;
+}
+
 describe('validateDocs', () => {
   it('合法 fixture 無 errors', () => {
     const { errors } = validateDocs(freshDocs());
@@ -137,5 +159,43 @@ describe('validateDocs', () => {
     (docs.floors.get('hall-b1') as any).slab.status = 'traced';
     const { warnings } = validateDocs(docs);
     expect(warnings.some((w) => w.includes('traced') && w.includes('test-src'))).toBe(true);
+  });
+
+  describe('縫合邊（跨樓層檔 walk 邊）', () => {
+    it('同高相鄰、線段在聯集內 → 合法', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs()));
+      expect(errors).toEqual([]);
+    });
+
+    it('兩端樓層 elevation 不相等 → error', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), { elevation: -4 }));
+      expect(errors.some((e) => e.includes('elevation 不相等'))).toBe(true);
+    });
+
+    it('端點不存在 → error（沿用既有文案）', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), { seamTo: 'n-pl-999' }));
+      expect(errors.some((e) => e.includes('"n-pl-999" 不存在'))).toBe(true);
+    });
+
+    it('兩 slab 不相鄰（穿土）→ error', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), {
+        outline: [[15, -5], [25, -5], [25, 5], [15, 5]],  // 與 plat-b2 之間有 5m 空隙
+        // n-ax-001 xy [15,0] 仍在此 outline 邊上（pointInPolygon 邊界視為內／外由實作決定），
+        // 取樣點 x∈(10,15) 落在兩 slab 之外 → 必炸
+      }));
+      expect(errors.some((e) => e.includes('穿土'))).toBe(true);
+    });
+
+    it('窄縫（0.3m，窄於舊 1m 取樣距）也擋——涵蓋判定用交點切分非等距取樣', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), {
+        outline: [[10.3, -5], [20, -5], [20, 5], [10.3, 5]],  // 與 plat-b2 之間 0.3m 縫
+      }));
+      expect(errors.some((e) => e.includes('穿土'))).toBe(true);
+    });
+
+    it('跨檔 gate edge → error（僅限 walk）', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), { seamKind: 'gate' }));
+      expect(errors.some((e) => e.includes('僅限 walk'))).toBe(true);
+    });
   });
 });

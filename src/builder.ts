@@ -302,6 +302,7 @@ export function buildConnectorsGroup(
   const M = THEME.materials;
   const connGroup = new THREE.Group();
   connGroup.name = 'connectors';
+  const elevByFloor = new Map(model.station.floors.map((f) => [f.id, f.elevation]));
   const nodePos = new Map<string, THREE.Vector3>();
   for (const meta of model.station.floors) {
     const floor = model.floors.get(meta.id);
@@ -327,9 +328,12 @@ export function buildConnectorsGroup(
       // a0/b0 是 nodePos map 內共用的 Vector3 參照（同錨點梯群共用）；clone 後才可安全位移，否則污染 map
       const a = a0.clone();
       const b = b0.clone();
-      // 手扶梯/樓梯合成斜向：把較高端沿其樓層相鄰走道方向平移，避免上下端重合退化成垂直棒
-      // ponytail: 合成斜向近似, 真實方位需手描 connectors
-      if (c.kind !== 'elevator') {
+      // 手扶梯/樓梯合成斜向：僅退化幾何（水平程短於樓層高差＝斜率 >45°，真實梯約 30°，
+      // 屬未手描/粗估開口——如 tptc 三支 1.8m 粗估位）時把較高端沿走道方向平移；
+      // 手描真實開口者用真實幾何。高差取樓層 elevation 差，不含爆炸位移——爆炸拉伸不得翻轉判定
+      const riseMeta = Math.abs(
+        (elevByFloor.get(c.levels[i].floor) ?? 0) - (elevByFloor.get(c.levels[i + 1].floor) ?? 0));
+      if (c.kind !== 'elevator' && Math.hypot(b.x - a.x, b.z - a.z) < riseMeta) {
         const hi = a.y >= b.y ? a : b;
         const hiLevel = a.y >= b.y ? c.levels[i] : c.levels[i + 1];
         const hf = model.floors.get(hiLevel.floor);

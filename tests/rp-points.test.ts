@@ -2,8 +2,27 @@ import { describe, expect, it } from 'vitest'
 import { pointInPolygon } from '../src/geometry'
 import { chainRows, distToPolygonEdge, type Pt } from '../tools/rp-geometry'
 import { generateFloorPoints } from '../tools/gen-rp-points'
+import rpList from '../rp/rp-points.json'
 
 const square: Pt[] = [[0, 0], [10, 0], [10, 10], [0, 10]]
+
+describe('rp-points.json', () => {
+  it('包含六層正式重產點數', () => {
+    const counts = rpList.points.reduce<Record<string, number>>((acc, point) => {
+      acc[point.floor] = (acc[point.floor] ?? 0) + 1
+      return acc
+    }, {})
+    expect(counts).toEqual({
+      'tra-concourse-b1': 92,
+      'tra-platform-b2': 96,
+      'mrt-bl-concourse-b2': 79,
+      'mrt-r-concourse-b3': 50,
+      'mrt-bl-platform-b3': 26,
+      'mrt-r-platform-b4': 10,
+    })
+    expect(rpList.points).toHaveLength(353)
+  })
+})
 
 describe('rp-geometry', () => {
   it('pointInPolygon:內/外/凹多邊形', () => {

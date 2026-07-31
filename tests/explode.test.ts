@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { StationModel } from '../src/types';
 import { assembleModel } from '../src/loader';
 import { buildConnectorsGroup } from '../src/builder';
 import { floorOffsetY, easeInOutCubic, EXPLODE_GAP, disposeDeep } from '../src/explode';
@@ -25,6 +26,20 @@ describe('floorOffsetY', () => {
   });
   it('未知樓層回 0', () => {
     expect(floorOffsetY(model, 'no-such', 1)).toBe(0);
+  });
+  it('同深站體共用槽位、槽位算深度不算筆數（ADR 0002）', () => {
+    const m2 = {
+      station: { floors: [
+        { id: 'x-b1', elevation: -8 },
+        { id: 'a-b2', elevation: -14 },
+        { id: 'b-b2', elevation: -14 },
+        { id: 'c-b3', elevation: -21 },
+      ] },
+    } as unknown as StationModel;
+    expect(floorOffsetY(m2, 'c-b3', 1)).toBe(0); // 最深槽不動
+    expect(floorOffsetY(m2, 'a-b2', 1)).toBe(floorOffsetY(m2, 'b-b2', 1)); // 同深同位移＝自然並排
+    // 三個相異深度 → B2 槽目標 = 最深(-21) + 1×GAP；index 制會給 b-b2 多墊一槽
+    expect(floorOffsetY(m2, 'a-b2', 1)).toBeCloseTo(-21 + EXPLODE_GAP - -14, 6);
   });
 });
 

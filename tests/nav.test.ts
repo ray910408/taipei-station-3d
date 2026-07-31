@@ -110,3 +110,61 @@ describe('sameEndpointMessage', () => {
     expect(sameEndpointMessage('a', 'b')).toBeNull();
   });
 });
+
+describe('routeSteps 縫合邊', () => {
+  const seamStation = {
+    schema: 'station@1', id: 'seam-station', name: { zh: '縫合測試站' },
+    frame: { units: 'm', origin_note: 't', axis_note: 't' },
+    systems: { test: { name: { zh: '測試系統' }, color: '#888888' } },
+    floors: [
+      { id: 'rc-b3', short: 'rc', file: 'floors/rc-b3.json', name: { zh: '紅線大廳層' },
+        labels: { complex: 'B3' }, elevation: -9, height: 3, estimated: true },
+      { id: 'bp-b3', short: 'bp', file: 'floors/bp-b3.json', name: { zh: '板南線月台層' },
+        labels: { complex: 'BL3' }, elevation: -9, height: 3, estimated: true },
+    ],
+  };
+  const rcFloor = {
+    schema: 'floor@1', id: 'rc-b3',
+    slab: { outline: [[-10, -5], [10, -5], [10, 5], [-10, 5]], source: 's', confidence: 5 },
+    nav: { nodes: [{ id: 'n-rc-001', xy: [0, 0], name: { zh: '紅廳' } }], edges: [] },
+  };
+  const bpFloor = {
+    schema: 'floor@1', id: 'bp-b3',
+    slab: { outline: [[10, -5], [30, -5], [30, 5], [10, 5]], source: 's', confidence: 5 },
+    nav: {
+      nodes: [
+        { id: 'n-bp-001', xy: [20, 0], name: { zh: '板月台' } },
+        { id: 'n-bp-002', xy: [25, 0] },
+      ],
+      edges: [
+        { from: 'n-bp-001', to: 'n-rc-001', kind: 'walk' },   // 縫合邊（新檔持縫）
+        { from: 'n-bp-001', to: 'n-bp-002', kind: 'walk' },
+      ],
+    },
+  };
+  const m = assembleModel(
+    seamStation as any,
+    { 'floors/rc-b3.json': rcFloor as any, 'floors/bp-b3.json': bpFloor as any },
+    { schema: 'connectors@1', connectors: [] } as any,
+  );
+  const g = buildGraph(m);
+
+  it('過縫切步驟邊界並唸目的樓層', () => {
+    const path = findPath(g, 'n-rc-001', 'n-bp-002')!;
+    expect(routeSteps(m, g, path)).toEqual([
+      '步行約 20 公尺',
+      '進入「板南線月台層」',
+      '步行約 5 公尺',
+    ]);
+  });
+
+  it('反向過縫唸另一層；縫合邊長度累進界前的步行段', () => {
+    // 規則：過縫邊自身長度先累進 walk、再 flush、再唸進入——
+    // bp-002→bp-001 5m（同層）＋ bp-001→rc-001 20m（縫合邊）＝ 25m 一次 flush
+    const back = findPath(g, 'n-bp-002', 'n-rc-001')!;
+    expect(routeSteps(m, g, back)).toEqual([
+      '步行約 25 公尺',
+      '進入「紅線大廳層」',
+    ]);
+  });
+});
