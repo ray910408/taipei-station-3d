@@ -61,7 +61,10 @@ export interface SimWorld {
   mag: Record<string, MagField>
 }
 
-export interface WorldOpts { apsPerFloor?: number; txMean?: number; txStd?: number; hotspotCount?: number }
+export interface WorldOpts {
+  apsPerFloor?: number; txMean?: number; txStd?: number; hotspotCount?: number
+  levels?: number[] // 與 floors 平行的實體層級(同深站體同值);未給退回陣列索引(僅適用相異深度序列)
+}
 
 /** 行動熱點 SSID 樣式庫(給 Stage 1.2 規則 1 抓) */
 export const HOTSPOT_SSIDS = [
@@ -86,14 +89,17 @@ function randInPoly(outline: Pt[], rng: Rng): Pt {
   return [(minX + maxX) / 2, (minY + maxY) / 2] // 退而求其次:bbox 中心(凹多邊形可能在外,僅備援)
 }
 
-/** 產生 seeded 世界。floors 需依垂直順序傳入——level 取陣列索引(非樓層編號),跨層衰減靠它算層差。 */
+/** 產生 seeded 世界。floors 需依垂直順序傳入;跨層衰減靠 level 差計算。
+ *  同深站體(如 tp/bc 同 −14)須經 opts.levels 給同一 level,否則陣列索引會假造跨層衰減。 */
 export function buildWorld(floors: FloorJson[], seed: number, opts: WorldOpts = {}): SimWorld {
   const { txMean = -40, txStd = 4, hotspotCount = 3 } = opts
   const rng = mulberry32(hash32(`world|${seed}`))
-  const simFloors: SimFloor[] = floors.map((f, level) => ({ id: f.id, level, outline: f.slab.outline }))
+  const levelOf = (i: number) => opts.levels?.[i] ?? i
+  const simFloors: SimFloor[] = floors.map((f, i) => ({ id: f.id, level: levelOf(i), outline: f.slab.outline }))
 
   const aps: SimAp[] = []
-  for (const [level, f] of floors.entries()) {
+  for (const [fi, f] of floors.entries()) {
+    const level = levelOf(fi)
     // 預設密度:每 400 m²(鞋帶公式實算)一顆,至少 4 顆。只要面積大小,取絕對值不管繞向
     const o = f.slab.outline
     const area = Math.abs(ringArea(o))
@@ -344,12 +350,14 @@ function main() {
   const rpList = JSON.parse(readFileSync(rpFile, 'utf8')) as { points: RpPoint[] }
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
   const wanted = new Set(rpList.points.map(p => p.floor))
-  const floors: FloorJson[] = station.floors
-    .filter((f: { id: string }) => wanted.has(f.id))
-    .map((f: { file: string }) => JSON.parse(readFileSync(join('data', f.file), 'utf8')))
+  const kept = station.floors.filter((f: { id: string }) => wanted.has(f.id))
+  const floors: FloorJson[] = kept.map((f: { file: string }) => JSON.parse(readFileSync(join('data', f.file), 'utf8')))
+  // 實體層級=全站相異 elevation 淺→深序位——同深站體(tp/bc、rc/bp)同 level,漏選樓層也不壓縮層差
+  const elevs: number[] = [...new Set<number>(station.floors.map((f: { elevation: number }) => f.elevation))].sort((a, b) => b - a)
+  const levels = kept.map((f: { elevation: number }) => elevs.indexOf(f.elevation))
   // 預設帶少量髒資料:Stage 1 每條規則都有東西可抓
   const { lines, world } = simSession({
-    seed, floors, rpPoints: rpList.points, scansPerPoint: N, mode,
+    seed, floors, rpPoints: rpList.points, scansPerPoint: N, mode, world: { levels },
     dirt: { throttledRate: 0.05, shortScanRate: 0.05, rotationRate: 0.05, lowMagAccRate: 0.05, resampleRate: 0.02 },
   })
   mkdirSync(outDir, { recursive: true })

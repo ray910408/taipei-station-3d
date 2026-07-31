@@ -13,7 +13,9 @@ import fullStationDoc from '../data/station.json';
 import fullConnectorsDoc from '../data/connectors.json';
 import b1 from '../data/floors/tra-concourse-b1.json';
 import b2 from '../data/floors/tra-platform-b2.json';
+import bc from '../data/floors/mrt-bl-concourse-b2.json';
 import b3 from '../data/floors/mrt-r-concourse-b3.json';
+import bp from '../data/floors/mrt-bl-platform-b3.json';
 import b4 from '../data/floors/mrt-r-platform-b4.json';
 
 const model = assembleModel(
@@ -25,7 +27,9 @@ const model = assembleModel(
 const fullModel = assembleModel(fullStationDoc, {
   'floors/tra-concourse-b1.json': b1,
   'floors/tra-platform-b2.json': b2,
+  'floors/mrt-bl-concourse-b2.json': bc,
   'floors/mrt-r-concourse-b3.json': b3,
+  'floors/mrt-bl-platform-b3.json': bp,
   'floors/mrt-r-platform-b4.json': b4,
 }, fullConnectorsDoc);
 
@@ -114,7 +118,7 @@ describe('buildStationGroup', () => {
     const a = nodePosition('n-rp-002');
     const b = nodePosition('n-rc-010');
     const expected = new THREE.Vector3(a.x, (a.y + b.y) / 2, a.z);
-    expect(connectorPosition(fullGroup, 'c-elv-rprc-1').distanceTo(expected)).toBeLessThan(1e-6);
+    expect(connectorPosition(fullGroup, 'c-elv-rpbc-1').distanceTo(expected)).toBeLessThan(1e-6);
   });
 
   it('slab 為頂亮側暗雙材質（side = cap × sideDarken）', () => {

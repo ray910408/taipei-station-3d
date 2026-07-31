@@ -101,7 +101,7 @@
       "confidence": 2
     },
     {
-      "id": "c-elv-rprc-1",
+      "id": "c-elv-rpbc-1",
       "kind": "elevator",
       "system": "trtc",
       "direction": "both",
@@ -114,11 +114,15 @@
         {
           "floor": "mrt-r-concourse-b3",
           "node": "n-rc-010"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-010"
         }
       ],
       "source": "trtc-info-b4",
       "confidence": 2,
-      "note": "淡水信義線電梯1：實為 B4↔B3↔B2 三層（B2 端＝板南線大廳/淡信電梯口，出入口平面圖 floor-2/3/4 佐證）。B2 落點約 [92.9,-81.4] 在臺鐵 B2 站體外（slab 南緣 -75 外、不開洞），該大廳未入模，故 B2 leg 暫緩待該區建模後補。"
+      "note": "淡水信義線電梯1：B4↔B3↔B2 三層（B2 端＝板南線大廳/淡信電梯口，出入口平面圖 floor-2/3/4 佐證）"
     },
     {
       "id": "c-esc-rctc-1",
@@ -527,6 +531,326 @@
       "confidence": 2,
       "status": "estimated",
       "note": "第3月台↔B1 電梯（語意推定）"
+    },
+    {
+      "id": "c-esc-bpbc-1",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-005"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-005"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台中西梯群上行"
+    },
+    {
+      "id": "c-esc-bpbc-2",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-005"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-005"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台中西梯群下行"
+    },
+    {
+      "id": "c-esc-bpbc-3",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-007"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-006"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台中東梯群上行"
+    },
+    {
+      "id": "c-esc-bpbc-4",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-007"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-006"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台中東梯群下行"
+    },
+    {
+      "id": "c-esc-bpbc-5",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-004"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-004"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台西梯群上行；B2 口朝東（站體中央）、B3 口朝月台西端，依 trtc-info-b2 開口罩與淨空斜線判讀"
+    },
+    {
+      "id": "c-esc-bpbc-6",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-004"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-004"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台西梯群下行"
+    },
+    {
+      "id": "c-esc-bpbc-7",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-008"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-007"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台東梯群上行；B2 口朝西（站體中央）、B3 口朝月台東端，與西梯群鏡像"
+    },
+    {
+      "id": "c-esc-bpbc-8",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-008"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-007"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線月台東梯群下行"
+    },
+    {
+      "id": "c-elv-bpbc-1",
+      "kind": "elevator",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-bl-platform-b3",
+          "node": "n-bp-006"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-019"
+        }
+      ],
+      "source": "trtc-info-b3",
+      "confidence": 2,
+      "note": "板南線電梯6：B3 月台↔B2 大廳"
+    },
+    {
+      "id": "c-esc-rcbc-1",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-020"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-018"
+        }
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "note": "紅↔藍轉乘主梯上行；B3/B2 圖面梯口斜跨"
+    },
+    {
+      "id": "c-esc-rcbc-2",
+      "kind": "escalator",
+      "system": "trtc",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-020"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-018"
+        }
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "note": "紅↔藍轉乘主梯下行；B3/B2 圖面梯口斜跨"
+    },
+    {
+      "id": "c-stair-rcbc-1",
+      "kind": "stair",
+      "system": "trtc",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-r-concourse-b3",
+          "node": "n-rc-020"
+        },
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-018"
+        }
+      ],
+      "source": "trtc-info-b2",
+      "confidence": 2,
+      "note": "紅↔藍轉乘主梯樓梯"
+    },
+    {
+      "id": "c-esc-bctc-1",
+      "kind": "escalator",
+      "system": "shared",
+      "direction": "up",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-015"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-011"
+        }
+      ],
+      "source": "trtc-info-b1",
+      "confidence": 2,
+      "note": "B2↔B1 非付費連通道西豎井上行"
+    },
+    {
+      "id": "c-esc-bctc-2",
+      "kind": "escalator",
+      "system": "shared",
+      "direction": "down",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-015"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-011"
+        }
+      ],
+      "source": "trtc-info-b1",
+      "confidence": 2,
+      "note": "B2↔B1 非付費連通道西豎井下行"
+    },
+    {
+      "id": "c-stair-bctc-1",
+      "kind": "stair",
+      "system": "shared",
+      "direction": "both",
+      "accessible": false,
+      "levels": [
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-016"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-012"
+        }
+      ],
+      "source": "trtc-info-b1",
+      "confidence": 2,
+      "note": "B2↔B1 非付費連通道東豎井樓梯"
+    },
+    {
+      "id": "c-elv-bctc-1",
+      "kind": "elevator",
+      "system": "shared",
+      "direction": "both",
+      "accessible": true,
+      "levels": [
+        {
+          "floor": "mrt-bl-concourse-b2",
+          "node": "n-bc-016"
+        },
+        {
+          "floor": "tra-concourse-b1",
+          "node": "n-tc-012"
+        }
+      ],
+      "source": "trtc-info-b1",
+      "confidence": 2,
+      "note": "B1→B2 無障礙電梯；依 B1 圖無障礙電梯 icon 判讀錨定東豎井"
     }
   ]
 }
