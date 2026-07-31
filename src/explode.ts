@@ -3,14 +3,15 @@ import type { StationModel } from './types';
 
 export const EXPLODE_GAP = 24; // 爆炸時相鄰樓層間距（公尺）；真實層距 6–7m 近等距，取等距最簡
 
-/** factor 0=實高、1=全爆炸。最深層不動，往上每層墊高到等距 GAP；回傳加在實高上的 y 位移。 */
+/** factor 0=實高、1=全爆炸。槽位依「相異 elevation」深→淺排列，最深槽不動、往上每槽
+ *  墊高到等距 GAP；同深站體（ADR 0002：樓層＝站體×深度，如 tp/bc 同 −14）共用槽位、
+ *  自然並排——不得用陣列 index 當槽位。回傳加在實高上的 y 位移。 */
 export function floorOffsetY(model: StationModel, floorId: string, factor: number): number {
-  const floors = model.station.floors; // station.json 順序＝淺→深
-  const i = floors.findIndex((f) => f.id === floorId);
-  if (i < 0) return 0;
-  const deepest = floors[floors.length - 1].elevation;
-  const target = deepest + (floors.length - 1 - i) * EXPLODE_GAP;
-  return (target - floors[i].elevation) * factor;
+  const me = model.station.floors.find((f) => f.id === floorId);
+  if (!me) return 0;
+  const elevs = [...new Set(model.station.floors.map((f) => f.elevation))].sort((x, y) => x - y); // 深→淺
+  const target = elevs[0] + elevs.indexOf(me.elevation) * EXPLODE_GAP;
+  return (target - me.elevation) * factor;
 }
 
 export const easeInOutCubic = (t: number): number =>

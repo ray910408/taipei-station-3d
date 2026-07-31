@@ -215,11 +215,28 @@ export function validateDocs(docs: RepoDocs): { errors: string[]; warnings: stri
     }
     const fa = floors.get(a.floor)!;
     const fb = floors.get(b.floor)!;
-    const len = Math.hypot(b.xy[0] - a.xy[0], b.xy[1] - a.xy[1]);
-    const n = Math.max(2, Math.ceil(len));   // 約每 1m 取樣
+    // 涵蓋檢查（精確）：以線段與兩 slab 所有邊的交點切分參數區間，逐區間取中點判內外。
+    // 等距取樣會漏掉窄於取樣距的縫（穿土窄縫）；交點切分後每個子區間內外狀態恆定，不會漏
+    const segParam = (p: [number, number], q: [number, number]): number | null => {
+      const rx = b.xy[0] - a.xy[0], ry = b.xy[1] - a.xy[1];
+      const sx = q[0] - p[0], sy = q[1] - p[1];
+      const den = rx * sy - ry * sx;
+      if (Math.abs(den) < 1e-12) return null; // 平行/共線——端點交界由相鄰邊的交點與 0/1 涵蓋
+      const t = ((p[0] - a.xy[0]) * sy - (p[1] - a.xy[1]) * sx) / den;
+      const s = ((p[0] - a.xy[0]) * ry - (p[1] - a.xy[1]) * rx) / den;
+      return s >= 0 && s <= 1 && t > 0 && t < 1 ? t : null;
+    };
+    const cuts = new Set<number>([0, 1]);
+    for (const f of [fa, fb])
+      for (const ring of [f.slab.outline, ...(f.slab.holes ?? [])])
+        for (let i = 0; i < ring.length; i++) {
+          const t = segParam(ring[i], ring[(i + 1) % ring.length]);
+          if (t !== null) cuts.add(t);
+        }
+    const ts = [...cuts].sort((x, y) => x - y);
     let ok = true;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
+    for (let i = 0; i + 1 < ts.length; i++) {
+      const t = (ts[i] + ts[i + 1]) / 2;
       const p: [number, number] = [a.xy[0] + (b.xy[0] - a.xy[0]) * t, a.xy[1] + (b.xy[1] - a.xy[1]) * t];
       if (!insideSlab(fa, p) && !insideSlab(fb, p)) { ok = false; break; }
     }

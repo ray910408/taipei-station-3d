@@ -184,6 +184,13 @@ describe('validateDocs', () => {
       expect(errors.some((e) => e.includes('穿土'))).toBe(true);
     });
 
+    it('窄縫（0.3m，窄於舊 1m 取樣距）也擋——涵蓋判定用交點切分非等距取樣', () => {
+      const { errors } = validateDocs(withAnnex(freshDocs(), {
+        outline: [[10.3, -5], [20, -5], [20, 5], [10.3, 5]],  // 與 plat-b2 之間 0.3m 縫
+      }));
+      expect(errors.some((e) => e.includes('穿土'))).toBe(true);
+    });
+
     it('跨檔 gate edge → error（僅限 walk）', () => {
       const { errors } = validateDocs(withAnnex(freshDocs(), { seamKind: 'gate' }));
       expect(errors.some((e) => e.includes('僅限 walk'))).toBe(true);

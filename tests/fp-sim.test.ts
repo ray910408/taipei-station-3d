@@ -48,6 +48,12 @@ describe('buildWorld', () => {
     expect(buildWorld(floors, 7)).not.toEqual(buildWorld(floors, 8))
   })
 
+  it('levels 覆寫:同深站體同 level,AP 繼承樓層 level(不再以陣列索引假造跨層衰減)', () => {
+    const w = buildWorld(floors, 7, { apsPerFloor: 4, levels: [0, 0] })
+    expect(w.floors.map(f => f.level)).toEqual([0, 0])
+    for (const ap of w.aps) expect(ap.level).toBe(0)
+  })
+
   it('AP 落在自己樓層 slab 內,tx 在合理範圍', () => {
     const w = buildWorld(floors, 7, { apsPerFloor: 5 })
     expect(w.aps.length).toBe(10) // 兩層各 5

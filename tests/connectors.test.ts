@@ -10,7 +10,7 @@ import rc from '../data/floors/mrt-r-concourse-b3.json';
 import bp from '../data/floors/mrt-bl-platform-b3.json';
 import rp from '../data/floors/mrt-r-platform-b4.json';
 
-function fixture(kind: 'elevator' | 'escalator' | 'stair'): StationModel {
+function fixture(kind: 'elevator' | 'escalator' | 'stair', bXY: [number, number] = [10, 10]): StationModel {
   return {
     station: { schema: 'station@1', id: 't', name: { zh: 't' },
       frame: { units: 'm', origin_note: '', axis_note: '' }, systems: {},
@@ -22,7 +22,7 @@ function fixture(kind: 'elevator' | 'escalator' | 'stair'): StationModel {
       ['a', { schema: 'floor@1', id: 'a', slab: { outline: [[0, 0], [1, 0], [1, 1]], source: 's', confidence: 2 },
         nav: { nodes: [{ id: 'n-aa-1', xy: [10, 10] }, { id: 'n-aa-2', xy: [20, 10] }], edges: [{ from: 'n-aa-1', to: 'n-aa-2', kind: 'walk' }] } }],
       ['b', { schema: 'floor@1', id: 'b', slab: { outline: [[0, 0], [1, 0], [1, 1]], source: 's', confidence: 2 },
-        nav: { nodes: [{ id: 'n-bb-1', xy: [10, 10] }], edges: [] } }],
+        nav: { nodes: [{ id: 'n-bb-1', xy: bXY }], edges: [] } }],
     ]),
     connectors: [{ id: `c-${kind}-ab-1`, kind, system: 't', direction: 'up', accessible: true,
       levels: [{ floor: 'a', node: 'n-aa-1' }, { floor: 'b', node: 'n-bb-1' }], source: 's', confidence: 2 }],
@@ -40,6 +40,25 @@ describe('buildConnectorsGroup 三型分明', () => {
     const stair = buildConnectorsGroup(fixture('stair')).children.find((o) => (o as THREE.Mesh).userData.kind === 'connector-stair') as THREE.Mesh;
     const c = (m: THREE.Mesh) => (m.material as THREE.MeshStandardMaterial).color.getHexString();
     expect(c(esc)).not.toBe(c(stair));
+  });
+});
+
+describe('合成斜向 vs 手描幾何（坡度合理性判定）', () => {
+  const span = (kind: 'escalator', bXY: [number, number]) => {
+    const g = buildConnectorsGroup(fixture(kind, bXY));
+    const m = g.children.find((o) => (o as THREE.Mesh).userData.kind === 'connector-escalator') as THREE.Mesh;
+    m.geometry.computeBoundingBox();
+    const s = new THREE.Vector3();
+    m.geometry.boundingBox!.getSize(s);
+    return Math.hypot(s.x, s.z);
+  };
+  it('粗估陡直（水平程 1.8m＜高差 8m）→ 合成 escalatorRun 斜向，不畫垂直棒', () => {
+    expect(span('escalator', [11.8, 10])).toBeGreaterThan(5);
+  });
+  it('手描實斜程（水平程 12m≥高差 8m）→ 用真實幾何，不疊近似位移', () => {
+    const v = span('escalator', [22, 10]);
+    expect(v).toBeGreaterThan(10);
+    expect(v).toBeLessThan(14); // 疊了合成位移會偏離 12m 實程
   });
 });
 
