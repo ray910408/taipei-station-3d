@@ -99,9 +99,12 @@ describe('板南線轉乘驗收（spec 2026-07-30 三判準；上上下拓撲）
     const path = findPath(graph, 'n-rp-002', idOf('板南線月台（往南港展覽館）'))!;
     expect(path).not.toBeNull();
     expect(path.every((e) => e.kind !== 'gate')).toBe(true);
-    const floors = routeFloors(graph, path);
-    expect(floors).toContain('mrt-bl-concourse-b2');   // 必經 B2 大廳
-    expect(floors).toContain('mrt-bl-platform-b3');
+    expect(routeFloors(graph, path)).toEqual([
+      'mrt-r-platform-b4',
+      'mrt-r-concourse-b3',
+      'mrt-bl-concourse-b2',
+      'mrt-bl-platform-b3',
+    ]);
   });
 
   it('判準2a：臺鐵月台→板南線月台，封 B1 連通道仍可達（B3 轉乘閘門路徑存在）', () => {
@@ -117,19 +120,35 @@ describe('板南線轉乘驗收（spec 2026-07-30 三判準；上上下拓撲）
     const path = findPath(g2, 'n-tp-001', idOf('板南線月台（往頂埔）'))!;
     expect(path).not.toBeNull();
     expect(path.some((e) => e.kind === 'gate')).toBe(true);        // 必經 bc 閘門
+    expect(path.some((e) => (e.gate ?? '').startsWith('g-bc-link-'))).toBe(true);
     const floors = routeFloors(g2, path);
     expect(floors).toContain('tra-concourse-b1');                  // 走 B1 連通道
     expect(floors).toContain('mrt-bl-concourse-b2');
   });
 
-  it('判準3：無障礙模式兩案皆有純電梯路徑', () => {
-    const a = findPath(graph, 'n-rp-002', idOf('板南線月台（往南港展覽館）'), { accessibleOnly: true });
-    const b = findPath(graph, 'n-tp-001', idOf('板南線月台（往頂埔）'), { accessibleOnly: true });
-    expect(a).not.toBeNull();
-    expect(b).not.toBeNull();
-    for (const p of [a!, b!]) {
-      expect(p.every((e) => e.accessible)).toBe(true);
-      expect(p.every((e) => e.kind !== 'escalator' && e.kind !== 'stair')).toBe(true);
-    }
+  it('判準3：紅線月台起點有純電梯無障礙路徑', () => {
+    const path = findPath(graph, 'n-rp-002', idOf('板南線月台（往南港展覽館）'), { accessibleOnly: true });
+    expect(path).not.toBeNull();
+    expect(path!.every((e) => e.accessible)).toBe(true);
+    expect(path!.every((e) => e.kind !== 'escalator' && e.kind !== 'stair')).toBe(true);
+  });
+
+  it('判準3a：封 B3 垂直鏈（rcbc|rpbc），無障礙必走 B1 鏈', () => {
+    const g2 = without((e) => /rcbc|rpbc/.test(e.connector ?? ''));
+    const path = findPath(g2, 'n-tp-001', idOf('板南線月台（往頂埔）'), { accessibleOnly: true });
+    expect(path).not.toBeNull();
+    expect(path!.every((e) => e.accessible)).toBe(true);
+    expect(path!.some((e) => e.connector === 'c-elv-bctc-1')).toBe(true);
+    expect(path!.some((e) => (e.gate ?? '').startsWith('g-bc-link-'))).toBe(true);
+    expect(path!.some((e) => e.connector === 'c-elv-bpbc-1')).toBe(true);
+  });
+
+  it('判準3b：封 B1 鏈（bctc），無障礙必走 B3 鏈', () => {
+    const g2 = without((e) => (e.connector ?? '').includes('bctc'));
+    const path = findPath(g2, 'n-tp-001', idOf('板南線月台（往頂埔）'), { accessibleOnly: true });
+    expect(path).not.toBeNull();
+    expect(path!.every((e) => e.accessible)).toBe(true);
+    expect(path!.some((e) => e.connector === 'c-elv-rpbc-1')).toBe(true);
+    expect(path!.some((e) => e.connector === 'c-elv-bpbc-1')).toBe(true);
   });
 });

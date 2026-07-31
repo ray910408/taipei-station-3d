@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { buildConnectorsGroup } from '../src/builder';
 import type { StationModel } from '../src/types';
+import connectorsDoc from '../data/connectors.json';
+import tc from '../data/floors/tra-concourse-b1.json';
+import tp from '../data/floors/tra-platform-b2.json';
+import bc from '../data/floors/mrt-bl-concourse-b2.json';
+import rc from '../data/floors/mrt-r-concourse-b3.json';
+import bp from '../data/floors/mrt-bl-platform-b3.json';
+import rp from '../data/floors/mrt-r-platform-b4.json';
 
 function fixture(kind: 'elevator' | 'escalator' | 'stair'): StationModel {
   return {
@@ -33,5 +40,24 @@ describe('buildConnectorsGroup 三型分明', () => {
     const stair = buildConnectorsGroup(fixture('stair')).children.find((o) => (o as THREE.Mesh).userData.kind === 'connector-stair') as THREE.Mesh;
     const c = (m: THREE.Mesh) => (m.material as THREE.MeshStandardMaterial).color.getHexString();
     expect(c(esc)).not.toBe(c(stair));
+  });
+});
+
+describe('真實資料電梯豎井對齊', () => {
+  it('指定電梯的相鄰停靠 xy 差全為 0', () => {
+    const nodes = new Map(
+      [tc, tp, bc, rc, bp, rp].flatMap((floor) =>
+        floor.nav.nodes.map((node) => [node.id, node.xy] as const)),
+    );
+
+    // c-elv-rctp-1/2、c-elv-tptc-1/2 為 Phase 2 語意推定（1.7–14.1m 錯位），對齊另案，不入斷言
+    for (const id of ['c-elv-rpbc-1', 'c-elv-bpbc-1', 'c-elv-bctc-1', 'c-elv-rctc-1', 'c-elv-rprc-2']) {
+      const levels = connectorsDoc.connectors.find((connector) => connector.id === id)!.levels;
+      for (let i = 1; i < levels.length; i++) {
+        const from = nodes.get(levels[i - 1].node)!;
+        const to = nodes.get(levels[i].node)!;
+        expect([to[0] - from[0], to[1] - from[1]], id).toEqual([0, 0]);
+      }
+    }
   });
 });

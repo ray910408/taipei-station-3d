@@ -402,7 +402,7 @@
         "zh": "詢問處2"
       },
       "source": "trtc-info-b2",
-      "confidence": 3,
+      "confidence": 2,
       "status": "traced",
       "note": "示範集：資訊圖明標詢問處2"
     },
@@ -415,7 +415,7 @@
         "zh": "詢問處3"
       },
       "source": "trtc-info-b2",
-      "confidence": 3,
+      "confidence": 2,
       "status": "traced",
       "note": "示範集：資訊圖明標詢問處3"
     },
@@ -428,7 +428,7 @@
         "zh": "板南線轉乘指標"
       },
       "source": "trtc-info-b2",
-      "confidence": 3,
+      "confidence": 2,
       "status": "traced",
       "note": "示範集：東西向主帶中央板南線標示"
     }
@@ -529,6 +529,11 @@
       {
         "id": "n-bc-018",
         "xy": [93.1, -106.6],
+        "area": "a-bc-paid"
+      },
+      {
+        "id": "n-bc-019",
+        "xy": [71.9, -147],
         "area": "a-bc-paid"
       }
     ],
@@ -660,6 +665,11 @@
         "kind": "gate",
         "gate": "g-bc-link-acc",
         "bidir": true
+      },
+      {
+        "from": "n-bc-019",
+        "to": "n-bc-003",
+        "kind": "walk"
       }
     ]
   }
