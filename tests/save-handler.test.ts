@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { applySave } from '../tools/save-handler';
+import { applySave, isLoopbackAddress } from '../tools/save-handler';
 import { formatDataJson } from '../tools/format-data';
 
 let root: string;
@@ -72,5 +72,20 @@ describe('applySave', () => {
     const r = applySave(root, [{ file: 'refs/sources.json', doc: sources }]);
     expect(r.ok).toBe(true);
     expect(readDoc('refs/sources.json').sources[0].calibration.px_per_m).toBe(10);
+  });
+});
+
+describe('isLoopbackAddress', () => {
+  it('loopback 位址一律 true', () => {
+    expect(isLoopbackAddress('127.0.0.1')).toBe(true);
+    expect(isLoopbackAddress('::1')).toBe(true);
+    expect(isLoopbackAddress('::ffff:127.0.0.1')).toBe(true);
+  });
+
+  it('區網／缺值一律 false', () => {
+    expect(isLoopbackAddress('192.168.1.5')).toBe(false);
+    expect(isLoopbackAddress('::ffff:192.168.1.5')).toBe(false);
+    expect(isLoopbackAddress(undefined)).toBe(false);
+    expect(isLoopbackAddress('')).toBe(false);
   });
 });

@@ -11,6 +11,11 @@ const SAVABLE = /^(data\/floors\/[a-z0-9-]+\.json|data\/connectors\.json|data\/s
 export interface SaveFile { file: string; doc: unknown }
 export interface SaveResult { ok: boolean; errors: string[]; written: string[] }
 
+/** 判斷來源位址是否為 loopback（127.0.0.1／::1／IPv4-mapped ::ffff:127.0.0.1）——dev:lan 存檔端點的來源守門用。 */
+export function isLoopbackAddress(addr: string | undefined): boolean {
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
+
 /** doc 來自 tracer 的 HTTP payload，形狀不可信——先擋路徑與型別，換入後一律走 validateDocs 把關。 */
 export function applySave(rootDir: string, files: SaveFile[]): SaveResult {
   if (!Array.isArray(files) || files.length === 0) return fail(['payload 必須是非空 files 陣列']);

@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { configDefaults } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { applySave } from './tools/save-handler';
+import { applySave, isLoopbackAddress } from './tools/save-handler';
 
 // 描圖工具 dev-only 存檔端點：POST /__tracer/save {files:[{file,doc}]} → 全站驗證通過才寫檔
 function tracerSavePlugin(): Plugin {
@@ -12,6 +12,11 @@ function tracerSavePlugin(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use('/__tracer/save', (req, res) => {
+        if (!isLoopbackAddress(req.socket.remoteAddress ?? undefined)) {
+          res.statusCode = 403;
+          res.end('描圖工具存檔僅限本機——dev:lan 的手機驗收是唯讀的，瀏覽可以，存檔請在桌機 localhost 上做');
+          return;
+        }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('POST only'); return; }
         let body = '';
         req.on('data', (chunk: Buffer) => { body += chunk; });
