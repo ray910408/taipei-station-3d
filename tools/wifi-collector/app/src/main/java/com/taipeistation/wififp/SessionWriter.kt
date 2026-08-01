@@ -7,8 +7,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /** JSONL 隨採隨寫：append+fsync；IO 失敗留在 pending，下次 append 一併重試 */
-class SessionWriter(baseDir: File, val sessionId: String) {
-  val file = File(baseDir, "sessions/wifi-fp-$sessionId.jsonl")
+class SessionWriter(baseDir: File, val sessionId: String, val prefix: String = "wifi-fp") {
+  val file = File(baseDir, "sessions/$prefix-$sessionId.jsonl")
   private val pending = ArrayDeque<String>()
 
   init { file.parentFile?.mkdirs() }
@@ -31,8 +31,8 @@ class SessionWriter(baseDir: File, val sessionId: String) {
   fun readLines(): List<String> = if (file.exists()) file.readLines() else emptyList()
 
   companion object {
-    fun list(baseDir: File): List<File> =
-      File(baseDir, "sessions").listFiles { f -> f.name.endsWith(".jsonl") }
+    fun list(baseDir: File, prefix: String = "wifi-fp"): List<File> =
+      File(baseDir, "sessions").listFiles { f -> f.name.startsWith("$prefix-") && f.name.endsWith(".jsonl") }
         ?.sortedByDescending { it.name } ?: emptyList()
 
     fun newSessionId(): String =
