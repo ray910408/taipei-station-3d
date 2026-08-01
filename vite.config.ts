@@ -14,10 +14,16 @@ function tracerSavePlugin(): Plugin {
       server.middlewares.use('/__tracer/save', (req, res) => {
         if (!isLoopbackAddress(req.socket.remoteAddress ?? undefined)) {
           res.statusCode = 403;
-          res.end('描圖工具存檔僅限本機——dev:lan 的手機驗收是唯讀的，瀏覽可以，存檔請在桌機 localhost 上做');
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ ok: false, errors: ['描圖工具存檔僅限本機——dev:lan 的手機驗收是唯讀的，瀏覽可以，存檔請在桌機 localhost 上做'], written: [] }));
           return;
         }
-        if (req.method !== 'POST') { res.statusCode = 405; res.end('POST only'); return; }
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ ok: false, errors: ['POST only'], written: [] }));
+          return;
+        }
         let body = '';
         req.on('data', (chunk: Buffer) => { body += chunk; });
         req.on('end', () => {
