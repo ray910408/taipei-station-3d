@@ -123,10 +123,12 @@ export function generateFloorPoints(floor: FloorJson, prefix: string, spacing: n
   }))
 }
 
-/** 覆寫閘門:目標不存在、或帶 --force 才允許寫檔。純函式(吃 existsSync 的結果),
+/** 覆寫閘門:目標不存在、或帶 --force 才允許寫檔。--floors 局部重產(partial)一律擋下,
+ *  --force 也不放行——all 只累積被篩選的樓層,寫出去會把既有清單截斷成只剩指定樓層,
+ *  header 的 spacing/spacingByFloor 卻仍宣稱完整,事後無法辨識。純函式(吃 existsSync 的結果),
  *  測試不用真的碰檔案系統。 */
-export function canOverwrite(targetExists: boolean, force: boolean): boolean {
-  return !targetExists || force
+export function canOverwrite(targetExists: boolean, force: boolean, partial: boolean): boolean {
+  return !targetExists || (force && !partial)
 }
 
 export function floorSvg(floor: FloorJson, points: RpPoint[]): string {
@@ -185,8 +187,13 @@ function main() {
 
   // 覆寫閘門:既有清單多半是校準過的正式版本,重產前先擋下來(見 README 的正式參數)
   const outPath = join(outDir, 'rp-points.json')
-  if (!canOverwrite(existsSync(outPath), Boolean(values.force))) {
-    console.error(`${outPath} 已存在,重產會覆寫既有清單。確定要覆寫請加 --force`)
+  const partial = wanted.length > 0
+  if (!canOverwrite(existsSync(outPath), Boolean(values.force), partial)) {
+    if (partial) {
+      console.error(`${outPath} 已存在,--floors 局部重產會把清單截斷成只剩指定樓層,--force 也無法覆寫此限制。預覽單層請改 --out 到別的目錄;要重產完整清單請拿掉 --floors。`)
+    } else {
+      console.error(`${outPath} 已存在,重產會覆寫既有清單。確定要覆寫請加 --force`)
+    }
     process.exit(1)
   }
 

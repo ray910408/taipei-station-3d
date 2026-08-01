@@ -26,15 +26,23 @@ describe('rp-points.json', () => {
 
 describe('canOverwrite', () => {
   it('目標存在＋無 force → 拒絕', () => {
-    expect(canOverwrite(true, false)).toBe(false)
+    expect(canOverwrite(true, false, false)).toBe(false)
   })
 
-  it('目標存在＋force → 允許', () => {
-    expect(canOverwrite(true, true)).toBe(true)
+  it('目標存在＋force＋非局部 → 允許', () => {
+    expect(canOverwrite(true, true, false)).toBe(true)
   })
 
   it('目標不存在 → 允許', () => {
-    expect(canOverwrite(false, false)).toBe(true)
+    expect(canOverwrite(false, false, false)).toBe(true)
+  })
+
+  it('目標存在＋--floors 局部＋force → 仍拒絕(force 對局部重產無效)', () => {
+    expect(canOverwrite(true, true, true)).toBe(false)
+  })
+
+  it('目標不存在＋--floors 局部 → 允許(空目錄預覽不受影響)', () => {
+    expect(canOverwrite(false, false, true)).toBe(true)
   })
 })
 
