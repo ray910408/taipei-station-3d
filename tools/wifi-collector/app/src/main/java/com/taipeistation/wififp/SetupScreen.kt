@@ -85,6 +85,10 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
     verticalArrangement = Arrangement.spacedBy(14.dp),
   ) {
     Text("WiFi 指紋採集", style = MaterialTheme.typography.headlineMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      FilterChip(selected = true, onClick = {}, label = { Text("站點採集(WiFi)") })
+      FilterChip(selected = false, onClick = { app.screen = Screen.WALK_SETUP }, label = { Text("走線採集(磁力)") })
+    }
     Text("進場前:開發者選項關「Wi-Fi 掃描節流」、開定位、畫 8 字校正磁力計",
       style = MaterialTheme.typography.bodyMedium, color = Color(0xFF92400E))
 

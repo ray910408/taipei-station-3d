@@ -115,3 +115,77 @@ setup 選「四朝向」:每點要面向磁北 0°/東 90°/南 180°/西 270° 
 - 採集檔 `wifi-fp@1`:欄位總覽見上一節;逐欄型別見 `tools/fp-build.ts` 的 `PointRecord`。
 - 指紋庫 `fp-db@1`(pipeline 產物):形狀見 `docs/data-conventions.md` 的「WiFi 指紋增補慣例」。
 - 設計 spec 草稿在 `docs/superpowers/specs/`(本機工作區,未入 git)。
+
+## 八、磁力走線模式
+
+### 用途
+
+WiFi 仍以 RP 站點採集；磁力改為沿路網邊連續走線，以保留磁場的空間梯度。每條走線以
+`(floor, from, to)` 識別，方向不同就是不同走線。完整理由與取捨見
+[ADR 0003：磁力指紋改軌為邊走線弧長剖面](adr/0003-mag-fingerprint-edge-walk-profiles.md)。
+
+### 現場 SOP
+
+1. 進場先把手機在胸前畫 8 字（∞）約 10 秒，等「磁力校正」顯示「中」或「高」。
+2. 執行 `npm run gen:edges -- --svg` 產生 `rp/edge-list.json` 與各層
+   `rp/maps/edges-<樓層>.svg`；把清單傳進手機，把找邊圖印出或存到手機。
+3. 在 app 切到「走線採集(磁力)」，允許活動辨識權限，匯入 `edge-list.json`，選新 session。
+4. 對照該層 SVG 的找邊圖與迴路序號，站在畫面指定的 `from`，按「開始走線」後勻速走到
+   `to` 再按「結束走線」。箭頭方向不可反走。
+5. 全程把手機在身前持平，與 WiFi 採集使用相同姿勢、相同高度；不要甩動、旋轉或中途停留。
+6. `required` 必收走線依迴路序號完成；`gate` 是選收，只有順路且現場允許通行時才走，
+   不必為了完成 gate 特地繞路。
+7. 被打斷、走錯邊或誤按時直接「作廢」後重走；每層完成後可從走線清單確認進度。
+8. 離場前按「匯出」分享 `mag-walk-*.jsonl` 備份。
+
+### 品質警告對照
+
+品質警告只提示、不擋存檔；是否重走由現場人員判斷。
+
+| 警告 | 意義 | 現場處置 |
+|---|---|---|
+| 速度出範圍 | 邊長÷時間不在 0.5–2.0 m/s，可能停太久、跑太快或走錯邊 | 確認邊與方向，改用自然勻速重走 |
+| 步數×步長與邊長差 >40% | 步伐事件可能漏報，名目步長不合，或走錯邊 | 先確認活動辨識權限與邊；若持續發生，再按實際步長調整 setup 旋鈕 |
+| 偵測到劇烈晃動 | rotation vector 峰值超過 300°/s，手機曾甩動、旋轉或掉落 | 固定身前持平姿勢重走 |
+| 磁力校正掉到「未校正/低」 | 走線期間磁力計 accuracy 不足，原始磁力值不可靠 | 畫 8 字到「中/高」後重走，並遠離大型金屬或強磁源 |
+
+### `mag-walk@1` 檔案格式速查
+
+檔案是 JSONL（一行一個 JSON object），共有五種行型：
+
+| `type` | 出現時機 | 實際欄位 |
+|---|---|---|
+| `session` | 新 session 第一行 | `type`, `schema`=`mag-walk@1`, `session`, `device`, `android`, `app`, `edgeList`, `edgeListGenerated`, `stepLengthM`, `startedAt` |
+| `walkBegin` | 每條走線開始 | `type`, `floor`, `from`, `to`, `kind`, `required`, `lengthM`, `t0Wall` |
+| `samples` | 走線中約每秒一批 | `type`, `magAcc`, `rows` |
+| `walkEnd` | 正常結束 | `type`, `t1`, `durationMs`, `sampleCount`, `stepCount`, `steps`, `magAccMin`, `rotMaxDegPerS` |
+| `walkAbort` | 手動作廢 | `type`, `floor`, `from`, `to`, `reason`, `t` |
+
+每個 `samples.rows[]` 固定 14 欄，順序不可調換：
+
+| 索引 | 欄位 | 定義 |
+|---:|---|---|
+| 0 | `t` | 相對本次 `walkBegin` 的毫秒數 |
+| 1 | `mx` | 磁力計 X（µT） |
+| 2 | `my` | 磁力計 Y（µT） |
+| 3 | `mz` | 磁力計 Z（µT） |
+| 4 | `gx` | 重力 X（m/s²） |
+| 5 | `gy` | 重力 Y（m/s²） |
+| 6 | `gz` | 重力 Z（m/s²） |
+| 7 | `ax` | 加速度計 X（m/s²） |
+| 8 | `ay` | 加速度計 Y（m/s²） |
+| 9 | `az` | 加速度計 Z（m/s²） |
+| 10 | `r0` | rotation vector 四元數 X |
+| 11 | `r1` | rotation vector 四元數 Y |
+| 12 | `r2` | rotation vector 四元數 Z |
+| 13 | `r3` | rotation vector 四元數 W |
+
+`steps` 內每個值也是相對本次 `walkBegin` 的毫秒數。走線只有在 `walkBegin` 後出現配對的
+`walkEnd` 才算完成；`walkAbort`、下一個 `walkBegin` 或檔案中斷都會棄置未結束的走線。
+
+### 續採與版本守門
+
+續採會從同一個 `mag-walk-*.jsonl` 還原已完成的 `(floor, from, to)`，並沿用 session 檔頭的
+`stepLengthM`。app 會逐字比較 session 的 `edgeListGenerated` 與目前匯入清單的 `generated`；
+檔頭缺失、版本缺失或兩者不符都禁止續採，因為重產清單後同名節點的幾何可能已改變。
+遇到「不能續採:清單版本不符」時，改匯入原清單或建立新 session，不要手動混併不同版本。
