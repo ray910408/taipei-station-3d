@@ -48,3 +48,10 @@ class WalkSensorRig(private val sm: SensorManager) : SensorEventListener {
     if (s.type == Sensor.TYPE_MAGNETIC_FIELD) currentMagAccuracy = accuracy
   }
 }
+
+/** 走線需要的五顆 sensor；缺席清單給 Setup 紅字用（缺 grav/rotvec = 永遠成不了行） */
+fun missingWalkSensors(sm: SensorManager): List<String> = listOf(
+  Sensor.TYPE_MAGNETIC_FIELD to "磁力計", Sensor.TYPE_GRAVITY to "重力",
+  Sensor.TYPE_ACCELEROMETER to "加速度計", Sensor.TYPE_ROTATION_VECTOR to "旋轉向量",
+  Sensor.TYPE_STEP_DETECTOR to "步伐偵測",
+).filter { sm.getDefaultSensor(it.first) == null }.map { it.second }

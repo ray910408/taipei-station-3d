@@ -13,7 +13,7 @@ data class WalkQuality(val speedMps: Double, val stepLenEstM: Double?, val warni
 
 /** walkEnd 三檢＋校正檢查。全部警告不擋——重走與否人裁；旗標數值已在 walkEnd 行,離線可重算。 */
 fun walkQuality(entry: WalkEntry, durationMs: Long, stepCount: Int, stepLengthM: Double,
-                rotMaxDegPerS: Double, magAccMin: Int): WalkQuality {
+                rotMaxDegPerS: Double, magAccMin: Int, sampleCount: Int, t1Ms: Double): WalkQuality {
   val warnings = ArrayList<String>()
   val speed = if (durationMs > 0) entry.lengthM / (durationMs / 1000.0) else 0.0
   if (speed < SPEED_MIN_MPS || speed > SPEED_MAX_MPS)
@@ -26,5 +26,11 @@ fun walkQuality(entry: WalkEntry, durationMs: Long, stepCount: Int, stepLengthM:
     warnings += "偵測到劇烈晃動(峰值 %.0f°/s)——手機甩動過,建議重走".format(rotMaxDegPerS)
   if (magNeedsCalibration(magAccMin))
     warnings += "走線中磁力校正掉到「${magAccLabel(magAccMin)}」——建議畫 8 字後重走"
+  if (sampleCount == 0)
+    warnings += "整條走線沒有錄到任何樣本——感測器缺席或未就緒?"
+  else if (durationMs > 1000 && sampleCount < 20 * durationMs / 1000)
+    warnings += "有效取樣率過低(${sampleCount} 樣本/${durationMs / 1000}s)——感測器被系統節流?"
+  if (sampleCount > 0 && kotlin.math.abs(t1Ms - durationMs) > 500 + 0.1 * durationMs)
+    warnings += "樣本時基與碼表差 %.0fms——裝置 sensor 時戳基準異常,離線弧長不可信".format(kotlin.math.abs(t1Ms - durationMs))
   return WalkQuality(speed, est, warnings)
 }

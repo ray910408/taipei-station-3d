@@ -81,7 +81,7 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
       color = Color(0xFF92400E), style = MaterialTheme.typography.titleMedium)
     if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
     ctl.lastQuality?.let { q ->
-      if (q.warnings.isEmpty()) Text("✓ 上一條走線品質 OK（%.2f m/s）".format(q.speedMps), color = Color(0xFF166534))
+      if (q.warnings.isEmpty()) Text("✓ 上一條走線品質 OK（%.2f m/s·實測步長 %s）".format(q.speedMps, q.stepLenEstM?.let { "%.2fm".format(it) } ?: "--"), color = Color(0xFF166534))
       for (warn in q.warnings) Text("⚠ 上一條:$warn", color = Color(0xFF92400E))
     }
 

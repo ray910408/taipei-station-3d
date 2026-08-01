@@ -86,6 +86,11 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
 
     Text(if (permOk) "✓ 活動辨識權限 OK" else "✗ 缺活動辨識權限——步伐事件收不到",
       color = if (permOk) Color(0xFF166534) else Color.Red)
+    val missingSensors = remember {
+      missingWalkSensors(ctx.getSystemService(android.hardware.SensorManager::class.java))
+    }
+    if (missingSensors.isNotEmpty())
+      Text("✗ 缺感測器:${missingSensors.joinToString()}——走線資料將不完整或全空", color = Color.Red)
     OutlinedButton(onClick = { permLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION) }) { Text("要求權限") }
 
     OutlinedButton(onClick = { fileLauncher.launch(arrayOf("application/json", "application/octet-stream")) },
@@ -127,12 +132,12 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
         } else {
           SessionWriter(baseDir, SessionWriter.newSessionId(), "mag-walk").also {
             it.append(buildWalkSessionLine(it.sessionId, android.os.Build.MODEL,
-              android.os.Build.VERSION.SDK_INT, "0.2.0", app.edgeName, list.generated,
+              android.os.Build.VERSION.SDK_INT, APP_VERSION, app.edgeName, list.generated,
               app.stepLengthM, isoNow()))
           }
         }
         app.walkWriter = w
-        app.walkProgress = parseWalkSession(w.readLines().asSequence())
+        app.walkProgress = if (w.file.exists()) w.file.useLines { parseWalkSession(it) } else WalkProgress(emptySet())
         onStart()
       },
     ) { Text(if (resumeFile != null) "續採" else "開始走線", style = MaterialTheme.typography.titleLarge) }

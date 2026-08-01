@@ -40,12 +40,13 @@ class WalkModelTest {
   }
 
   @Test fun sampleLines_roundtrip() {
-    val row = doubleArrayOf(123.4, 12.0, -33.0, 28.0, 0.1, 0.2, 9.8, 0.0, 0.1, 9.9, 0.7, 0.0, 0.0, 0.7)
+    val row = doubleArrayOf(123.4, 12.300000190734863, -33.0, 28.0, 0.1, 0.2, 9.8, 0.0, 0.1, 9.9, 0.7, 0.0, 0.0, 0.7)
     val o = JSONObject(buildSamplesLine(listOf(row), magAccMin = 2))
     assertEquals("samples", o.getString("type"))
     assertEquals(2, o.getInt("magAcc"))
     assertEquals(14, o.getJSONArray("rows").getJSONArray(0).length())
     assertEquals(123.4, o.getJSONArray("rows").getJSONArray(0).getDouble(0), 1e-9)
+    assertEquals(12.3, o.getJSONArray("rows").getJSONArray(0).getDouble(1), 1e-9)
     val end = JSONObject(buildWalkEndLine(41000.5, 41001, 2050, listOf(600.0, 1150.5), 3, 42.0))
     assertEquals("walkEnd", end.getString("type"))
     assertEquals(2, end.getJSONArray("steps").length())

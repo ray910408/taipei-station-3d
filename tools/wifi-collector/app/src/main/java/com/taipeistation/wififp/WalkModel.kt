@@ -41,10 +41,22 @@ fun buildWalkBeginLine(w: WalkEntry, t0Wall: String): String =
   JSONObject().put("type", "walkBegin").put("floor", w.floor).put("from", w.from).put("to", w.to)
     .put("kind", w.kind).put("required", w.required).put("lengthM", w.lengthM).put("t0Wall", t0Wall).toString()
 
-/** row＝14 欄 [t,mx,my,mz,gx,gy,gz,ax,ay,az,r0,r1,r2,r3]；t＝相對 walkBegin 的 ms */
-fun buildSamplesLine(rows: List<DoubleArray>, magAccMin: Int): String =
-  JSONObject().put("type", "samples").put("magAcc", magAccMin)
-    .put("rows", JSONArray().apply { for (r in rows) put(JSONArray().apply { for (v in r) put(v) }) }).toString()
+/** row＝14 欄 [t,mx,my,mz,gx,gy,gz,ax,ay,az,r0,r1,r2,r3]；t＝相對 walkBegin 的 ms。
+ *  精度:t 取 1 位小數,感測值取 4 位(0.0001 µT/m·s²,遠低於 sensor 解析度),rotvec 取 6 位——
+ *  Float→Double 加寬的 12.300000190734863 是雜訊不是訊號,截掉後檔案縮 ~2.5 倍。 */
+fun buildSamplesLine(rows: List<DoubleArray>, magAccMin: Int): String {
+  fun rnd(v: Double, p: Double) = Math.round(v * p) / p
+  return JSONObject().put("type", "samples").put("magAcc", magAccMin)
+    .put("rows", JSONArray().apply {
+      for (r in rows) put(JSONArray().apply {
+        for ((i, v) in r.withIndex()) put(when {
+          i == 0 -> rnd(v, 10.0)
+          i >= 10 -> rnd(v, 1e6)
+          else -> rnd(v, 1e4)
+        })
+      })
+    }).toString()
+}
 
 fun buildWalkEndLine(t1Ms: Double, durationMs: Long, sampleCount: Int, stepsMs: List<Double>,
                      magAccMin: Int, rotMaxDegPerS: Double): String =
@@ -65,6 +77,10 @@ fun parseWalkSession(lines: Sequence<String>): WalkProgress {
   val done = LinkedHashSet<WalkKey>()
   var pending: WalkKey? = null
   for (line in lines) {
+    // samples 行佔檔案 99%,不進 JSON parse。用 contains 而非行首前綴——
+    // JSONObject 鍵序不保證(JVM HashMap/Android LinkedHashMap),"type" 不必然在行首。
+    // rows 只有數字,不可能誤含這個子串。
+    if ("\"type\":\"walk" !in line) continue
     val o = try { JSONObject(line) } catch (e: Exception) { continue }
     when (o.optString("type")) {
       "walkBegin" -> pending = WalkKey(o.optString("floor"), o.optString("from"), o.optString("to"))
@@ -90,6 +106,6 @@ fun parseWalkSessionHeader(lines: Sequence<String>): WalkSessionHeader? {
 fun walkResumeBlockReason(header: WalkSessionHeader?, listGenerated: String): String? = when {
   header == null -> "讀不到 session 檔頭,無法確認清單版本"
   header.edgeListGenerated.isEmpty() -> "session 檔沒記錄清單版本,無法確認"
-  header.edgeListGenerated != listGenerated -> "清單版本不符——此 session 用的是 ${header.edgeListGenerated.take(10)} 產的清單,目前選的是 ${listGenerated.take(10)} 產的。請改開新 session。"
+  header.edgeListGenerated != listGenerated -> "清單版本不符——此 session 用的是 ${header.edgeListGenerated.take(16)} 產的清單,目前選的是 ${listGenerated.take(16)} 產的。請改開新 session。"
   else -> null
 }

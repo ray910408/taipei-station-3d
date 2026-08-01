@@ -38,7 +38,7 @@ class WalkController(
     scope.launch {
       for (line in lines) {
         val ok = withContext(Dispatchers.IO) { app.walkWriter?.append(line) ?: false }
-        if (!ok) writeWarn = true
+        writeWarn = !ok
       }
     }
   }
@@ -88,7 +88,8 @@ class WalkController(
     val durationMs = SystemClock.elapsedRealtime() - beginMs
     append(buildWalkEndLine(b.lastT1Ms, durationMs, b.sampleCount, b.stepsMs, b.magAccMin, b.rotMaxDegPerS))
     app.walkProgress = WalkProgress(app.walkProgress.done + w.key())
-    lastQuality = walkQuality(w, durationMs, b.stepsMs.size, app.stepLengthM, b.rotMaxDegPerS, b.magAccMin)
+    lastQuality = walkQuality(w, durationMs, b.stepsMs.size, app.stepLengthM, b.rotMaxDegPerS, b.magAccMin,
+      b.sampleCount, b.lastT1Ms)
     buffer = null
     ensureCurrent()
   }
