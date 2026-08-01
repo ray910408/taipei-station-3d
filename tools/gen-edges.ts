@@ -5,7 +5,7 @@ import { floorSvgBase, type FloorSvgJson } from './floor-svg'
 import type { Pt } from './rp-geometry'
 
 export interface NavNode { id: string; xy: Pt; area?: string }
-export interface NavEdge { from: string; to: string; kind: string }
+export interface NavEdge { from: string; to: string; kind: string; bidir?: boolean }
 /** 只列 floorWalks 用得到的欄位;真 floor JSON 的其餘欄位靠結構化子型別放行。
  *  勿 import gen-rp-points 的 FloorJson——那個檔有 CLI main,value-import 會連帶執行。 */
 export interface FloorNavJson {
@@ -66,7 +66,8 @@ export function floorWalks(floor: FloorNavJson, startSeq: number): DirectedWalk[
   const areaNote = new Map((floor.areas ?? []).map(a => [a.id, a.note]))
   let seq = startSeq
   const mk = (from: string, to: string, kind: string, required: boolean): DirectedWalk => {
-    const a = nodes.get(from)!, b = nodes.get(to)!
+    const a = nodes.get(from), b = nodes.get(to)
+    if (!a || !b) throw new Error(`nav edge 指到不存在節點: ${floor.id} ${from}→${to}`)
     const note = (a.area && areaNote.get(a.area)) ?? (b.area && areaNote.get(b.area)) ?? undefined
     return {
       seq: seq++, floor: floor.id, from, to, kind, required,
@@ -79,10 +80,18 @@ export function floorWalks(floor: FloorNavJson, startSeq: number): DirectedWalk[
   const walkPairs = nav.edges.filter(e => e.kind === 'walk').map(e => [e.from, e.to] as [string, string])
   for (const comp of components(walkPairs))
     for (const [a, b] of eulerCircuit(comp)) out.push(mk(a, b, 'walk', true))
-  // gate 選收：不排進迴路（要刷卡過閘，順路才收），雙向附在該層尾端
+  // gate 選收：不排進迴路（要刷卡過閘，順路才收）。bidir:false=單向閘門，只發可通方向；
+  // 平行閘門（同節點對多條 edge）只發一次——識別鍵 (floor,from,to) 必須唯一（Global Constraint）。
+  const emitted = new Set<string>()
   for (const e of nav.edges.filter(e => e.kind === 'gate')) {
-    out.push(mk(e.from, e.to, 'gate', false))
-    out.push(mk(e.to, e.from, 'gate', false))
+    const dirs: [string, string][] = e.bidir === false
+      ? [[e.from, e.to]]
+      : [[e.from, e.to], [e.to, e.from]]
+    for (const [a, b] of dirs) {
+      if (emitted.has(`${a}>${b}`)) continue
+      emitted.add(`${a}>${b}`)
+      out.push(mk(a, b, 'gate', false))
+    }
   }
   return out
 }
@@ -143,6 +152,8 @@ function main() {
   const all: DirectedWalk[] = []
   for (const f of station.floors as { id: string; file: string }[]) {
     const floor = JSON.parse(readFileSync(join('data', f.file), 'utf8')) as FloorNavJson & FloorSvgJson
+    const ignored = [...new Set((floor.nav?.edges ?? []).map(e => e.kind))].filter(k => k !== 'walk' && k !== 'gate')
+    if (ignored.length) console.warn(`${floor.id}: 略過 kind=${ignored.join(',')}（走線只收 walk/gate）`)
     const walks = floorWalks(floor, all.length + 1)
     all.push(...walks)
     const req = walks.filter(w => w.required)
@@ -151,6 +162,8 @@ function main() {
     if (values.svg) writeFileSync(join(outDir, 'maps', `edges-${floor.id}.svg`), edgeSvg(floor, walks))
   }
   if (all.length === 0) { console.error('產出 0 走線——檢查樓層 nav 資料'); process.exit(1) }
+  const keySet = new Set(all.map(w => `${w.floor}/${w.from}>${w.to}`))
+  if (keySet.size !== all.length) { console.error('走線識別鍵重複——bidir/平行閘門處理破損'); process.exit(1) }
   writeFileSync(outPath, JSON.stringify({
     schema: 'edge-list@1', station: station.id, coordSystem: 'model',
     generated: new Date().toISOString(), walks: all,

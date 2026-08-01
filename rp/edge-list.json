@@ -2,7 +2,7 @@
   "schema": "edge-list@1",
   "station": "taipei-main-station",
   "coordSystem": "model",
-  "generated": "2026-08-01T10:15:28.346Z",
+  "generated": "2026-08-01T12:31:25.460Z",
   "walks": [
     {
       "seq": 1,
@@ -421,24 +421,6 @@
     {
       "seq": 24,
       "floor": "tra-concourse-b1",
-      "from": "n-tc-003",
-      "to": "n-tc-002",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 22,
-      "fromXy": [
-        70,
-        12
-      ],
-      "toXy": [
-        92,
-        12
-      ],
-      "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
-    },
-    {
-      "seq": 25,
-      "floor": "tra-concourse-b1",
       "from": "n-tc-005",
       "to": "n-tc-006",
       "kind": "gate",
@@ -455,7 +437,7 @@
       "note": "站體東側非付費帶（東剪票口外）"
     },
     {
-      "seq": 26,
+      "seq": 25,
       "floor": "tra-concourse-b1",
       "from": "n-tc-006",
       "to": "n-tc-005",
@@ -473,7 +455,7 @@
       "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
     },
     {
-      "seq": 27,
+      "seq": 26,
       "floor": "tra-concourse-b1",
       "from": "n-tc-003",
       "to": "n-tc-002",
@@ -491,25 +473,7 @@
       "note": "臺鐵東付費島（等角圖示雙付費島＋中央南北非付費通廊；西島與中央通廊未建——西半範圍外）"
     },
     {
-      "seq": 28,
-      "floor": "tra-concourse-b1",
-      "from": "n-tc-002",
-      "to": "n-tc-003",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 22,
-      "fromXy": [
-        92,
-        12
-      ],
-      "toXy": [
-        70,
-        12
-      ],
-      "note": "站體東側非付費帶（東剪票口外）"
-    },
-    {
-      "seq": 29,
+      "seq": 27,
       "floor": "tra-platform-b2",
       "from": "n-tp-001",
       "to": "n-tp-002",
@@ -527,7 +491,7 @@
       "note": "臺鐵第4月台（北端；往捷運梯群在東段）。往松山、南港、基隆方向；東部幹線往瑞芳、花蓮、臺東方向。長寬 330×9m 依 wiki 文獻值，橫向中心線依 tra-b2-map 描圖"
     },
     {
-      "seq": 30,
+      "seq": 28,
       "floor": "tra-platform-b2",
       "from": "n-tp-002",
       "to": "n-tp-001",
@@ -545,7 +509,7 @@
       "note": "臺鐵第4月台（北端；往捷運梯群在東段）。往松山、南港、基隆方向；東部幹線往瑞芳、花蓮、臺東方向。長寬 330×9m 依 wiki 文獻值，橫向中心線依 tra-b2-map 描圖"
     },
     {
-      "seq": 31,
+      "seq": 29,
       "floor": "tra-platform-b2",
       "from": "n-tp-003",
       "to": "n-tp-004",
@@ -563,7 +527,7 @@
       "note": "臺鐵第3月台。西部幹線南下（往鶯歌、桃園方向）、東部幹線往樹林方向。第五股道（通過線）在本月台與 2B 之間。長寬 330×9m 依 wiki 文獻值，橫向中心線依 tra-b2-map 描圖"
     },
     {
-      "seq": 32,
+      "seq": 30,
       "floor": "tra-platform-b2",
       "from": "n-tp-004",
       "to": "n-tp-003",
@@ -581,7 +545,7 @@
       "note": "臺鐵第3月台。西部幹線南下（往鶯歌、桃園方向）、東部幹線往樹林方向。第五股道（通過線）在本月台與 2B 之間。長寬 330×9m 依 wiki 文獻值，橫向中心線依 tra-b2-map 描圖"
     },
     {
-      "seq": 33,
+      "seq": 31,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-001",
       "to": "n-bc-011",
@@ -599,7 +563,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 34,
+      "seq": 32,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-011",
       "to": "n-bc-001",
@@ -617,7 +581,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 35,
+      "seq": 33,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-001",
       "to": "n-bc-004",
@@ -635,7 +599,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 36,
+      "seq": 34,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-004",
       "to": "n-bc-001",
@@ -653,7 +617,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 37,
+      "seq": 35,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-001",
       "to": "n-bc-002",
@@ -671,7 +635,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 38,
+      "seq": 36,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-002",
       "to": "n-bc-005",
@@ -689,7 +653,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 39,
+      "seq": 37,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-005",
       "to": "n-bc-002",
@@ -707,7 +671,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 40,
+      "seq": 38,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-002",
       "to": "n-bc-003",
@@ -725,7 +689,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 41,
+      "seq": 39,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-003",
       "to": "n-bc-019",
@@ -743,7 +707,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 42,
+      "seq": 40,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-019",
       "to": "n-bc-003",
@@ -761,7 +725,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 43,
+      "seq": 41,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-003",
       "to": "n-bc-006",
@@ -779,7 +743,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 44,
+      "seq": 42,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-006",
       "to": "n-bc-003",
@@ -797,7 +761,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 45,
+      "seq": 43,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-003",
       "to": "n-bc-009",
@@ -815,7 +779,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 46,
+      "seq": 44,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-009",
       "to": "n-bc-017",
@@ -833,7 +797,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 47,
+      "seq": 45,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-017",
       "to": "n-bc-010",
@@ -851,7 +815,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 48,
+      "seq": 46,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-010",
       "to": "n-bc-017",
@@ -869,7 +833,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 49,
+      "seq": 47,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-017",
       "to": "n-bc-009",
@@ -887,7 +851,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 50,
+      "seq": 48,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-009",
       "to": "n-bc-003",
@@ -905,7 +869,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 51,
+      "seq": 49,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-003",
       "to": "n-bc-008",
@@ -923,7 +887,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 52,
+      "seq": 50,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-008",
       "to": "n-bc-013",
@@ -941,7 +905,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 53,
+      "seq": 51,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-013",
       "to": "n-bc-008",
@@ -959,7 +923,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 54,
+      "seq": 52,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-008",
       "to": "n-bc-007",
@@ -977,7 +941,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 55,
+      "seq": 53,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-007",
       "to": "n-bc-008",
@@ -995,7 +959,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 56,
+      "seq": 54,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-008",
       "to": "n-bc-003",
@@ -1013,7 +977,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 57,
+      "seq": 55,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-003",
       "to": "n-bc-002",
@@ -1031,7 +995,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 58,
+      "seq": 56,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-002",
       "to": "n-bc-001",
@@ -1049,7 +1013,7 @@
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
-      "seq": 59,
+      "seq": 57,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-015",
       "to": "n-bc-016",
@@ -1067,7 +1031,7 @@
       "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
     },
     {
-      "seq": 60,
+      "seq": 58,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-016",
       "to": "n-bc-015",
@@ -1085,7 +1049,7 @@
       "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
     },
     {
-      "seq": 61,
+      "seq": 59,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-012",
       "to": "n-bc-011",
@@ -1103,7 +1067,7 @@
       "note": "詢問處2與 M4-M6 一側的非付費帶；主帶在 local frame 向東南傾斜，故此端為較北側"
     },
     {
-      "seq": 62,
+      "seq": 60,
       "floor": "mrt-bl-concourse-b2",
       "from": "n-bc-011",
       "to": "n-bc-012",
@@ -1117,299 +1081,83 @@
       "toXy": [
         0.7,
         -130.7
+      ],
+      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
+    },
+    {
+      "seq": 61,
+      "floor": "mrt-bl-concourse-b2",
+      "from": "n-bc-014",
+      "to": "n-bc-013",
+      "kind": "gate",
+      "required": false,
+      "lengthM": 17.2,
+      "fromXy": [
+        149.4,
+        -147.6
+      ],
+      "toXy": [
+        132.3,
+        -145.7
+      ],
+      "note": "詢問處3、M3/M8 與主帶南緣出口的非付費帶"
+    },
+    {
+      "seq": 62,
+      "floor": "mrt-bl-concourse-b2",
+      "from": "n-bc-013",
+      "to": "n-bc-014",
+      "kind": "gate",
+      "required": false,
+      "lengthM": 17.2,
+      "fromXy": [
+        132.3,
+        -145.7
+      ],
+      "toXy": [
+        149.4,
+        -147.6
       ],
       "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
       "seq": 63,
       "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-011",
-      "to": "n-bc-012",
+      "from": "n-bc-016",
+      "to": "n-bc-017",
       "kind": "gate",
       "required": false,
-      "lengthM": 17.2,
+      "lengthM": 7,
       "fromXy": [
-        17.8,
-        -132.7
+        98.3,
+        -89
       ],
       "toXy": [
-        0.7,
-        -130.7
+        104,
+        -93
       ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
+      "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
     },
     {
       "seq": 64,
       "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-012",
-      "to": "n-bc-011",
+      "from": "n-bc-017",
+      "to": "n-bc-016",
       "kind": "gate",
       "required": false,
-      "lengthM": 17.2,
+      "lengthM": 7,
       "fromXy": [
-        0.7,
-        -130.7
+        104,
+        -93
       ],
       "toXy": [
-        17.8,
-        -132.7
+        98.3,
+        -89
       ],
-      "note": "詢問處2與 M4-M6 一側的非付費帶；主帶在 local frame 向東南傾斜，故此端為較北側"
+      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
     },
     {
       "seq": 65,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-011",
-      "to": "n-bc-012",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        17.8,
-        -132.7
-      ],
-      "toXy": [
-        0.7,
-        -130.7
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 66,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-012",
-      "to": "n-bc-011",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        0.7,
-        -130.7
-      ],
-      "toXy": [
-        17.8,
-        -132.7
-      ],
-      "note": "詢問處2與 M4-M6 一側的非付費帶；主帶在 local frame 向東南傾斜，故此端為較北側"
-    },
-    {
-      "seq": 67,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-014",
-      "to": "n-bc-013",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        149.4,
-        -147.6
-      ],
-      "toXy": [
-        132.3,
-        -145.7
-      ],
-      "note": "詢問處3、M3/M8 與主帶南緣出口的非付費帶"
-    },
-    {
-      "seq": 68,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-013",
-      "to": "n-bc-014",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        132.3,
-        -145.7
-      ],
-      "toXy": [
-        149.4,
-        -147.6
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 69,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-013",
-      "to": "n-bc-014",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        132.3,
-        -145.7
-      ],
-      "toXy": [
-        149.4,
-        -147.6
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 70,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-014",
-      "to": "n-bc-013",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        149.4,
-        -147.6
-      ],
-      "toXy": [
-        132.3,
-        -145.7
-      ],
-      "note": "詢問處3、M3/M8 與主帶南緣出口的非付費帶"
-    },
-    {
-      "seq": 71,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-013",
-      "to": "n-bc-014",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        132.3,
-        -145.7
-      ],
-      "toXy": [
-        149.4,
-        -147.6
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 72,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-014",
-      "to": "n-bc-013",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 17.2,
-      "fromXy": [
-        149.4,
-        -147.6
-      ],
-      "toXy": [
-        132.3,
-        -145.7
-      ],
-      "note": "詢問處3、M3/M8 與主帶南緣出口的非付費帶"
-    },
-    {
-      "seq": 73,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-016",
-      "to": "n-bc-017",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        98.3,
-        -89
-      ],
-      "toXy": [
-        104,
-        -93
-      ],
-      "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
-    },
-    {
-      "seq": 74,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-017",
-      "to": "n-bc-016",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        104,
-        -93
-      ],
-      "toXy": [
-        98.3,
-        -89
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 75,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-017",
-      "to": "n-bc-016",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        104,
-        -93
-      ],
-      "toXy": [
-        98.3,
-        -89
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 76,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-016",
-      "to": "n-bc-017",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        98.3,
-        -89
-      ],
-      "toXy": [
-        104,
-        -93
-      ],
-      "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
-    },
-    {
-      "seq": 77,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-017",
-      "to": "n-bc-016",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        104,
-        -93
-      ],
-      "toXy": [
-        98.3,
-        -89
-      ],
-      "note": "四組下月台梯井、東西向主幹與北伸淡信轉乘廊道；stem 北端扣除 a-bc-unpaid-link，電梯1與往南轉乘廊維持付費"
-    },
-    {
-      "seq": 78,
-      "floor": "mrt-bl-concourse-b2",
-      "from": "n-bc-016",
-      "to": "n-bc-017",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7,
-      "fromXy": [
-        98.3,
-        -89
-      ],
-      "toXy": [
-        104,
-        -93
-      ],
-      "note": "B1↔B2 兩梯群的 B2 落點；邊界依票務語意推定，避開付費電梯1落點"
-    },
-    {
-      "seq": 79,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-001",
       "to": "n-rc-014",
@@ -1427,7 +1175,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 80,
+      "seq": 66,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-014",
       "to": "n-rc-002",
@@ -1445,7 +1193,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 81,
+      "seq": 67,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-002",
       "to": "n-rc-012",
@@ -1463,7 +1211,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 82,
+      "seq": 68,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-012",
       "to": "n-rc-002",
@@ -1481,7 +1229,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 83,
+      "seq": 69,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-002",
       "to": "n-rc-008",
@@ -1499,7 +1247,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 84,
+      "seq": 70,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-008",
       "to": "n-rc-002",
@@ -1517,7 +1265,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 85,
+      "seq": 71,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-002",
       "to": "n-rc-003",
@@ -1535,7 +1283,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 86,
+      "seq": 72,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-003",
       "to": "n-rc-002",
@@ -1553,7 +1301,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 87,
+      "seq": 73,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-002",
       "to": "n-rc-014",
@@ -1571,7 +1319,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 88,
+      "seq": 74,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-014",
       "to": "n-rc-001",
@@ -1589,7 +1337,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 89,
+      "seq": 75,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-001",
       "to": "n-rc-010",
@@ -1607,7 +1355,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 90,
+      "seq": 76,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-010",
       "to": "n-rc-015",
@@ -1625,7 +1373,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 91,
+      "seq": 77,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-015",
       "to": "n-rc-010",
@@ -1643,7 +1391,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 92,
+      "seq": 78,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-010",
       "to": "n-rc-001",
@@ -1661,7 +1409,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 93,
+      "seq": 79,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-004",
       "to": "n-rc-019",
@@ -1679,7 +1427,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 94,
+      "seq": 80,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-019",
       "to": "n-rc-004",
@@ -1697,7 +1445,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 95,
+      "seq": 81,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-004",
       "to": "n-rc-007",
@@ -1715,7 +1463,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 96,
+      "seq": 82,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-007",
       "to": "n-rc-011",
@@ -1733,7 +1481,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 97,
+      "seq": 83,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-011",
       "to": "n-rc-007",
@@ -1751,7 +1499,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 98,
+      "seq": 84,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-007",
       "to": "n-rc-004",
@@ -1769,7 +1517,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 99,
+      "seq": 85,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-004",
       "to": "n-rc-013",
@@ -1787,7 +1535,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 100,
+      "seq": 86,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-013",
       "to": "n-rc-004",
@@ -1805,7 +1553,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 101,
+      "seq": 87,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-004",
       "to": "n-rc-005",
@@ -1823,7 +1571,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 102,
+      "seq": 88,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-005",
       "to": "n-rc-013",
@@ -1841,7 +1589,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 103,
+      "seq": 89,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-013",
       "to": "n-rc-005",
@@ -1859,7 +1607,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 104,
+      "seq": 90,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-005",
       "to": "n-rc-009",
@@ -1877,7 +1625,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 105,
+      "seq": 91,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-009",
       "to": "n-rc-005",
@@ -1895,7 +1643,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 106,
+      "seq": 92,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-005",
       "to": "n-rc-004",
@@ -1913,7 +1661,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 107,
+      "seq": 93,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-006",
       "to": "n-rc-018",
@@ -1931,7 +1679,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 108,
+      "seq": 94,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-018",
       "to": "n-rc-017",
@@ -1949,7 +1697,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 109,
+      "seq": 95,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-017",
       "to": "n-rc-018",
@@ -1967,7 +1715,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 110,
+      "seq": 96,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-018",
       "to": "n-rc-006",
@@ -1985,7 +1733,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 111,
+      "seq": 97,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-006",
       "to": "n-rc-017",
@@ -2003,7 +1751,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 112,
+      "seq": 98,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-017",
       "to": "n-rc-006",
@@ -2021,7 +1769,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 113,
+      "seq": 99,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-003",
       "to": "n-rc-004",
@@ -2039,25 +1787,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 114,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-004",
-      "to": "n-rc-003",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 8.7,
-      "fromXy": [
-        112.8,
-        26.4
-      ],
-      "toXy": [
-        120.5,
-        22.3
-      ],
-      "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
-    },
-    {
-      "seq": 115,
+      "seq": 100,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-013",
       "to": "n-rc-012",
@@ -2075,25 +1805,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 116,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-012",
-      "to": "n-rc-013",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 7.4,
-      "fromXy": [
-        125.1,
-        25.7
-      ],
-      "toXy": [
-        121.4,
-        32.1
-      ],
-      "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
-    },
-    {
-      "seq": 117,
+      "seq": 101,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-008",
       "to": "n-rc-009",
@@ -2111,7 +1823,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 118,
+      "seq": 102,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-009",
       "to": "n-rc-008",
@@ -2129,7 +1841,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 119,
+      "seq": 103,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-005",
       "to": "n-rc-006",
@@ -2147,7 +1859,7 @@
       "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
     },
     {
-      "seq": 120,
+      "seq": 104,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-006",
       "to": "n-rc-005",
@@ -2165,43 +1877,7 @@
       "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
     },
     {
-      "seq": 121,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-005",
-      "to": "n-rc-006",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 12.4,
-      "fromXy": [
-        102.7,
-        13.2
-      ],
-      "toXy": [
-        90.7,
-        16.3
-      ],
-      "note": "北非付費轉乘廊：北閘門陣列西北側，接臺鐵轉乘閘門/臺鐵售票處/詢問處1；市民大道廊道未入模"
-    },
-    {
-      "seq": 122,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-006",
-      "to": "n-rc-005",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 12.4,
-      "fromXy": [
-        90.7,
-        16.3
-      ],
-      "toXy": [
-        102.7,
-        13.2
-      ],
-      "note": "臺鐵轉乘付費區（圖示臺鐵TR區，西側；高鐵區未建模）"
-    },
-    {
-      "seq": 123,
+      "seq": 105,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-015",
       "to": "n-rc-016",
@@ -2219,7 +1895,7 @@
       "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
     },
     {
-      "seq": 124,
+      "seq": 106,
       "floor": "mrt-r-concourse-b3",
       "from": "n-rc-016",
       "to": "n-rc-015",
@@ -2237,79 +1913,7 @@
       "note": "南側非付費出口帶（往忠孝西路/板南線；閘門位置推定）"
     },
     {
-      "seq": 125,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-016",
-      "to": "n-rc-015",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 6.8,
-      "fromXy": [
-        87.9,
-        -89
-      ],
-      "toXy": [
-        89.2,
-        -82.3
-      ],
-      "note": "南側非付費出口帶（往忠孝西路/板南線；閘門位置推定）"
-    },
-    {
-      "seq": 126,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-015",
-      "to": "n-rc-016",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 6.8,
-      "fromXy": [
-        89.2,
-        -82.3
-      ],
-      "toXy": [
-        87.9,
-        -89
-      ],
-      "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
-    },
-    {
-      "seq": 127,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-015",
-      "to": "n-rc-016",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 6.8,
-      "fromXy": [
-        89.2,
-        -82.3
-      ],
-      "toXy": [
-        87.9,
-        -89
-      ],
-      "note": "捷運付費區：南閘門線至北閘門陣列（詢問處1 西南對角線），東西至站體牆"
-    },
-    {
-      "seq": 128,
-      "floor": "mrt-r-concourse-b3",
-      "from": "n-rc-016",
-      "to": "n-rc-015",
-      "kind": "gate",
-      "required": false,
-      "lengthM": 6.8,
-      "fromXy": [
-        87.9,
-        -89
-      ],
-      "toXy": [
-        89.2,
-        -82.3
-      ],
-      "note": "南側非付費出口帶（往忠孝西路/板南線；閘門位置推定）"
-    },
-    {
-      "seq": 129,
+      "seq": 107,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-003",
       "to": "n-bp-004",
@@ -2327,7 +1931,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 130,
+      "seq": 108,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-004",
       "to": "n-bp-005",
@@ -2345,7 +1949,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 131,
+      "seq": 109,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-005",
       "to": "n-bp-006",
@@ -2363,7 +1967,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 132,
+      "seq": 110,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-006",
       "to": "n-bp-002",
@@ -2381,7 +1985,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 133,
+      "seq": 111,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-002",
       "to": "n-bp-006",
@@ -2399,7 +2003,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 134,
+      "seq": 112,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-006",
       "to": "n-bp-001",
@@ -2417,7 +2021,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 135,
+      "seq": 113,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-001",
       "to": "n-bp-006",
@@ -2435,7 +2039,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 136,
+      "seq": 114,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-006",
       "to": "n-bp-007",
@@ -2453,7 +2057,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 137,
+      "seq": 115,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-007",
       "to": "n-bp-008",
@@ -2471,7 +2075,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 138,
+      "seq": 116,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-008",
       "to": "n-bp-009",
@@ -2489,7 +2093,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 139,
+      "seq": 117,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-009",
       "to": "n-bp-008",
@@ -2507,7 +2111,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 140,
+      "seq": 118,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-008",
       "to": "n-bp-007",
@@ -2525,7 +2129,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 141,
+      "seq": 119,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-007",
       "to": "n-bp-006",
@@ -2543,7 +2147,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 142,
+      "seq": 120,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-006",
       "to": "n-bp-005",
@@ -2561,7 +2165,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 143,
+      "seq": 121,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-005",
       "to": "n-bp-004",
@@ -2579,7 +2183,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 144,
+      "seq": 122,
       "floor": "mrt-bl-platform-b3",
       "from": "n-bp-004",
       "to": "n-bp-003",
@@ -2597,7 +2201,7 @@
       "note": "島式月台；高運量 6 節 141m 級，寬度依 trtc-info-b3 重描"
     },
     {
-      "seq": 145,
+      "seq": 123,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-002",
       "to": "n-rp-001",
@@ -2615,7 +2219,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 146,
+      "seq": 124,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-001",
       "to": "n-rp-003",
@@ -2633,7 +2237,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 147,
+      "seq": 125,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-003",
       "to": "n-rp-006",
@@ -2651,7 +2255,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 148,
+      "seq": 126,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-006",
       "to": "n-rp-003",
@@ -2669,7 +2273,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 149,
+      "seq": 127,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-003",
       "to": "n-rp-004",
@@ -2687,7 +2291,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 150,
+      "seq": 128,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-004",
       "to": "n-rp-005",
@@ -2705,7 +2309,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 151,
+      "seq": 129,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-005",
       "to": "n-rp-004",
@@ -2723,7 +2327,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 152,
+      "seq": 130,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-004",
       "to": "n-rp-003",
@@ -2741,7 +2345,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 153,
+      "seq": 131,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-003",
       "to": "n-rp-001",
@@ -2759,7 +2363,7 @@
       "note": "島式月台，長 141m 為比例基準（高運量 6 節）；寬度依 trtc-info-b4 重描"
     },
     {
-      "seq": 154,
+      "seq": 132,
       "floor": "mrt-r-platform-b4",
       "from": "n-rp-001",
       "to": "n-rp-002",

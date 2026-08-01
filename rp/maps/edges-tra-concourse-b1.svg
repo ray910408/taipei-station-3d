@@ -77,21 +77,15 @@
 <line x1="92" y1="-27.4" x2="70" y2="-27.4" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
 <polygon points="76.6,-27.4 77.8,-28 77.8,-26.8" fill="#d97706"/>
 <text x="81" y="-27.4" font-size="2" fill="#d97706">23</text>
-<line x1="70" y1="-28.6" x2="92" y2="-28.6" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
-<polygon points="85.4,-28.6 84.2,-28 84.2,-29.2" fill="#d97706"/>
-<text x="81" y="-28.6" font-size="2" fill="#d97706">24</text>
 <line x1="92" y1="-36.4" x2="70" y2="-36.4" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
 <polygon points="76.6,-36.4 77.8,-37 77.8,-35.8" fill="#d97706"/>
-<text x="81" y="-36.4" font-size="2" fill="#d97706">25</text>
+<text x="81" y="-36.4" font-size="2" fill="#d97706">24</text>
 <line x1="70" y1="-37.6" x2="92" y2="-37.6" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
 <polygon points="85.4,-37.6 84.2,-37 84.2,-38.2" fill="#d97706"/>
-<text x="81" y="-37.6" font-size="2" fill="#d97706">26</text>
+<text x="81" y="-37.6" font-size="2" fill="#d97706">25</text>
 <line x1="70" y1="-28.6" x2="92" y2="-28.6" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
 <polygon points="85.4,-28.6 84.2,-28 84.2,-29.2" fill="#d97706"/>
-<text x="81" y="-28.6" font-size="2" fill="#d97706">27</text>
-<line x1="92" y1="-27.4" x2="70" y2="-27.4" stroke="#d97706" stroke-width="0.4" stroke-dasharray="1.5,1"/>
-<polygon points="76.6,-27.4 77.8,-28 77.8,-26.8" fill="#d97706"/>
-<text x="81" y="-27.4" font-size="2" fill="#d97706">28</text>
+<text x="81" y="-28.6" font-size="2" fill="#d97706">26</text>
 <circle cx="128" cy="-46" r="0.7" fill="#111827"/>
 <text x="129" y="-45" font-size="1.8" fill="#111827">n-tc-001</text>
 <circle cx="120" cy="-54" r="0.7" fill="#111827"/>
