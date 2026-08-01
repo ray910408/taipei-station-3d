@@ -58,11 +58,12 @@ fun buildSamplesLine(rows: List<DoubleArray>, magAccMin: Int): String {
     }).toString()
 }
 
+/** steps 同 rows 的 t 取 1 位小數。 */
 fun buildWalkEndLine(t1Ms: Double, durationMs: Long, sampleCount: Int, stepsMs: List<Double>,
                      magAccMin: Int, rotMaxDegPerS: Double): String =
   JSONObject().put("type", "walkEnd").put("t1", t1Ms).put("durationMs", durationMs)
     .put("sampleCount", sampleCount).put("stepCount", stepsMs.size)
-    .put("steps", JSONArray().apply { for (t in stepsMs) put(t) })
+    .put("steps", JSONArray().apply { for (t in stepsMs) put(Math.round(t * 10.0) / 10.0) })
     .put("magAccMin", magAccMin).put("rotMaxDegPerS", rotMaxDegPerS).toString()
 
 fun buildWalkAbortLine(w: WalkEntry, reason: String, t: String): String =

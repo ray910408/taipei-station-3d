@@ -148,8 +148,8 @@ function main() {
     process.exit(1)
   }
   const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
-  mkdirSync(join(outDir, 'maps'), { recursive: true })
   const all: DirectedWalk[] = []
+  const svgs: [path: string, content: string][] = []
   for (const f of station.floors as { id: string; file: string }[]) {
     const floor = JSON.parse(readFileSync(join('data', f.file), 'utf8')) as FloorNavJson & FloorSvgJson
     const ignored = [...new Set((floor.nav?.edges ?? []).map(e => e.kind))].filter(k => k !== 'walk' && k !== 'gate')
@@ -159,11 +159,13 @@ function main() {
     const req = walks.filter(w => w.required)
     const mins = req.reduce((s, w) => s + w.lengthM / 1.2 + 15, 0) / 60 // 1.2 m/s＋每線 15s 定位按鈕
     console.log(`${floor.id}: 必收 ${req.length} 走線（${Math.round(req.reduce((s, w) => s + w.lengthM, 0))} m·約 ${mins.toFixed(0)} 分）· 選收 ${walks.length - req.length}`)
-    if (values.svg) writeFileSync(join(outDir, 'maps', `edges-${floor.id}.svg`), edgeSvg(floor, walks))
+    if (values.svg) svgs.push([join(outDir, 'maps', `edges-${floor.id}.svg`), edgeSvg(floor, walks)])
   }
   if (all.length === 0) { console.error('產出 0 走線——檢查樓層 nav 資料'); process.exit(1) }
   const keySet = new Set(all.map(w => `${w.floor}/${w.from}>${w.to}`))
   if (keySet.size !== all.length) { console.error('走線識別鍵重複——bidir/平行閘門處理破損'); process.exit(1) }
+  mkdirSync(join(outDir, 'maps'), { recursive: true })
+  for (const [path, content] of svgs) writeFileSync(path, content)
   writeFileSync(outPath, JSON.stringify({
     schema: 'edge-list@1', station: station.id, coordSystem: 'model',
     generated: new Date().toISOString(), walks: all,
