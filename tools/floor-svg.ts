@@ -15,7 +15,7 @@ export const AREA_FILL: Record<string, string> = {
 /** 底圖（slab＋areas＋units）與座標翻轉，供 rp 點位圖與走線找邊圖共用。
  *  獨立成無 CLI 的模組：gen-edges 若 value-import gen-rp-points,其檔尾
  *  `if (!process.env.VITEST) main()` 會被連帶執行。 */
-export function floorSvgBase(floor: FloorSvgJson): { fy: (y: number) => number; open: string; parts: string[] } {
+export function floorSvgBase(floor: FloorSvgJson): { fy: (y: number) => number; open: string; parts: string[]; size: [number, number] } {
   const outline = floor.slab.outline
   const xs = outline.map(p => p[0]); const ys = outline.map(p => p[1])
   const minX = Math.min(...xs) - 5, maxX = Math.max(...xs) + 5
@@ -27,5 +27,5 @@ export function floorSvgBase(floor: FloorSvgJson): { fy: (y: number) => number; 
   for (const a of floor.areas ?? []) if ((a.polygon?.length ?? 0) >= 3) parts.push(poly(a.polygon!, AREA_FILL[a.kind] ?? '#e5e7eb'))
   for (const u of floor.units ?? []) if ((u.polygon?.length ?? 0) >= 3) parts.push(poly(u.polygon!, '#d1d5db'))
   const open = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}">`
-  return { fy, open, parts }
+  return { fy, open, parts, size: [maxX - minX, maxY - minY] }
 }

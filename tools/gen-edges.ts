@@ -104,32 +104,35 @@ export function allWalks(floors: FloorNavJson[]): DirectedWalk[] {
 
 /** 找邊圖：required 實線箭頭＋迴路序號（正反向各往左偏 0.6m 分離）、gate 虛線、節點標籤 */
 export function edgeSvg(floor: FloorNavJson & FloorSvgJson, walks: DirectedWalk[]): string {
-  const { fy, open, parts } = floorSvgBase(floor)
+  const { fy, open, parts, size } = floorSvgBase(floor)
+  // 圖幅自動縮放：字級/線寬/偏移以 150m 圖幅為基準等比放大,350m 月台圖才讀得到。
+  // 上限 3 倍——偏移是幾何抽象,放太大會扭曲走線位置感。
+  const s = Math.max(1, Math.min(3, Math.max(size[0], size[1]) / 150))
   for (const w of walks) {
     const [x1, y1] = w.fromXy; const [x2, y2] = w.toXy
     const dx = x2 - x1, dy = y2 - y1; const len = Math.hypot(dx, dy) || 1
     // 行進方向左側偏移：去回程平行分離，箭頭與序號不互疊
-    const ox = (-dy / len) * 0.6, oy = (dx / len) * 0.6
+    const ox = (-dy / len) * 0.6 * s, oy = (dx / len) * 0.6 * s
     const a: Pt = [x1 + ox, y1 + oy], b: Pt = [x2 + ox, y2 + oy]
     const dash = w.required ? '' : ' stroke-dasharray="1.5,1"'
     const color = w.required ? '#2563eb' : '#d97706'
-    parts.push(`<line x1="${a[0]}" y1="${fy(a[1])}" x2="${b[0]}" y2="${fy(b[1])}" stroke="${color}" stroke-width="0.4"${dash}/>`)
+    parts.push(`<line x1="${a[0]}" y1="${fy(a[1])}" x2="${b[0]}" y2="${fy(b[1])}" stroke="${color}" stroke-width="${0.4 * s}"${dash}/>`)
     // 箭頭：線段 70% 處一枚小三角
     const tx = a[0] + (b[0] - a[0]) * 0.7, ty = a[1] + (b[1] - a[1]) * 0.7
     const ux = dx / len, uy = dy / len
     const p1 = `${tx},${fy(ty)}`
-    const p2 = `${tx - ux * 1.2 - -uy * 0.6},${fy(ty - uy * 1.2 - ux * 0.6)}`
-    const p3 = `${tx - ux * 1.2 + -uy * 0.6},${fy(ty - uy * 1.2 + ux * 0.6)}`
+    const p2 = `${tx - ux * 1.2 * s - -uy * 0.6 * s},${fy(ty - uy * 1.2 * s - ux * 0.6 * s)}`
+    const p3 = `${tx - ux * 1.2 * s + -uy * 0.6 * s},${fy(ty - uy * 1.2 * s + ux * 0.6 * s)}`
     parts.push(`<polygon points="${p1} ${p2} ${p3}" fill="${color}"/>`)
     const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2
-    parts.push(`<text x="${mx}" y="${fy(my)}" font-size="2" fill="${color}">${w.seq}</text>`)
+    parts.push(`<text x="${mx}" y="${fy(my)}" font-size="${2 * s}" fill="${color}">${w.seq}</text>`)
   }
   const seen = new Set<string>()
   for (const w of walks) for (const [id, xy] of [[w.from, w.fromXy], [w.to, w.toXy]] as [string, [number, number]][]) {
     if (seen.has(id)) continue
     seen.add(id)
-    parts.push(`<circle cx="${xy[0]}" cy="${fy(xy[1])}" r="0.7" fill="#111827"/>`)
-    parts.push(`<text x="${xy[0] + 1}" y="${fy(xy[1]) + 1}" font-size="1.8" fill="#111827">${id}</text>`)
+    parts.push(`<circle cx="${xy[0]}" cy="${fy(xy[1])}" r="${0.7 * s}" fill="#111827"/>`)
+    parts.push(`<text x="${xy[0] + 1.0 * s}" y="${fy(xy[1] + 1.6 * s)}" font-size="${1.8 * s}" fill="#111827">${id}</text>`)
   }
   return `${open}\n${parts.join('\n')}\n</svg>\n`
 }

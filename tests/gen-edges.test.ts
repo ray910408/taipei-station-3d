@@ -100,6 +100,22 @@ describe('edgeSvg', () => {
     expect(rp).toContain('<circle')
     expect(rp).toContain('>1<')
   })
+  it('scales large-floor SVG marks and lifts horizontal-edge node labels', () => {
+    const largeFloor = {
+      ...floorWithSlab,
+      slab: { outline: [[0, 0], [350, 0], [350, 20], [0, 20]] },
+    } satisfies FloorNavJson & FloorSvgJson
+    const svg = edgeSvg(largeFloor, [{
+      seq: 1, floor: 'f1', from: 'n1', to: 'n2', kind: 'walk', required: true,
+      lengthM: 30, fromXy: [0, 0], toXy: [30, 0],
+    }])
+
+    expect(svg).toContain('stroke-width="0.96"')
+    expect(svg).toContain('points="21,18.56 18.12,20 18.12,17.12"')
+    expect(svg).toContain('font-size="4.8" fill="#2563eb">1</text>')
+    expect(svg).toContain('r="1.68"')
+    expect(svg).toContain('x="2.4" y="16.16" font-size="4.32" fill="#111827">n1</text>')
+  })
 })
 
 describe('真資料 smoke', () => {
