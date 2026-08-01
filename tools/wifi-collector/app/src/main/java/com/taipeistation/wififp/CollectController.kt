@@ -26,40 +26,6 @@ fun nextPendingPoint(points: List<RpPoint>, mode: String, progress: Progress): R
 fun progressAfterRedo(progress: Progress, id: String): Progress =
   progress.copy(done = progress.done.filterNot { it.pointId == id }.toSet())
 
-/** 合力擾動門檻(µT):magStd 超標=環境磁場本身在變(列車/電梯) */
-const val MAG_NOISY_STD = 2.0
-
-/** 單軸擾動門檻(µT):合力穩但三軸狂擺=手機被轉動;magStd 是旋轉不變量,抓不到這種。
- *  取 6.0 是實測夾出來的:北車手持站定 25 秒,軸向 std 上限 4.75(呼吸/手抖本來就有這個量級);
- *  真正的轉動實測落在 10~19。原本設 3.0 會把握穩也報成轉動(0729 十一點中誤報四點)。 */
-const val MAG_AXIS_NOISY_STD = 6.0
-
-enum class MagQuality { OK, AMBIENT_NOISY, DEVICE_MOVED }
-
-/** 轉動的特徵是「軸向擾動遠大於合力擾動」——環境磁場變化則兩者同步漲。
- *  不可只看 magStd 門檻:殘留硬鐵偏移會讓合力也隨轉動變化(實測轉動時 magStd 也超標),
- *  單看門檻會把轉動誤判成環境擾動。 */
-fun magQuality(mag: MagSummary?): MagQuality {
-  if (mag == null) return MagQuality.OK
-  val axisMax = mag.std.maxOrNull() ?: 0.0
-  return when {
-    axisMax > MAG_AXIS_NOISY_STD && axisMax > mag.magStd * 2 -> MagQuality.DEVICE_MOVED
-    mag.magStd > MAG_NOISY_STD -> MagQuality.AMBIENT_NOISY
-    axisMax > MAG_AXIS_NOISY_STD -> MagQuality.AMBIENT_NOISY // 兩者同幅度漲＝環境
-    else -> MagQuality.OK
-  }
-}
-
-fun magAccLabel(acc: Int): String = when (acc) {
-  3 -> "高"
-  2 -> "中"
-  1 -> "低"
-  else -> "未校正"
-}
-
-/** accuracy ≤ 1 代表磁力資料不可信,要提示畫 8 字 */
-fun magNeedsCalibration(acc: Int): Boolean = acc <= 1
-
 sealed class SlotPick {
   data object Done : SlotPick()
   data class Run(val slot: Int?) : SlotPick()
@@ -81,8 +47,6 @@ class CollectController(
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
   var writeWarn by mutableStateOf(false)
-  var lastMagQuality by mutableStateOf(MagQuality.OK)
-  var lastMagAcc by mutableStateOf(-1)
   var scanStartMs by mutableStateOf(0L)
   var currentId by mutableStateOf<String?>(null)
   private var job: Job? = null
@@ -158,14 +122,12 @@ class CollectController(
       }
       val win = rig.endWindow()
       val line = buildPointLine(p, slot, win.headingMeanDeg, win.headingAcc, startedAt,
-        SystemClock.elapsedRealtime() - t0, ok, throttled, batches, win.mag)
+        SystemClock.elapsedRealtime() - t0, ok, throttled, batches)
       val okWrite = withContext(Dispatchers.IO) { app.writer?.append(line) ?: false }
       writeWarn = !okWrite
       app.progress = app.progress.copy(done = app.progress.done + DoneKey(p.id, slot))
       lastThrottled = throttled
       lowScanWarn = ok * 10 < app.scansPerPoint * 6 // ok < 60% N
-      lastMagAcc = win.headingAcc
-      lastMagQuality = magQuality(win.mag)
       ensureCurrent()
     } finally {
       rig.endWindow() // 中斷路徑關閉時窗；正常路徑已取值，重複呼叫無害

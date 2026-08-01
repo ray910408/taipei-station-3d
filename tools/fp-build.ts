@@ -14,7 +14,8 @@ export interface PointRecord {
   headingSlot: number | null; headingDeg: number
   actualScans: number; throttled: boolean
   scans: { t: string; fresh: boolean; aps: ScanApRec[] }[]
-  mag: { n: number; mean: number[]; std: number[]; magMean: number; magStd: number; accuracy: number }
+  // Kotlin 端 buildPointLine 的 mag 一直是 nullable（無磁力計機型／0.2.1 起站點模式不收磁力），必填是潛在 bug。
+  mag?: { n: number; mean: number[]; std: number[]; magMean: number; magStd: number; accuracy: number }
 }
 export interface RawSample extends PointRecord { session: string; scansPerPoint: number }
 
@@ -61,7 +62,7 @@ export function parseSessions(texts: string[]): { samples: RawSample[]; sessions
 // Stage 1.1 門檻(真機資料進來後的調參旋鈕;可調可回溯)
 export const SHORT_SCAN_RATIO = 0.6 // actualScans < 此×scansPerPoint → 降權
 export const DOWNWEIGHT = 0.5       // 短掃描/轉動共用降權係數
-// 必須與 APK 的 MAG_AXIS_NOISY_STD 同值:採集端顯示 OK 的點若在這裡被判成轉動,
+// 舊檔判別須沿用 0.2.0 APK 的軸向門檻:當時採集端顯示 OK 的點若在這裡被判成轉動,
 // 磁力會被剔除且 WiFi 遭降權——採集者看到綠燈,建庫卻默默丟掉。
 // 6.0 由實測兩端夾出:北車手持站定軸向 std 上限 4.75,真轉動 10~19。
 export const ROT_AXIS_STD = 6       // 軸向 std 超過此(µT)才談轉動
@@ -79,9 +80,10 @@ export function cleanSamples(samples: RawSample[]): { kept: CleanSample[]; dropp
     let w = 1, magOk = true
     if (rec.actualScans < SHORT_SCAN_RATIO * rec.scansPerPoint) w *= DOWNWEIGHT
     const m = rec.mag
+    if (!m) { kept.push({ rec, w, magOk: false }); continue }
     // 轉動的特徵是「軸向擾動遠大於合力擾動」,環境磁場變化則兩者同步漲。不可只看 magStd 門檻:
     // 殘留硬鐵偏移會讓合力也隨轉動超標(真機 0726 P01 軸10.16/合2.75、P07 軸18.70/合3.95),
-    // 單看門檻會把轉動誤判成環境擾動而讓污染的 WiFi 拿到全權重。與 APK magQuality() 同一判別式。
+    // 單看門檻會把轉動誤判成環境擾動而讓污染的 WiFi 拿到全權重。與 0.2.0 APK 同一判別式。
     const axisMax = Math.max(...m.std)
     if (m.accuracy <= MIN_MAG_ACCURACY) magOk = false
     else if (axisMax > ROT_AXIS_STD && axisMax > m.magStd * ROT_AXIS_RATIO) { magOk = false; w *= DOWNWEIGHT } // 手機轉動:WiFi 亦污染
@@ -230,11 +232,12 @@ export function buildDb(texts: string[], opts: { station: string; generated: str
         a.vals.push({ v, w }); a.wPresent += w; a.n++
       }
     }
-    if (magOk) {
-      rp.magW += w; rp.magSum += w * rec.mag.magMean
-      if (Math.max(...rec.mag.std) < MAG_AXIS_STD_MAX) {
+    const mag = rec.mag
+    if (magOk && mag) {
+      rp.magW += w; rp.magSum += w * mag.magMean
+      if (Math.max(...mag.std) < MAG_AXIS_STD_MAX) {
         rp.axW += w
-        rp.axSum[0] += w * rec.mag.mean[0]; rp.axSum[1] += w * rec.mag.mean[1]; rp.axSum[2] += w * rec.mag.mean[2]
+        rp.axSum[0] += w * mag.mean[0]; rp.axSum[1] += w * mag.mean[1]; rp.axSum[2] += w * mag.mean[2]
       }
     }
   }

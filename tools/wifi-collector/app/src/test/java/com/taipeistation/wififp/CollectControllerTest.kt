@@ -18,29 +18,6 @@ class CollectControllerTest {
     assertEquals(listOf<Int?>(0, 90, 180, 270), slotsForMode("quad"))
   }
 
-  @Test fun magQuality_separates_rotation_from_ambient() {
-    fun mag(std: List<Double>, magStd: Double) =
-      MagSummary(100, listOf(0.0, 0.0, 0.0), std, 40.0, magStd, 3)
-    // 真機實測:握穩(0726 P02~P06)三軸 std ~1.2、magStd ~1.2
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(0.42, 0.33, 0.44), 0.36)))
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(1.13, 0.9, 1.0), 1.15)))
-    // 真機實測:北車手持站定(0729 P02/P03/P07/P09)——舊門檻 3.0 把這些誤報成轉動
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.27, 1.97, 2.21), 1.32)))
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.93, 2.81, 2.00), 1.00)))
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(4.75, 3.43, 2.22), 1.57)))
-    assertEquals(MagQuality.OK, magQuality(mag(listOf(3.87, 3.19, 1.51), 1.21)))
-    // 真機實測:轉動(0725 s1649)三軸 ~16、magStd 1.75
-    assertEquals(MagQuality.DEVICE_MOVED, magQuality(mag(listOf(16.27, 14.58, 13.55), 1.75)))
-    // 真機實測:轉動且殘留偏移讓合力也超標(0726 P01 / P07)——舊版會誤判成 AMBIENT
-    assertEquals(MagQuality.DEVICE_MOVED, magQuality(mag(listOf(10.16, 8.0, 6.0), 2.75)))
-    assertEquals(MagQuality.DEVICE_MOVED, magQuality(mag(listOf(18.70, 12.0, 9.0), 3.95)))
-    // 真機實測:輕微環境擾動(0726 P10)軸向未超標、合力超標
-    assertEquals(MagQuality.AMBIENT_NOISY, magQuality(mag(listOf(2.12, 1.8, 1.5), 2.53)))
-    // 環境磁場真的變(列車):兩者同幅度漲
-    assertEquals(MagQuality.AMBIENT_NOISY, magQuality(mag(listOf(8.0, 7.0, 6.0), 5.0)))
-    assertEquals(MagQuality.OK, magQuality(null))
-  }
-
   @Test fun magAccuracy_labels_and_calibration_gate() {
     assertEquals("未校正", magAccLabel(0))
     assertEquals("低", magAccLabel(1))

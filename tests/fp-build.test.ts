@@ -71,6 +71,11 @@ describe('parseSessions', () => {
 describe('cleanSamples(spec 1.1 逐條)', () => {
   const parse = (lines: string[]) => parseSessions([[SESSION, ...lines].join('\n')]).samples
 
+  it('缺 mag → 保留 WiFi 全權重並標記 mag 不可用', () => {
+    const { kept } = cleanSamples(parse([pt({ mag: undefined })]))
+    expect(kept[0]).toMatchObject({ w: 1, magOk: false })
+  })
+
   it('throttled → 整筆剔除,記 reason', () => {
     const { kept, dropped } = cleanSamples(parse([pt({ throttled: true })]))
     expect(kept.length).toBe(0)

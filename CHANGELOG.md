@@ -3,6 +3,10 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.1] — 2026-08-01
+
+- collector 站點模式去磁力化（磁力改軌走線模式），並在站點／走線 setup 畫面顯示版本號。
+
 ## [0.2.0] — 2026-07-27
 
 WiFi 指紋室內定位的**離線工具鏈**。本代不改變 viewer 行為——定位引擎尚未接進 app。

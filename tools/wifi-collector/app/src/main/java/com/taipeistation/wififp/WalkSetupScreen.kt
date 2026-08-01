@@ -76,7 +76,10 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp),
   ) {
-    Text("磁力走線採集", style = MaterialTheme.typography.headlineMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      Text("磁力走線採集", style = MaterialTheme.typography.headlineMedium)
+      Text("v$APP_VERSION", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       FilterChip(selected = false, onClick = { app.screen = Screen.SETUP }, label = { Text("站點採集(WiFi)") })
       FilterChip(selected = true, onClick = {}, label = { Text("走線採集(磁力)") })

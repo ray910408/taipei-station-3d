@@ -14,6 +14,16 @@ const val MIN_SAMPLE_RATE_HZ = 20.0
 /** 樣本時基與碼表的容差（ms,固定項）:另加 10% 比例項。寬鬆起步,pilot 後夾緊。 */
 const val TIME_SKEW_TOL_MS = 500.0
 
+fun magAccLabel(acc: Int): String = when (acc) {
+  3 -> "高"
+  2 -> "中"
+  1 -> "低"
+  else -> "未校正"
+}
+
+/** accuracy ≤ 1 代表磁力資料不可信,要提示畫 8 字 */
+fun magNeedsCalibration(acc: Int): Boolean = acc <= 1
+
 data class WalkQuality(val speedMps: Double, val stepLenEstM: Double?, val warnings: List<String>)
 
 /** walkEnd 三檢＋校正檢查。全部警告不擋——重走與否人裁；旗標數值已在 walkEnd 行,離線可重算。 */

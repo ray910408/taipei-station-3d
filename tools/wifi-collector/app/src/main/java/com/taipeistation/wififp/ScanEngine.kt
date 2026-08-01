@@ -61,16 +61,12 @@ class WifiScanEngine(context: Context) {
 class SensorRig(private val sm: SensorManager) : SensorEventListener {
   @Volatile var currentHeadingDeg: Double = Double.NaN
     private set
-  /** 即時磁力計校正等級 0..3;供 UI 在開掃前就提示校正 */
-  @Volatile var currentMagAccuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
-    private set
   private var magAccuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
-  private var window: MagStats? = null
-  private val headingWindow = ArrayList<Double>()
+  private var headingWindow: ArrayList<Double>? = null
   private val rotMat = FloatArray(9)
   private val orient = FloatArray(3)
 
-  data class WindowResult(val mag: MagSummary?, val headingMeanDeg: Double?, val headingAcc: Int)
+  data class WindowResult(val headingMeanDeg: Double?, val headingAcc: Int)
 
   fun start() {
     sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let { sm.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
@@ -79,11 +75,11 @@ class SensorRig(private val sm: SensorManager) : SensorEventListener {
 
   fun stop() = sm.unregisterListener(this)
 
-  @Synchronized fun beginWindow() { window = MagStats(); headingWindow.clear() }
+  @Synchronized fun beginWindow() { headingWindow = ArrayList() }
 
   @Synchronized fun endWindow(): WindowResult {
-    val res = WindowResult(window?.summary(magAccuracy), circularMeanDeg(headingWindow.toList()), magAccuracy)
-    window = null; headingWindow.clear()
+    val res = WindowResult(circularMeanDeg(headingWindow?.toList() ?: emptyList()), magAccuracy)
+    headingWindow = null
     return res
   }
 
@@ -92,22 +88,18 @@ class SensorRig(private val sm: SensorManager) : SensorEventListener {
       Sensor.TYPE_MAGNETIC_FIELD -> {
         // 每個 event 自帶 accuracy——不能只靠 onAccuracyChanged(部分裝置不觸發,值會假性停在 0)
         magAccuracy = e.accuracy
-        currentMagAccuracy = e.accuracy
-        synchronized(this) {
-          window?.add(e.values[0].toDouble(), e.values[1].toDouble(), e.values[2].toDouble())
-        }
       }
       Sensor.TYPE_ROTATION_VECTOR -> {
         SensorManager.getRotationMatrixFromVector(rotMat, e.values)
         SensorManager.getOrientation(rotMat, orient)
         val deg = (Math.toDegrees(orient[0].toDouble()) + 360.0) % 360.0
         currentHeadingDeg = deg
-        synchronized(this) { if (window != null) headingWindow += deg }
+        synchronized(this) { headingWindow?.add(deg) }
       }
     }
   }
 
   override fun onAccuracyChanged(s: Sensor, accuracy: Int) {
-    if (s.type == Sensor.TYPE_MAGNETIC_FIELD) { magAccuracy = accuracy; currentMagAccuracy = accuracy }
+    if (s.type == Sensor.TYPE_MAGNETIC_FIELD) magAccuracy = accuracy
   }
 }
