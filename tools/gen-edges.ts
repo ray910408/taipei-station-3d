@@ -1,3 +1,4 @@
+import { floorSvgBase, type FloorSvgJson } from './floor-svg'
 import type { Pt } from './rp-geometry'
 
 export interface NavNode { id: string; xy: Pt; area?: string }
@@ -81,4 +82,36 @@ export function floorWalks(floor: FloorNavJson, startSeq: number): DirectedWalk[
     out.push(mk(e.to, e.from, 'gate', false))
   }
   return out
+}
+
+/** 找邊圖：required 實線箭頭＋迴路序號（正反向各往左偏 0.6m 分離）、gate 虛線、節點標籤 */
+export function edgeSvg(floor: FloorNavJson & FloorSvgJson, walks: DirectedWalk[]): string {
+  const { fy, open, parts } = floorSvgBase(floor)
+  for (const w of walks) {
+    const [x1, y1] = w.fromXy; const [x2, y2] = w.toXy
+    const dx = x2 - x1, dy = y2 - y1; const len = Math.hypot(dx, dy) || 1
+    // 行進方向左側偏移：去回程平行分離，箭頭與序號不互疊
+    const ox = (-dy / len) * 0.6, oy = (dx / len) * 0.6
+    const a: Pt = [x1 + ox, y1 + oy], b: Pt = [x2 + ox, y2 + oy]
+    const dash = w.required ? '' : ' stroke-dasharray="1.5,1"'
+    const color = w.required ? '#2563eb' : '#d97706'
+    parts.push(`<line x1="${a[0]}" y1="${fy(a[1])}" x2="${b[0]}" y2="${fy(b[1])}" stroke="${color}" stroke-width="0.4"${dash}/>`)
+    // 箭頭：線段 70% 處一枚小三角
+    const tx = a[0] + (b[0] - a[0]) * 0.7, ty = a[1] + (b[1] - a[1]) * 0.7
+    const ux = dx / len, uy = dy / len
+    const p1 = `${tx},${fy(ty)}`
+    const p2 = `${tx - ux * 1.2 - -uy * 0.6},${fy(ty - uy * 1.2 - ux * 0.6)}`
+    const p3 = `${tx - ux * 1.2 + -uy * 0.6},${fy(ty - uy * 1.2 + ux * 0.6)}`
+    parts.push(`<polygon points="${p1} ${p2} ${p3}" fill="${color}"/>`)
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2
+    parts.push(`<text x="${mx}" y="${fy(my)}" font-size="2" fill="${color}">${w.seq}</text>`)
+  }
+  const seen = new Set<string>()
+  for (const w of walks) for (const [id, xy] of [[w.from, w.fromXy], [w.to, w.toXy]] as [string, [number, number]][]) {
+    if (seen.has(id)) continue
+    seen.add(id)
+    parts.push(`<circle cx="${xy[0]}" cy="${fy(xy[1])}" r="0.7" fill="#111827"/>`)
+    parts.push(`<text x="${xy[0] + 1}" y="${fy(xy[1]) + 1}" font-size="1.8" fill="#111827">${id}</text>`)
+  }
+  return `${open}\n${parts.join('\n')}\n</svg>\n`
 }

@@ -1,6 +1,9 @@
 // tests/gen-edges.test.ts
 import { describe, expect, it } from 'vitest'
 import { eulerCircuit, floorWalks, type FloorNavJson } from '../tools/gen-edges'
+import { edgeSvg } from '../tools/gen-edges'
+import { floorSvg } from '../tools/gen-rp-points'
+import type { FloorSvgJson } from '../tools/floor-svg'
 
 const tri: [string, string][] = [['a', 'b'], ['b', 'c'], ['c', 'a']]
 
@@ -21,6 +24,12 @@ const floor: FloorNavJson = {
       { from: 'n1', to: 'n4', kind: 'stair' },
     ],
   },
+}
+
+// Task 1 的 fixture 沒有 slab（不在 FloorNavJson 上）；SVG 測試用交集型別補上
+const floorWithSlab: FloorNavJson & FloorSvgJson = {
+  ...floor,
+  slab: { outline: [[0, 0], [40, 0], [40, 20], [0, 20]] },
 }
 
 describe('eulerCircuit', () => {
@@ -71,5 +80,20 @@ describe('floorWalks', () => {
   })
   it('無 nav 的樓層回空陣列', () => {
     expect(floorWalks({ id: 'f9' }, 1)).toEqual([])
+  })
+})
+
+describe('edgeSvg', () => {
+  it('含序號標籤、選收虛線、節點標籤；rp 的 floorSvg 重構後不變', () => {
+    const walks = floorWalks(floorWithSlab, 1)
+    const svg = edgeSvg(floorWithSlab, walks)
+    expect(svg).toContain('<svg')
+    expect(svg).toContain('>1<')          // 迴路序號
+    expect(svg).toContain('stroke-dasharray') // gate 選收虛線
+    expect(svg).toContain('>n1<')         // 節點標籤
+    // floorSvg 沿用 base 後仍輸出點位（回歸保護）
+    const rp = floorSvg(floorWithSlab, [{ id: 'X-001', floor: 'f1', x: 5, y: 5 }])
+    expect(rp).toContain('<circle')
+    expect(rp).toContain('>1<')
   })
 })
