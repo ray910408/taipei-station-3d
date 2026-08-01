@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import { floorSvgBase, type FloorSvgJson } from './floor-svg'
 import type { Pt } from './rp-geometry'
 
@@ -84,6 +87,12 @@ export function floorWalks(floor: FloorNavJson, startSeq: number): DirectedWalk[
   return out
 }
 
+export function allWalks(floors: FloorNavJson[]): DirectedWalk[] {
+  const out: DirectedWalk[] = []
+  for (const f of floors) out.push(...floorWalks(f, out.length + 1))
+  return out
+}
+
 /** 找邊圖：required 實線箭頭＋迴路序號（正反向各往左偏 0.6m 分離）、gate 虛線、節點標籤 */
 export function edgeSvg(floor: FloorNavJson & FloorSvgJson, walks: DirectedWalk[]): string {
   const { fy, open, parts } = floorSvgBase(floor)
@@ -115,3 +124,39 @@ export function edgeSvg(floor: FloorNavJson & FloorSvgJson, walks: DirectedWalk[
   }
   return `${open}\n${parts.join('\n')}\n</svg>\n`
 }
+
+// ---- CLI ----
+function main() {
+  // 刻意不提供 --floors：局部重產會截斷清單且 generated 無法辨識（gen:rp 前科，acc0032）。
+  // 無 partial 情境,覆寫閘門就是一行——勿為此 import gen-rp-points 的 canOverwrite(有 CLI main)。
+  const { values } = parseArgs({ options: {
+    out: { type: 'string' }, svg: { type: 'boolean' }, force: { type: 'boolean' },
+  } })
+  const outDir = values.out ?? 'rp'
+  const outPath = join(outDir, 'edge-list.json')
+  if (existsSync(outPath) && !values.force) {
+    console.error(`${outPath} 已存在,重產會覆寫既有清單。確定要覆寫請加 --force`)
+    process.exit(1)
+  }
+  const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
+  mkdirSync(join(outDir, 'maps'), { recursive: true })
+  const all: DirectedWalk[] = []
+  for (const f of station.floors as { id: string; file: string }[]) {
+    const floor = JSON.parse(readFileSync(join('data', f.file), 'utf8')) as FloorNavJson & FloorSvgJson
+    const walks = floorWalks(floor, all.length + 1)
+    all.push(...walks)
+    const req = walks.filter(w => w.required)
+    const mins = req.reduce((s, w) => s + w.lengthM / 1.2 + 15, 0) / 60 // 1.2 m/s＋每線 15s 定位按鈕
+    console.log(`${floor.id}: 必收 ${req.length} 走線（${Math.round(req.reduce((s, w) => s + w.lengthM, 0))} m·約 ${mins.toFixed(0)} 分）· 選收 ${walks.length - req.length}`)
+    if (values.svg) writeFileSync(join(outDir, 'maps', `edges-${floor.id}.svg`), edgeSvg(floor, walks))
+  }
+  if (all.length === 0) { console.error('產出 0 走線——檢查樓層 nav 資料'); process.exit(1) }
+  writeFileSync(outPath, JSON.stringify({
+    schema: 'edge-list@1', station: station.id, coordSystem: 'model',
+    generated: new Date().toISOString(), walks: all,
+  }, null, 2))
+  console.log(`共 ${all.length} 走線（必收 ${all.filter(w => w.required).length}）→ ${outPath}`)
+}
+
+// 見 gen-rp-points.ts 同處註解：vite-node 無進入點資訊，改以「非測試環境」為判準
+if (!process.env.VITEST) main()

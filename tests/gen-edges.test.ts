@@ -1,5 +1,7 @@
 // tests/gen-edges.test.ts
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { allWalks } from '../tools/gen-edges'
 import { eulerCircuit, floorWalks, type FloorNavJson } from '../tools/gen-edges'
 import { edgeSvg } from '../tools/gen-edges'
 import { floorSvg } from '../tools/gen-rp-points'
@@ -95,5 +97,18 @@ describe('edgeSvg', () => {
     const rp = floorSvg(floorWithSlab, [{ id: 'X-001', floor: 'f1', x: 5, y: 5 }])
     expect(rp).toContain('<circle')
     expect(rp).toContain('>1<')
+  })
+})
+
+describe('真資料 smoke', () => {
+  it('六層合計 required=114、optional=40，seq 嚴格遞增', () => {
+    const station = JSON.parse(readFileSync('data/station.json', 'utf8'))
+    const floors = station.floors.map((f: { file: string }) =>
+      JSON.parse(readFileSync(`data/${f.file}`, 'utf8')))
+    const walks = allWalks(floors)
+    expect(walks.filter(w => w.required)).toHaveLength(114) // 57 walk 邊 ×2 向
+    expect(walks.filter(w => !w.required)).toHaveLength(40) // 20 gate 邊 ×2 向
+    expect(walks.map(w => w.seq)).toEqual(walks.map((_, i) => i + 1))
+    expect(walks.every(w => w.lengthM > 0)).toBe(true)
   })
 })
