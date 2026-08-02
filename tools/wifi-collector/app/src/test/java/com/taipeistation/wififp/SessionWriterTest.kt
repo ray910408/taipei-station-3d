@@ -37,6 +37,6 @@ class SessionWriterTest {
   }
 
   @Test fun newSessionId_format() {
-    assertTrue(Regex("^s\\d{8}-\\d{4}$").matches(SessionWriter.newSessionId()))
+    assertTrue(Regex("^s\\d{8}-\\d{6}$").matches(SessionWriter.newSessionId()))
   }
 }

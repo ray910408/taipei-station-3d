@@ -36,6 +36,6 @@ class SessionWriter(baseDir: File, val sessionId: String, val prefix: String = "
         ?.sortedByDescending { it.name } ?: emptyList()
 
     fun newSessionId(): String =
-      "s" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
+      "s" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
   }
 }
