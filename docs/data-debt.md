@@ -122,7 +122,7 @@ history 就是存根。
 `bearing_status` 也還是 estimated（§4）。`refs/sources.json` 各來源的 `calibration` 只有
 `px_per_m`（像素→公尺）與控制點，補不上這一段。POI 管線本身已就緒，補資料即顯示。
 
-## 6. WiFi 指紋線（非模型）
+## 6. 指紋採集線（非模型；WiFi＋磁力走線）
 
 - **多 BSSID 同源合併判準兩個方向都不完備，待北車真實資料再裁定**（`CHANGELOG.md`
   「已知限制」）：
@@ -140,7 +140,20 @@ history 就是存根。
   點號 P01–P08，與現行 `rp/rp-points.json`（353 點、`B1-001` 起）不是同一份清單。
   理由不是資料髒，是 `docs/wifi-collector-guide.md:99`：清單版本不符會**把同一個點號指到
   不同座標**，續採會靜默跳過不相干的新位置，而且混版無法合併建庫（`build:fp` 會擋）。
-- **磁北↔模型北偏角需現場實測一次**：`tools/fp-build.ts` 的 `FpDb.magNorthOffsetDeg`
+- **臺鐵 B2 月台磁力走線覆蓋缺口（2026-08-01 裁定另案）**：`data/floors/tra-platform-b2.json`
+  的 nav 只有 4 節點／2 條 walk 邊（東端梯口區，總長 31m），攤在 350m 寬樓板——四座 330m
+  月台帶因此幾乎沒有磁力剖面（走線清單忠實繼承 nav；對照 `mrt-bl-platform-b3` 8 邊 164m、
+  `mrt-r-platform-b4` 5 邊 142m 都有沿月台邊）。補法＝月台帶各加沿月台節點與 walk 邊，
+  但**工作量現實：4×330m×雙向＝+2640m 純走，超過現全站 2475m**，且月台列車磁擾最頻繁；
+  裁定等磁力 pilot（廊道/大廳）結果再決定收不收、收幾座。動工時是資料工程：validate＋
+  路由回歸＋`npm run gen:edges -- --svg --force` 重產（generated 換版＝當時未完 session 不可續採）。
+  注意 §1.1 的月台帶 y 偏差是它的前置——帶位置未重錨前加的節點會繼承同一筆系統性偏差。
+- **B1 西側兩條 nav 邊穿越未建模空白（現場確認待查，2026-08-01）**：`tra-concourse-b1` 的
+  `n-tc-011→n-tc-002` 與 `n-tc-012→n-tc-002` 中段各有約 15m 連續落在「無任何 area/unit
+  多邊形」的空白（逐 0.5m 取樣 point-in-polygon 實測；走線圖上為西側兩條長對角線）。
+  兩種可能待現場裁：(a) 該處是開放可走大廳＝area 覆蓋缺口（連帶 rp 產點也沒擊中該區）；
+  (b) 該處有牆/商場＝這兩條邊本身是假的，viewer 路由同樣一直在畫穿牆線，須加 waypoint 重建。
+  採集 SOP：現場走得通照走；走不通跳過該兩條並回報，勿硬走。`tools/fp-build.ts` 的 `FpDb.magNorthOffsetDeg`
   目前是 `null` 佔位。這跟底圖的北無關——`docs/floor-notes/mrt-r-platform-b4.md:7` 記的
   「底圖北方相對 local 北方偏約 6.5°」是**示意圖繪製誤差**、已由相似變換吸收；
   `docs/data-conventions.md` 的結論是底圖指北針（12.3–14.3°）與出入口 GPS 相似變換（14.7°）

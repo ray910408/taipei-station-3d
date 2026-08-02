@@ -1,0 +1,137 @@
+package com.taipeistation.wififp
+
+import android.os.SystemClock
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** 建議下一條：required 走線依 seq 序(歐拉迴路順序)取第一條未完成;選收(gate)不入建議,只能跳選 */
+fun nextPendingWalk(walks: List<WalkEntry>, done: Set<WalkKey>): WalkEntry? =
+  walks.asSequence().filter { it.required }.sortedBy { it.seq }.firstOrNull { it.key() !in done }
+
+/** begin 後至少此毫秒才接受 end——連點防抖:第二下不該把近空走線標完成。最短邊 <5m≈4s,1s 不影響正常操作 */
+const val MIN_WALK_MS = 1000L
+/** end/abort 後至少此毫秒才接受下一個 begin——防連點在原地誤開下一條 */
+const val WALK_REARM_MS = 500L
+
+class WalkController(
+  private val app: AppState,
+  private val rig: WalkSensorRig,
+  private val scope: CoroutineScope,
+) {
+  var walking by mutableStateOf(false)
+  var currentKey by mutableStateOf<WalkKey?>(null)
+  var lastQuality by mutableStateOf<WalkQuality?>(null)
+  var writeWarn by mutableStateOf(false)
+  var pendingWrites by mutableStateOf(0)
+    private set
+  var liveSteps by mutableStateOf(0)
+  var liveSamples by mutableStateOf(0)
+  var beginMs by mutableStateOf(0L)
+  private var buffer: WalkSampleBuffer? = null
+  private var flushJob: Job? = null
+  private var lastStopMs = 0L
+
+  /** 寫檔走單一 Channel 消費者:多個 launch 各自 withContext(IO) 會在執行緒池亂序,
+   *  walkEnd 可能先於最後一批 samples 落盤;Channel FIFO 保證行序＝呼叫序。 */
+  private val lines = Channel<String>(Channel.UNLIMITED)
+  init {
+    scope.launch {
+      for (line in lines) {
+        val w = app.walkWriter
+        if (w == null) { pendingWrites--; continue } // 無 writer 行不可救——WALK 畫面上不該發生
+        var ok = withContext(Dispatchers.IO) { if (line.isEmpty()) w.flushPending() else w.append(line) }
+        while (!ok) { // 失敗行已留在 writer.pending;閘門保持關,每秒重試到落盤為止
+          writeWarn = true
+          delay(1000)
+          ok = withContext(Dispatchers.IO) { w.flushPending() }
+        }
+        writeWarn = false
+        pendingWrites-- // 成功落盤才算 flushed(append 與此處皆 main dispatcher,免 atomic)
+      }
+    }
+    // 建構時 writer 可能已有未落盤行(session header 寫失敗)——排進同一條重試通道,
+    // 防止還沒開走就匯出/返回丟檔頭。空字串=僅 flush 哨兵(真行皆為 JSON 非空)。
+    if (app.walkWriter?.hasPending() == true) { pendingWrites++; lines.trySend("") }
+  }
+
+  fun isDone(key: WalkKey): Boolean = key in app.walkProgress.done
+  fun current(): WalkEntry? = currentKey?.let { k -> app.edgeList?.walks?.firstOrNull { it.key() == k } }
+
+  fun ensureCurrent() {
+    if (currentKey == null || isDone(currentKey!!))
+      currentKey = nextPendingWalk(app.edgeList?.walks ?: emptyList(), app.walkProgress.done)?.key()
+  }
+
+  fun jumpTo(key: WalkKey) { if (!walking) currentKey = key }
+
+  fun redo(key: WalkKey) {
+    if (walking) return
+    // 檔案裡舊 walk 留著（離線同 key 取最後一個完整 walk）；記憶體中清掉重走
+    app.walkProgress = WalkProgress(app.walkProgress.done - key)
+    currentKey = key
+  }
+
+  fun begin() {
+    if (walking) return
+    if (SystemClock.elapsedRealtime() - lastStopMs < WALK_REARM_MS) return // 剛結束/作廢——防連點誤開下一條
+    val w = current() ?: return
+    walking = true // 同步豎旗封雙擊（CollectController 同款教訓）
+    beginMs = SystemClock.elapsedRealtime()
+    liveSteps = 0; liveSamples = 0; lastQuality = null
+    val b = WalkSampleBuffer(SystemClock.elapsedRealtimeNanos())
+    buffer = b
+    append(buildWalkBeginLine(w, isoNow()))
+    rig.beginWalk(b)
+    flushJob = scope.launch {
+      while (true) {
+        delay(500)
+        flushReady(b)
+        liveSteps = b.stepsMs.size; liveSamples = b.sampleCount
+      }
+    }
+  }
+
+  fun end() {
+    val w = current() ?: return
+    val b = buffer ?: return
+    if (SystemClock.elapsedRealtime() - beginMs < MIN_WALK_MS) return // begin 後過快——連點防抖,近空走線不得標完成
+    stopStream()
+    flushReady(b)
+    b.drain()?.let { append(buildSamplesLine(it.rows, it.magAccMin)) }
+    val durationMs = SystemClock.elapsedRealtime() - beginMs
+    append(buildWalkEndLine(b.lastT1Ms, durationMs, b.sampleCount, b.stepsMs, b.magAccMin, b.rotMaxDegPerS))
+    app.walkProgress = WalkProgress(app.walkProgress.done + w.key())
+    lastQuality = walkQuality(w, durationMs, b.stepsMs.size, app.stepLengthM, b.rotMaxDegPerS, b.magAccMin,
+      b.sampleCount, b.lastT1Ms)
+    buffer = null
+    ensureCurrent()
+  }
+
+  fun abort(reason: String) {
+    val w = current() ?: return
+    stopStream()
+    append(buildWalkAbortLine(w, reason, isoNow()))
+    buffer = null
+  }
+
+  private fun stopStream() {
+    rig.endWalk()
+    flushJob?.cancel(); flushJob = null
+    walking = false
+    lastStopMs = SystemClock.elapsedRealtime()
+  }
+
+  private fun flushReady(b: WalkSampleBuffer) {
+    for (batch in b.takeReady()) append(buildSamplesLine(batch.rows, batch.magAccMin))
+  }
+
+  private fun append(line: String) { pendingWrites++; lines.trySend(line) }
+}

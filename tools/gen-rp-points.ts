@@ -2,13 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { distPointSeg, pointInPolygon } from '../src/geometry'
+import { floorSvgBase, type FloorSvgJson } from './floor-svg'
 import { chainRows, distToPolygonEdge, type Pt } from './rp-geometry'
 
 const WALKABLE_KINDS = new Set(['corridor', 'unpaid', 'paid', 'platform'])
-const AREA_FILL: Record<string, string> = {
-  corridor: '#dbeafe', unpaid: '#dcfce7', paid: '#fef9c3',
-  platform: '#e0e7ff', track: '#fecaca', 'stair-void': '#f3e8ff',
-}
 
 interface FloorArea { id: string; kind: string; polygon: Pt[]; note?: string }
 interface FloorUnit { id: string; kind: string; polygon?: Pt[] }
@@ -131,23 +128,13 @@ export function canOverwrite(targetExists: boolean, force: boolean, partial: boo
   return !targetExists || (force && !partial)
 }
 
-export function floorSvg(floor: FloorJson, points: RpPoint[]): string {
-  const outline = floor.slab.outline
-  const xs = outline.map(p => p[0]); const ys = outline.map(p => p[1])
-  const minX = Math.min(...xs) - 5, maxX = Math.max(...xs) + 5
-  const minY = Math.min(...ys) - 5, maxY = Math.max(...ys) + 5
-  const fy = (y: number) => maxY + minY - y // 模型 +Y 朝北,SVG y 朝下 → 翻轉
-  const poly = (pts: Pt[], fill: string, stroke = '#9ca3af') =>
-    `<polygon points="${pts.map(([x, y]) => `${x},${fy(y)}`).join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="0.3"/>`
-  const parts: string[] = []
-  parts.push(poly(outline, '#f3f4f6', '#6b7280'))
-  for (const a of floor.areas ?? []) if ((a.polygon?.length ?? 0) >= 3) parts.push(poly(a.polygon, AREA_FILL[a.kind] ?? '#e5e7eb'))
-  for (const u of floor.units ?? []) if ((u.polygon?.length ?? 0) >= 3) parts.push(poly(u.polygon!, '#d1d5db'))
+export function floorSvg(floor: FloorSvgJson, points: RpPoint[]): string {
+  const { fy, open, parts } = floorSvgBase(floor)
   for (const [i, p] of points.entries()) {
     parts.push(`<circle cx="${p.x}" cy="${fy(p.y)}" r="0.8" fill="#dc2626"/>`)
     parts.push(`<text x="${p.x + 1}" y="${fy(p.y) - 1}" font-size="2.2" fill="#111827">${i + 1}</text>`)
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}">\n${parts.join('\n')}\n</svg>\n`
+  return `${open}\n${parts.join('\n')}\n</svg>\n`
 }
 
 // ---- CLI ----

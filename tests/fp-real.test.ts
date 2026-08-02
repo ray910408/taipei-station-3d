@@ -6,7 +6,11 @@ import { buildDb, cleanSamples, parseSessions, popcount, ROT_AXIS_RATIO, ROT_AXI
 const TEXT = readFileSync('tests/fixtures/real-home/session.jsonl', 'utf8')
 const clean = () => {
   const { kept } = cleanSamples(parseSessions([TEXT]).samples)
-  return new Map(kept.map(k => [k.rec.pointId, k]))
+  const withMag = kept.map(k => {
+    if (!k.rec.mag) throw new Error(`真機 fixture ${k.rec.pointId} 缺 mag`)
+    return { ...k, rec: { ...k.rec, mag: k.rec.mag } }
+  })
+  return new Map(withMag.map(k => [k.rec.pointId, k]))
 }
 
 describe('真機回歸:Stage 1 清洗判定', () => {

@@ -84,8 +84,15 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp),
   ) {
-    Text("WiFi 指紋採集", style = MaterialTheme.typography.headlineMedium)
-    Text("進場前:開發者選項關「Wi-Fi 掃描節流」、開定位、畫 8 字校正磁力計",
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      Text("WiFi 指紋採集", style = MaterialTheme.typography.headlineMedium)
+      Text("v$APP_VERSION", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      FilterChip(selected = true, onClick = {}, label = { Text("站點採集(WiFi)") })
+      FilterChip(selected = false, onClick = { app.screen = Screen.WALK_SETUP }, label = { Text("走線採集(磁力)") })
+    }
+    Text("進場前:開發者選項關「Wi-Fi 掃描節流」、開定位",
       style = MaterialTheme.typography.bodyMedium, color = Color(0xFF92400E))
 
     // 前置檢查
@@ -153,8 +160,8 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
         val w = if (resumeFile != null) {
           SessionWriter(baseDir, resumeFile!!.name.removePrefix("wifi-fp-").removeSuffix(".jsonl"))
         } else {
-          SessionWriter(baseDir, SessionWriter.newSessionId()).also {
-            it.append(buildSessionLine(it.sessionId, Build.MODEL, Build.VERSION.SDK_INT, "0.1.0",
+          SessionWriter(baseDir, SessionWriter.newSessionId(baseDir, "wifi-fp")).also {
+            it.append(buildSessionLine(it.sessionId, Build.MODEL, Build.VERSION.SDK_INT, APP_VERSION,
               app.mode, app.scansPerPoint, app.rpName, list.generated, isoNow()))
           }
         }

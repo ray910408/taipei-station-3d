@@ -30,9 +30,6 @@ fun parseRpList(json: String): RpList {
 
 data class ApObs(val bssid: String, val ssid: String, val rssi: Int, val freq: Int)
 data class ScanBatch(val t: String, val fresh: Boolean, val aps: List<ApObs>)
-data class MagSummary(val n: Int, val mean: List<Double>, val std: List<Double>,
-                      val magMean: Double, val magStd: Double, val accuracy: Int)
-
 fun isoNow(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
 fun buildSessionLine(session: String, device: String, android: Int, app: String, mode: String,
@@ -45,7 +42,7 @@ fun buildSessionLine(session: String, device: String, android: Int, app: String,
 
 fun buildPointLine(p: RpPoint, headingSlot: Int?, headingDeg: Double?, headingAcc: Int,
                    startedAt: String, durationMs: Long, actualScans: Int, throttled: Boolean,
-                   scans: List<ScanBatch>, mag: MagSummary?): String {
+                   scans: List<ScanBatch>): String {
   val o = JSONObject().put("type", "point")
     .put("pointId", p.id).put("floor", p.floor).put("x", p.x).put("y", p.y)
     .put("headingSlot", headingSlot ?: JSONObject.NULL)
@@ -60,9 +57,6 @@ fun buildPointLine(p: RpPoint, headingSlot: Int?, headingDeg: Double?, headingAc
           .put("rssi", a.rssi).put("freq", a.freq))
       }))
   })
-  if (mag != null) o.put("mag", JSONObject()
-    .put("n", mag.n).put("mean", JSONArray(mag.mean)).put("std", JSONArray(mag.std))
-    .put("magMean", mag.magMean).put("magStd", mag.magStd).put("accuracy", mag.accuracy))
   return o.toString()
 }
 

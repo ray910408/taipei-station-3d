@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="160" viewBox="-180 -80 360 160">
+<polygon points="-175,75 175,75 175,-75 -175,-75" fill="#f3f4f6" stroke="#6b7280" stroke-width="0.3"/>
+<polygon points="-165,50.5 165,50.5 165,41.5 -165,41.5" fill="#e0e7ff" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-165,27.8 165,27.8 165,18.8 -165,18.8" fill="#e0e7ff" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-165,0 165,0 165,-9 -165,-9" fill="#e0e7ff" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-165,-21.5 165,-21.5 165,-30.5 -165,-30.5" fill="#e0e7ff" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,55 175,55 175,50.5 -175,50.5" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,41.5 175,41.5 175,37 -175,37" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,32.3 175,32.3 175,27.8 -175,27.8" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,18.8 175,18.8 175,14.3 -175,14.3" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,11.65 175,11.65 175,7.15 -175,7.15" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,4.5 175,4.5 175,0 -175,0" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,-9 175,-9 175,-13.5 -175,-13.5" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,-17 175,-17 175,-21.5 -175,-21.5" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<polygon points="-175,-30.5 175,-30.5 175,-35 -175,-35" fill="#fecaca" stroke="#9ca3af" stroke-width="0.3"/>
+<line x1="93.17103421680687" y1="-28.608621686974207" x2="78.17103421680687" y2="-24.608621686974207" stroke="#2563eb" stroke-width="0.96"/>
+<polygon points="82.67103421680687,-25.808621686974206 85.08275662605159,-27.942068433613755 85.82482505966534,-25.15931180756217" fill="#2563eb"/>
+<text x="85.67103421680687" y="-26.608621686974207" font-size="4.8" fill="#2563eb">27</text>
+<line x1="77.42896578319312" y1="-27.391378313025793" x2="92.42896578319312" y2="-31.391378313025793" stroke="#2563eb" stroke-width="0.96"/>
+<polygon points="87.92896578319312,-30.191378313025794 85.5172433739484,-28.057931566386245 84.77517494033465,-30.84068819243783" fill="#2563eb"/>
+<text x="84.92896578319312" y="-29.391378313025793" font-size="4.8" fill="#2563eb">28</text>
+<line x1="92.07103421680688" y1="-7.108621686974205" x2="77.07103421680688" y2="-3.1086216869742054" stroke="#2563eb" stroke-width="0.96"/>
+<polygon points="81.57103421680688,-4.308621686974206 83.9827566260516,-6.442068433613757 84.72482505966535,-3.6593118075621685" fill="#2563eb"/>
+<text x="84.57103421680688" y="-5.108621686974205" font-size="4.8" fill="#2563eb">29</text>
+<line x1="76.32896578319313" y1="-5.891378313025795" x2="91.32896578319313" y2="-9.891378313025795" stroke="#2563eb" stroke-width="0.96"/>
+<polygon points="86.82896578319313,-8.691378313025794 84.41724337394841,-6.557931566386243 83.67517494033466,-9.340688192437831" fill="#2563eb"/>
+<text x="83.82896578319313" y="-7.891378313025795" font-size="4.8" fill="#2563eb">30</text>
+<circle cx="92.8" cy="-30" r="1.68" fill="#111827"/>
+<text x="95.2" y="-33.84" font-size="4.32" fill="#111827">n-tp-001</text>
+<circle cx="77.8" cy="-26" r="1.68" fill="#111827"/>
+<text x="80.2" y="-29.84" font-size="4.32" fill="#111827">n-tp-002</text>
+<circle cx="91.7" cy="-8.5" r="1.68" fill="#111827"/>
+<text x="94.10000000000001" y="-12.34" font-size="4.32" fill="#111827">n-tp-003</text>
+<circle cx="76.7" cy="-4.5" r="1.68" fill="#111827"/>
+<text x="79.10000000000001" y="-8.34" font-size="4.32" fill="#111827">n-tp-004</text>
+</svg>
