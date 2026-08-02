@@ -5,6 +5,7 @@
 
 ## [0.2.1] — 2026-08-01
 
+- 找邊圖/點位圖 SVG 補上 `width`/`height`，並加入 `rp/maps/.nomedia`（三星相簿縮圖器相容）。
 - collector 站點模式去磁力化（磁力改軌走線模式），並在站點／走線 setup 畫面顯示版本號。
 - session id 加入秒數，同分鐘重開新 session 不再撞檔。
 

@@ -88,15 +88,16 @@ describe('floorWalks', () => {
 })
 
 describe('edgeSvg', () => {
-  it('含序號標籤、選收虛線、節點標籤；rp 的 floorSvg 重構後不變', () => {
+  it('含序號標籤、選收虛線、節點標籤；edgeSvg 與 floorSvg 共用的 SVG 根元素具內在尺寸', () => {
     const walks = floorWalks(floorWithSlab, 1)
     const svg = edgeSvg(floorWithSlab, walks)
-    expect(svg).toContain('<svg')
+    expect(svg).toContain('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="30" viewBox="-5 -5 50 30">')
     expect(svg).toContain('>1<')          // 迴路序號
     expect(svg).toContain('stroke-dasharray') // gate 選收虛線
     expect(svg).toContain('>n1<')         // 節點標籤
     // floorSvg 沿用 base 後仍輸出點位（回歸保護）
     const rp = floorSvg(floorWithSlab, [{ id: 'X-001', floor: 'f1', x: 5, y: 5 }])
+    expect(rp).toContain('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="30" viewBox="-5 -5 50 30">')
     expect(rp).toContain('<circle')
     expect(rp).toContain('>1<')
   })

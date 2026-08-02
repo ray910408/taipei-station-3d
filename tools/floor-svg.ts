@@ -26,6 +26,7 @@ export function floorSvgBase(floor: FloorSvgJson): { fy: (y: number) => number; 
   const parts: string[] = [poly(outline, '#f3f4f6', '#6b7280')]
   for (const a of floor.areas ?? []) if ((a.polygon?.length ?? 0) >= 3) parts.push(poly(a.polygon!, AREA_FILL[a.kind] ?? '#e5e7eb'))
   for (const u of floor.units ?? []) if ((u.polygon?.length ?? 0) >= 3) parts.push(poly(u.polygon!, '#d1d5db'))
-  const open = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}">`
+  // 缺少內在尺寸會讓部分縮圖器（實測三星相簿）崩潰，進而拖垮媒體索引。
+  const open = `<svg xmlns="http://www.w3.org/2000/svg" width="${maxX - minX}" height="${maxY - minY}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}">`
   return { fy, open, parts, size: [maxX - minX, maxY - minY] }
 }
