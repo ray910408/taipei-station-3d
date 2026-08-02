@@ -1,5 +1,6 @@
 package com.taipeistation.wififp
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,14 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
   var showJump by remember { mutableStateOf(false) }
   var showAbort by remember { mutableStateOf(false) }
 
+  BackHandler {
+    when {
+      showJump -> showJump = false
+      !ctl.walking -> app.screen = Screen.WALK_SETUP
+      // 走線中吞掉返回——要退先「作廢」或「結束走線」
+    }
+  }
+
   val w = ctl.current()
   val walks = app.edgeList?.walks ?: emptyList()
   val reqWalks = walks.filter { it.required }
@@ -68,6 +77,7 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
       Text("選收(gate)可從走線清單跳選", style = MaterialTheme.typography.bodyMedium)
       Button(onClick = onExport, modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
       OutlinedButton(onClick = { showJump = true }, modifier = Modifier.fillMaxWidth()) { Text("走線清單") }
+      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, modifier = Modifier.fillMaxWidth()) { Text("返回") }
       return@Column
     }
 
@@ -102,6 +112,7 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
       OutlinedButton(onClick = { showJump = true }, enabled = !ctl.walking) { Text("走線清單") }
       OutlinedButton(onClick = onExport, enabled = !ctl.walking) { Text("匯出") }
+      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, enabled = !ctl.walking) { Text("返回") }
     }
   }
 

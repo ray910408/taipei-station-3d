@@ -1,5 +1,6 @@
 package com.taipeistation.wififp
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,14 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   var showSkip by remember { mutableStateOf(false) }
   var skipReason by remember { mutableStateOf("") }
   var showJump by remember { mutableStateOf(false) }
+
+  BackHandler {
+    when {
+      showJump -> showJump = false
+      !ctl.scanning -> app.screen = Screen.SETUP
+      // 掃描中吞掉返回——防誤退掉資料；要退先按「中斷」
+    }
+  }
 
   val p = ctl.current()
   val total = app.rpList?.points?.size ?: 0
@@ -76,6 +85,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
       Text("全部完成 🎉", style = MaterialTheme.typography.headlineLarge)
       Button(onClick = onExport, modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
       OutlinedButton(onClick = { showJump = true }, modifier = Modifier.fillMaxWidth()) { Text("點位清單") }
+      OutlinedButton(onClick = { app.screen = Screen.SETUP }, modifier = Modifier.fillMaxWidth()) { Text("返回設定") }
       return@Column
     }
 
@@ -115,6 +125,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
       OutlinedButton(onClick = { showJump = true }, enabled = !ctl.scanning) { Text("點位清單") }
       OutlinedButton(onClick = onExport, enabled = !ctl.scanning) { Text("匯出") }
+      OutlinedButton(onClick = { app.screen = Screen.SETUP }, enabled = !ctl.scanning) { Text("返回設定") }
     }
   }
 

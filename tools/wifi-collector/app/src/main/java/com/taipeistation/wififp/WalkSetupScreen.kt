@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,8 @@ private fun hasStepPerm(ctx: Context): Boolean =
 
 @Composable
 fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
+  BackHandler { app.screen = Screen.SETUP }
+
   val ctx = androidx.compose.ui.platform.LocalContext.current
   val prefs = remember { ctx.getSharedPreferences("wififp", 0) }
   var permOk by remember { mutableStateOf(hasStepPerm(ctx)) }
