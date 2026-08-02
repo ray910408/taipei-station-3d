@@ -41,7 +41,7 @@ class WalkController(
       for (line in lines) {
         val w = app.walkWriter
         if (w == null) { pendingWrites--; continue } // 無 writer 行不可救——WALK 畫面上不該發生
-        var ok = withContext(Dispatchers.IO) { w.append(line) }
+        var ok = withContext(Dispatchers.IO) { if (line.isEmpty()) w.flushPending() else w.append(line) }
         while (!ok) { // 失敗行已留在 writer.pending;閘門保持關,每秒重試到落盤為止
           writeWarn = true
           delay(1000)
@@ -51,6 +51,9 @@ class WalkController(
         pendingWrites-- // 成功落盤才算 flushed(append 與此處皆 main dispatcher,免 atomic)
       }
     }
+    // 建構時 writer 可能已有未落盤行(session header 寫失敗)——排進同一條重試通道,
+    // 防止還沒開走就匯出/返回丟檔頭。空字串=僅 flush 哨兵(真行皆為 JSON 非空)。
+    if (app.walkWriter?.hasPending() == true) { pendingWrites++; lines.trySend("") }
   }
 
   fun isDone(key: WalkKey): Boolean = key in app.walkProgress.done

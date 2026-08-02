@@ -56,16 +56,21 @@ class WalkSampleBuffer(private val t0Nanos: Long) {
     cur += doubleArrayOf(t, x, y, z, g[0], g[1], g[2], a[0], a[1], a[2], r[0], r[1], r[2], r[3])
     sampleCount++; lastT1Ms = t
     curAccMin = min(curAccMin, accuracy); magAccMin = min(magAccMin, accuracy)
-    // rot 峰值角速率：品質守門用（rotvec 不入特徵,ADR 0003）。以 mag 行的節奏取樣即可。
-    rotPrev?.let { p ->
-      if (!rotPrevTMs.isNaN() && t > rotPrevTMs) {
-        var dot = p[0] * r[0] + p[1] * r[1] + p[2] * r[2] + p[3] * r[3]
-        dot = abs(dot).coerceAtMost(1.0)
-        val deg = Math.toDegrees(2.0 * acos(dot))
-        rotMaxDegPerS = maxOf(rotMaxDegPerS, deg / ((t - rotPrevTMs) / 1000.0))
+    // rot 峰值角速率：品質守門用（rotvec 不入特徵,ADR 0003）。
+    // 只在四元數實際更新時計,除以距上次更新的時距——rotvec 比 mag 慢的機型,
+    // 按 mag 行節奏取樣會把累積角度除以單一行距,噴假尖峰。
+    val changed = rotPrev?.let { !it.contentEquals(r) } ?: true
+    if (changed) {
+      rotPrev?.let { p ->
+        if (!rotPrevTMs.isNaN() && t > rotPrevTMs) {
+          var dot = p[0] * r[0] + p[1] * r[1] + p[2] * r[2] + p[3] * r[3]
+          dot = abs(dot).coerceAtMost(1.0)
+          val deg = Math.toDegrees(2.0 * acos(dot))
+          rotMaxDegPerS = maxOf(rotMaxDegPerS, deg / ((t - rotPrevTMs) / 1000.0))
+        }
       }
+      rotPrev = r; rotPrevTMs = t
     }
-    rotPrev = r; rotPrevTMs = t
   }
 
   @Synchronized fun takeReady(): List<Batch> {

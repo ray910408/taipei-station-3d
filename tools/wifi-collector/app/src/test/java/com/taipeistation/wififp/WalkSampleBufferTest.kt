@@ -69,4 +69,15 @@ class WalkSampleBufferTest {
     b.onMag(ms(100), 1.0, 2.0, 3.0, 3)
     assertTrue("rotMax=${b.rotMaxDegPerS}", b.rotMaxDegPerS > 800.0)
   }
+
+  @Test fun rot_rate_uses_time_since_last_rotation_change() {
+    val b = primed()
+    b.onMag(ms(0), 1.0, 2.0, 3.0, 3)
+    b.onMag(ms(20), 1.0, 2.0, 3.0, 3)   // rotvec 未更新——不得推進計時基準
+    b.onMag(ms(40), 1.0, 2.0, 3.0, 3)
+    b.onRotvec(0.0, 0.0, 0.08715574, 0.9961947) // 繞 z 轉 10°
+    b.onMag(ms(80), 1.0, 2.0, 3.0, 3)
+    // 10° 累積於 80ms(距上次變化),不是 40ms 行距:125°/s 而非 250°/s
+    assertEquals(125.0, b.rotMaxDegPerS, 1.0)
+  }
 }

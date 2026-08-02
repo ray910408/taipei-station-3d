@@ -90,8 +90,9 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
     Text("進場前:畫 8 字校正磁力計;走線時手機身前持平、與 WiFi 採集同姿勢、高度一致",
       style = MaterialTheme.typography.bodyMedium, color = Color(0xFF92400E))
 
-    Text(if (permOk) "✓ 活動辨識權限 OK" else "✗ 缺活動辨識權限——步伐事件收不到",
-      color = if (permOk) Color(0xFF166534) else Color.Red)
+    Text(if (permOk) "✓ 活動辨識權限 OK"
+      else "⚠ 未授權活動辨識——收不到步伐事件,錨定全靠離線 acc 重建(建議按下方授權)",
+      color = if (permOk) Color(0xFF166534) else Color(0xFF92400E))
     val sm = ctx.getSystemService(android.hardware.SensorManager::class.java)
     val missingRow = remember { missingRowSensors(sm) }
     val stepOk = remember { hasStepDetector(sm) }
@@ -131,14 +132,14 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
     }
 
     Button(
-      enabled = permOk && app.edgeList != null && resumeBlock == null && missingRow.isEmpty(),
+      enabled = app.edgeList != null && resumeBlock == null && missingRow.isEmpty(),
       modifier = Modifier.fillMaxWidth().height(60.dp),
       onClick = {
         val list = app.edgeList!!
         val w = if (resumeFile != null) {
           SessionWriter(baseDir, resumeFile!!.name.removePrefix("mag-walk-").removeSuffix(".jsonl"), "mag-walk")
         } else {
-          SessionWriter(baseDir, SessionWriter.newSessionId(), "mag-walk").also {
+          SessionWriter(baseDir, SessionWriter.newSessionId(baseDir, "mag-walk"), "mag-walk").also {
             it.append(buildWalkSessionLine(it.sessionId, android.os.Build.MODEL,
               android.os.Build.VERSION.SDK_INT, APP_VERSION, app.edgeName, list.generated,
               app.stepLengthM, isoNow()))

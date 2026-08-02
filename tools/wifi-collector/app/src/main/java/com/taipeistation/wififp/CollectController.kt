@@ -46,7 +46,8 @@ class CollectController(
   var apCount by mutableStateOf(0)
   var lastThrottled by mutableStateOf(false)
   var lowScanWarn by mutableStateOf(false)
-  var writeWarn by mutableStateOf(false)
+  // 站點側由畫面每秒 retryFlush 輪詢收拾,出口已有 !writeWarn 閘。
+  var writeWarn by mutableStateOf(app.writer?.hasPending() == true)
   var scanStartMs by mutableStateOf(0L)
   var currentId by mutableStateOf<String?>(null)
   private var job: Job? = null

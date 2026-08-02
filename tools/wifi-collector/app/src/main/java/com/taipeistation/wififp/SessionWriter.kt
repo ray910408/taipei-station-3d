@@ -21,6 +21,10 @@ class SessionWriter(baseDir: File, val sessionId: String, val prefix: String = "
   @Synchronized
   fun flushPending(): Boolean = flushLocked()
 
+  /** 有未落盤行或 fsync 未確認——controller 建構時檢查,把失敗的 session header 納入重試閘門 */
+  @Synchronized
+  fun hasPending(): Boolean = pending.isNotEmpty() || needsSync
+
   // 只在 @Synchronized 方法內呼叫。行寫出即出佇列(重試不重寫→不產生重複列);
   // fsync 成功前掛 needsSync——sync 拋錯時佇列可能已空,旗保證下次補 sync 而非空放。
   private fun flushLocked(): Boolean {
@@ -45,7 +49,16 @@ class SessionWriter(baseDir: File, val sessionId: String, val prefix: String = "
       File(baseDir, "sessions").listFiles { f -> f.name.startsWith("$prefix-") && f.name.endsWith(".jsonl") }
         ?.sortedByDescending { it.name } ?: emptyList()
 
-    fun newSessionId(): String =
-      "s" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+    fun newSessionId(baseDir: File, prefix: String): String =
+      uniqueSessionId(baseDir, prefix,
+        "s" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")))
+
+    /** 同一秒連開兩個新 session 會撞同檔(append 模式=混寫)——已存在就加序號。base 拆參數供測試 */
+    fun uniqueSessionId(baseDir: File, prefix: String, base: String): String {
+      var id = base
+      var k = 2
+      while (File(baseDir, "sessions/$prefix-$id.jsonl").exists()) { id = "$base-${k++}" }
+      return id
+    }
   }
 }

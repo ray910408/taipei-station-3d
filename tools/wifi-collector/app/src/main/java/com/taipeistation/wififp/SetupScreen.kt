@@ -160,7 +160,7 @@ fun SetupScreen(app: AppState, onStart: () -> Unit) {
         val w = if (resumeFile != null) {
           SessionWriter(baseDir, resumeFile!!.name.removePrefix("wifi-fp-").removeSuffix(".jsonl"))
         } else {
-          SessionWriter(baseDir, SessionWriter.newSessionId()).also {
+          SessionWriter(baseDir, SessionWriter.newSessionId(baseDir, "wifi-fp")).also {
             it.append(buildSessionLine(it.sessionId, Build.MODEL, Build.VERSION.SDK_INT, APP_VERSION,
               app.mode, app.scansPerPoint, app.rpName, list.generated, isoNow()))
           }

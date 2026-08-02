@@ -22,7 +22,7 @@ const val DEFAULT_MODE = "single"
 const val DEFAULT_SCANS_PER_POINT = 5
 /** 名目步長預設值:walkEnd「步數×步長 vs 邊長」檢查用;Setup 可調(Phase 7 步長旋鈕經驗) */
 const val DEFAULT_STEP_LENGTH_M = 0.65
-const val APP_VERSION = "0.2.5"
+const val APP_VERSION = "0.2.6"
 
 class AppState {
   var screen by mutableStateOf(Screen.SETUP)

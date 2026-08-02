@@ -3,6 +3,12 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.6] — 2026-08-02
+
+- 活動辨識權限被拒不再擋開始走線（降警告，acc 離線重建路徑同缺步偵測器）。
+- session header 寫入失敗納入重試閘門；同一秒重開新 session 檔名加序號不再混寫。
+- rot 晃動偵測只在四元數實際更新時計算——rotvec 較慢的機型不再噴假尖峰。
+
 ## [0.2.5] — 2026-08-02
 
 - fsync 未確認前 flush 閘門不放行（needsSync 旗）；站點模式出口同樣以寫入重試閘門把關。

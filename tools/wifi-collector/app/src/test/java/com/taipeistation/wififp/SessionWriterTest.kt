@@ -1,5 +1,6 @@
 package com.taipeistation.wififp
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -42,6 +43,14 @@ class SessionWriterTest {
   }
 
   @Test fun newSessionId_format() {
-    assertTrue(Regex("^s\\d{8}-\\d{6}$").matches(SessionWriter.newSessionId()))
+    assertTrue(Regex("^s\\d{8}-\\d{6}$").matches(SessionWriter.newSessionId(tmp.root, "wifi-fp")))
+  }
+
+  @Test fun uniqueSessionId_suffixes_on_collision() {
+    File(tmp.root, "sessions").mkdirs()
+    File(tmp.root, "sessions/wifi-fp-s20260802-120000.jsonl").writeText("")
+    assertEquals("s20260802-120000-2", SessionWriter.uniqueSessionId(tmp.root, "wifi-fp", "s20260802-120000"))
+    File(tmp.root, "sessions/wifi-fp-s20260802-120000-2.jsonl").writeText("")
+    assertEquals("s20260802-120000-3", SessionWriter.uniqueSessionId(tmp.root, "wifi-fp", "s20260802-120000"))
   }
 }
