@@ -89,6 +89,13 @@ class CollectController(
     ensureCurrent()
   }
 
+  fun retryFlush() { // writeWarn 亮著時由畫面每秒呼叫;落盤成功即熄旗
+    scope.launch {
+      val ok = withContext(Dispatchers.IO) { app.writer?.flushPending() ?: true }
+      writeWarn = !ok
+    }
+  }
+
   fun jumpTo(id: String) { if (!scanning) currentId = id }
 
   private suspend fun runOneSlot(p: RpPoint) {

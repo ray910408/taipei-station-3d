@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,9 +30,12 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   var heading by remember { mutableStateOf(Double.NaN) }
   var elapsedS by remember { mutableStateOf(0L) }
   LaunchedEffect(Unit) {
+    var tick = 0
     while (true) {
       heading = rig.currentHeadingDeg
       elapsedS = if (ctl.scanning) (android.os.SystemClock.elapsedRealtime() - ctl.scanStartMs) / 1000 else 0
+      tick++
+      if (tick % 5 == 0 && ctl.writeWarn) ctl.retryFlush()
       delay(200)
     }
   }
@@ -42,8 +47,8 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   BackHandler {
     when {
       showJump -> showJump = false
-      !ctl.scanning -> app.screen = Screen.SETUP
-      // 掃描中吞掉返回——防誤退掉資料；要退先按「中斷」
+      !ctl.scanning && !ctl.writeWarn -> app.screen = Screen.SETUP
+      // 掃描中或落盤重試中吞掉返回——防誤退掉資料；要退先按「中斷」
     }
   }
 
@@ -78,14 +83,16 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
   }
 
   Column(
-    Modifier.fillMaxSize().padding(20.dp),
+    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     if (p == null) {
       Text("全部完成 🎉", style = MaterialTheme.typography.headlineLarge)
-      Button(onClick = onExport, modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
+      Button(onClick = onExport, enabled = !ctl.writeWarn,
+        modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
       OutlinedButton(onClick = { showJump = true }, modifier = Modifier.fillMaxWidth()) { Text("點位清單") }
-      OutlinedButton(onClick = { app.screen = Screen.SETUP }, modifier = Modifier.fillMaxWidth()) { Text("返回設定") }
+      OutlinedButton(onClick = { app.screen = Screen.SETUP }, enabled = !ctl.writeWarn,
+        modifier = Modifier.fillMaxWidth()) { Text("返回設定") }
       return@Column
     }
 
@@ -104,7 +111,7 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     if (ctl.lastThrottled) Text("⚠ 偵測到掃描節流——去開發者選項關掉後重採",
       color = Color.Red, style = MaterialTheme.typography.titleMedium)
     if (ctl.lowScanWarn) Text("⚠ 上一點成功掃描 <60%,建議重採", color = Color(0xFF92400E))
-    if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
+    if (ctl.writeWarn) Text("⚠ 寫檔失敗——每秒自動重試中,完成前擋住返回/匯出;請檢查儲存空間", color = Color.Red)
 
     Button(
       onClick = { ctl.startScan() }, enabled = !ctl.scanning && quadGateOk && !pointDone,
@@ -124,8 +131,8 @@ fun CollectScreen(app: AppState, ctl: CollectController, rig: SensorRig, onExpor
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
       OutlinedButton(onClick = { showJump = true }, enabled = !ctl.scanning) { Text("點位清單") }
-      OutlinedButton(onClick = onExport, enabled = !ctl.scanning) { Text("匯出") }
-      OutlinedButton(onClick = { app.screen = Screen.SETUP }, enabled = !ctl.scanning) { Text("返回設定") }
+      OutlinedButton(onClick = onExport, enabled = !ctl.scanning && !ctl.writeWarn) { Text("匯出") }
+      OutlinedButton(onClick = { app.screen = Screen.SETUP }, enabled = !ctl.scanning && !ctl.writeWarn) { Text("返回設定") }
     }
   }
 

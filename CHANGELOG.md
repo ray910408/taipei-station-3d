@@ -3,6 +3,12 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.5] — 2026-08-02
+
+- fsync 未確認前 flush 閘門不放行（needsSync 旗）；站點模式出口同樣以寫入重試閘門把關。
+- 缺成行必需感測器時擋住開始走線；缺步偵測降警告（acc 離線重建）。
+- 採集／走線畫面可捲動——多警告時操作鍵不再被裁掉。
+
 ## [0.2.4] — 2026-08-02
 
 - 寫檔失敗時 flush 閘門不再空放——每秒自動重試、落盤前擋住返回/匯出。

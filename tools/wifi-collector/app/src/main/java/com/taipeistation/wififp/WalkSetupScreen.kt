@@ -92,11 +92,13 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
 
     Text(if (permOk) "✓ 活動辨識權限 OK" else "✗ 缺活動辨識權限——步伐事件收不到",
       color = if (permOk) Color(0xFF166534) else Color.Red)
-    val missingSensors = remember {
-      missingWalkSensors(ctx.getSystemService(android.hardware.SensorManager::class.java))
-    }
-    if (missingSensors.isNotEmpty())
-      Text("✗ 缺感測器:${missingSensors.joinToString()}——走線資料將不完整或全空", color = Color.Red)
+    val sm = ctx.getSystemService(android.hardware.SensorManager::class.java)
+    val missingRow = remember { missingRowSensors(sm) }
+    val stepOk = remember { hasStepDetector(sm) }
+    if (missingRow.isNotEmpty())
+      Text("✗ 缺成行必需感測器:${missingRow.joinToString()}——每行樣本都湊不齊,無法開始走線", color = Color.Red)
+    if (!stepOk)
+      Text("⚠ 缺步伐偵測——弧長錨定全靠離線 acc 重建,可走但精度打折", color = Color(0xFF92400E))
     OutlinedButton(onClick = { permLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION) }) { Text("要求權限") }
 
     OutlinedButton(onClick = { fileLauncher.launch(arrayOf("application/json", "application/octet-stream")) },
@@ -129,7 +131,7 @@ fun WalkSetupScreen(app: AppState, onStart: () -> Unit) {
     }
 
     Button(
-      enabled = permOk && app.edgeList != null && resumeBlock == null,
+      enabled = permOk && app.edgeList != null && resumeBlock == null && missingRow.isEmpty(),
       modifier = Modifier.fillMaxWidth().height(60.dp),
       onClick = {
         val list = app.edgeList!!

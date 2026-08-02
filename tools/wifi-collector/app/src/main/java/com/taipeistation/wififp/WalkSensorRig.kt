@@ -49,9 +49,12 @@ class WalkSensorRig(private val sm: SensorManager) : SensorEventListener {
   }
 }
 
-/** 走線需要的五顆 sensor；缺席清單給 Setup 紅字用（缺 grav/rotvec = 永遠成不了行） */
-fun missingWalkSensors(sm: SensorManager): List<String> = listOf(
+/** 成行必需的四顆——缺任一,每一行樣本都湊不齊(onMag 要 grav/acc/rotvec 到齊才成行),整場全空 */
+fun missingRowSensors(sm: SensorManager): List<String> = listOf(
   Sensor.TYPE_MAGNETIC_FIELD to "磁力計", Sensor.TYPE_GRAVITY to "重力",
   Sensor.TYPE_ACCELEROMETER to "加速度計", Sensor.TYPE_ROTATION_VECTOR to "旋轉向量",
-  Sensor.TYPE_STEP_DETECTOR to "步伐偵測",
 ).filter { sm.getDefaultSensor(it.first) == null }.map { it.second }
+
+/** 步偵測另計:缺=可走,弧長錨定全靠離線 acc 重建 */
+fun hasStepDetector(sm: SensorManager): Boolean =
+  sm.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
