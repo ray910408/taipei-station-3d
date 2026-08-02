@@ -9,6 +9,11 @@ import org.junit.rules.TemporaryFolder
 class SessionWriterTest {
   @get:Rule val tmp = TemporaryFolder()
 
+  @Test fun flushPending_empty_is_true() {
+    val w = SessionWriter(tmp.root, "s20260724-1030")
+    assertTrue(w.flushPending())
+  }
+
   @Test fun append_readback_roundtrip() {
     val w = SessionWriter(tmp.root, "s20260724-1030")
     assertTrue(w.append("""{"type":"session"}"""))

@@ -39,9 +39,16 @@ class WalkController(
   init {
     scope.launch {
       for (line in lines) {
-        val ok = withContext(Dispatchers.IO) { app.walkWriter?.append(line) ?: false }
-        writeWarn = !ok
-        pendingWrites-- // append 與此處都在 main dispatcher；只有實際寫檔切到 IO，計數不需 atomic。
+        val w = app.walkWriter
+        if (w == null) { pendingWrites--; continue } // 無 writer 行不可救——WALK 畫面上不該發生
+        var ok = withContext(Dispatchers.IO) { w.append(line) }
+        while (!ok) { // 失敗行已留在 writer.pending;閘門保持關,每秒重試到落盤為止
+          writeWarn = true
+          delay(1000)
+          ok = withContext(Dispatchers.IO) { w.flushPending() }
+        }
+        writeWarn = false
+        pendingWrites-- // 成功落盤才算 flushed(append 與此處皆 main dispatcher,免 atomic)
       }
     }
   }

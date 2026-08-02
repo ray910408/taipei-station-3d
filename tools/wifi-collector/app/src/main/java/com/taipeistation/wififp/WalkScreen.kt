@@ -91,7 +91,7 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
 
     if (magNeedsCalibration(magAcc)) Text("⚠ 磁力計${magAccLabel(magAcc)}——手機畫 8 字(∞)約 10 秒再開始",
       color = Color(0xFF92400E), style = MaterialTheme.typography.titleMedium)
-    if (ctl.writeWarn) Text("⚠ 寫檔失敗——資料暫存記憶體,下一筆會重試;請檢查儲存空間", color = Color.Red)
+    if (ctl.writeWarn) Text("⚠ 寫檔失敗——每秒自動重試中,完成前擋住返回/匯出;請檢查儲存空間", color = Color.Red)
     ctl.lastQuality?.let { q ->
       if (q.warnings.isEmpty()) Text("✓ 上一條走線品質 OK（%.2f m/s·實測步長 %s）".format(q.speedMps, q.stepLenEstM?.let { "%.2fm".format(it) } ?: "--"), color = Color(0xFF166534))
       for (warn in q.warnings) Text("⚠ 上一條:$warn", color = Color(0xFF92400E))

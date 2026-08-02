@@ -28,6 +28,22 @@ class SessionWriter(baseDir: File, val sessionId: String, val prefix: String = "
     } catch (e: IOException) { false }
   }
 
+  /** 重試 pending 佇列(不新增行)。消費端重試不可重呼 append(line)——同一行會二次入佇列,成功時寫出重複列。 */
+  @Synchronized
+  fun flushPending(): Boolean {
+    if (pending.isEmpty()) return true
+    return try {
+      FileOutputStream(file, true).use { fos ->
+        while (pending.isNotEmpty()) {
+          fos.write((pending.first() + "\n").toByteArray(Charsets.UTF_8))
+          pending.removeFirst()
+        }
+        fos.fd.sync()
+      }
+      true
+    } catch (e: IOException) { false }
+  }
+
   fun readLines(): List<String> = if (file.exists()) file.readLines() else emptyList()
 
   companion object {

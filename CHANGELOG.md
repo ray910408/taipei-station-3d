@@ -3,6 +3,10 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.4] — 2026-08-02
+
+- 寫檔失敗時 flush 閘門不再空放——每秒自動重試、落盤前擋住返回/匯出。
+
 ## [0.2.3] — 2026-08-02
 
 - 走線寫入佇列加入 flush 閘門，結束後秒退不再丟失 `walkEnd`。
