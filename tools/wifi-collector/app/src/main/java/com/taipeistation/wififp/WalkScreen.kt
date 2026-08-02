@@ -41,8 +41,8 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
   BackHandler {
     when {
       showJump -> showJump = false
-      !ctl.walking -> app.screen = Screen.WALK_SETUP
-      // 走線中吞掉返回——要退先「作廢」或「結束走線」
+      !ctl.walking && ctl.pendingWrites == 0 -> app.screen = Screen.WALK_SETUP
+      // 走線中或落盤中吞掉返回——要退先「作廢」或「結束走線」，並等寫入完成
     }
   }
 
@@ -75,9 +75,11 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
     if (w == null) {
       Text("必收走線全部完成 🎉", style = MaterialTheme.typography.headlineLarge)
       Text("選收(gate)可從走線清單跳選", style = MaterialTheme.typography.bodyMedium)
-      Button(onClick = onExport, modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
+      Button(onClick = onExport, enabled = ctl.pendingWrites == 0,
+        modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("分享 session 檔") }
       OutlinedButton(onClick = { showJump = true }, modifier = Modifier.fillMaxWidth()) { Text("走線清單") }
-      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, modifier = Modifier.fillMaxWidth()) { Text("返回") }
+      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, enabled = ctl.pendingWrites == 0,
+        modifier = Modifier.fillMaxWidth()) { Text("返回") }
       return@Column
     }
 
@@ -111,8 +113,8 @@ fun WalkScreen(app: AppState, ctl: WalkController, rig: WalkSensorRig, onExport:
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
       OutlinedButton(onClick = { showJump = true }, enabled = !ctl.walking) { Text("走線清單") }
-      OutlinedButton(onClick = onExport, enabled = !ctl.walking) { Text("匯出") }
-      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, enabled = !ctl.walking) { Text("返回") }
+      OutlinedButton(onClick = onExport, enabled = !ctl.walking && ctl.pendingWrites == 0) { Text("匯出") }
+      OutlinedButton(onClick = { app.screen = Screen.WALK_SETUP }, enabled = !ctl.walking && ctl.pendingWrites == 0) { Text("返回") }
     }
   }
 

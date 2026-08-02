@@ -39,7 +39,11 @@ class WalkSampleBuffer(private val t0Nanos: Long) {
     rot = doubleArrayOf(r0, r1, r2, r3)
   }
 
-  @Synchronized fun onStep(tNanos: Long) { steps += relMs(tNanos) }
+  @Synchronized fun onStep(tNanos: Long) {
+    val t = relMs(tNanos)
+    if (t < 0) return // begin 前的步遲送——不屬於本走線
+    steps += t
+  }
 
   @Synchronized fun onMag(tNanos: Long, x: Double, y: Double, z: Double, accuracy: Int) {
     val g = grav ?: return; val a = acc ?: return; val r = rot ?: return // 到齊前不成行

@@ -3,6 +3,11 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.3] — 2026-08-02
+
+- 走線寫入佇列加入 flush 閘門，結束後秒退不再丟失 `walkEnd`。
+- begin 前遲送的步事件不再記入負時戳。
+
 ## [0.2.2] — 2026-08-02
 
 - 採集／走線畫面加入返回導航（含系統返回鍵），掃描／走線中防誤退；跳選清單可用返回鍵關閉。

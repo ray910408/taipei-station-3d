@@ -25,6 +25,8 @@ class WalkController(
   var currentKey by mutableStateOf<WalkKey?>(null)
   var lastQuality by mutableStateOf<WalkQuality?>(null)
   var writeWarn by mutableStateOf(false)
+  var pendingWrites by mutableStateOf(0)
+    private set
   var liveSteps by mutableStateOf(0)
   var liveSamples by mutableStateOf(0)
   var beginMs by mutableStateOf(0L)
@@ -39,6 +41,7 @@ class WalkController(
       for (line in lines) {
         val ok = withContext(Dispatchers.IO) { app.walkWriter?.append(line) ?: false }
         writeWarn = !ok
+        pendingWrites-- // append 與此處都在 main dispatcher；只有實際寫檔切到 IO，計數不需 atomic。
       }
     }
   }
@@ -111,5 +114,5 @@ class WalkController(
     for (batch in b.takeReady()) append(buildSamplesLine(batch.rows, batch.magAccMin))
   }
 
-  private fun append(line: String) { lines.trySend(line) }
+  private fun append(line: String) { pendingWrites++; lines.trySend(line) }
 }

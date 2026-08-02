@@ -53,6 +53,14 @@ class WalkSampleBufferTest {
     assertEquals(listOf(600.0, 1150.0), b.stepsMs)
   }
 
+  @Test fun steps_before_begin_are_ignored() {
+    val b = primed(ms(1000))
+    b.onStep(ms(900))
+    assertEquals(emptyList<Double>(), b.stepsMs)
+    b.onStep(ms(1100))
+    assertEquals(listOf(100.0), b.stepsMs)
+  }
+
   @Test fun rot_rate_peak_from_consecutive_quats() {
     val b = primed()
     b.onMag(ms(0), 1.0, 2.0, 3.0, 3)
