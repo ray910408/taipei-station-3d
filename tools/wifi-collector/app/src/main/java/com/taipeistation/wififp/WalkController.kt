@@ -16,6 +16,11 @@ import kotlinx.coroutines.withContext
 fun nextPendingWalk(walks: List<WalkEntry>, done: Set<WalkKey>): WalkEntry? =
   walks.asSequence().filter { it.required }.sortedBy { it.seq }.firstOrNull { it.key() !in done }
 
+/** begin 後至少此毫秒才接受 end——連點防抖:第二下不該把近空走線標完成。最短邊 <5m≈4s,1s 不影響正常操作 */
+const val MIN_WALK_MS = 1000L
+/** end/abort 後至少此毫秒才接受下一個 begin——防連點在原地誤開下一條 */
+const val WALK_REARM_MS = 500L
+
 class WalkController(
   private val app: AppState,
   private val rig: WalkSensorRig,
@@ -32,6 +37,7 @@ class WalkController(
   var beginMs by mutableStateOf(0L)
   private var buffer: WalkSampleBuffer? = null
   private var flushJob: Job? = null
+  private var lastStopMs = 0L
 
   /** 寫檔走單一 Channel 消費者:多個 launch 各自 withContext(IO) 會在執行緒池亂序,
    *  walkEnd 可能先於最後一批 samples 落盤;Channel FIFO 保證行序＝呼叫序。 */
@@ -75,6 +81,7 @@ class WalkController(
 
   fun begin() {
     if (walking) return
+    if (SystemClock.elapsedRealtime() - lastStopMs < WALK_REARM_MS) return // 剛結束/作廢——防連點誤開下一條
     val w = current() ?: return
     walking = true // 同步豎旗封雙擊（CollectController 同款教訓）
     beginMs = SystemClock.elapsedRealtime()
@@ -95,6 +102,7 @@ class WalkController(
   fun end() {
     val w = current() ?: return
     val b = buffer ?: return
+    if (SystemClock.elapsedRealtime() - beginMs < MIN_WALK_MS) return // begin 後過快——連點防抖,近空走線不得標完成
     stopStream()
     flushReady(b)
     b.drain()?.let { append(buildSamplesLine(it.rows, it.magAccMin)) }
@@ -118,6 +126,7 @@ class WalkController(
     rig.endWalk()
     flushJob?.cancel(); flushJob = null
     walking = false
+    lastStopMs = SystemClock.elapsedRealtime()
   }
 
   private fun flushReady(b: WalkSampleBuffer) {

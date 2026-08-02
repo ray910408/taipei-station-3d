@@ -3,6 +3,11 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本遵循 [SemVer](https://semver.org/lang/zh-TW/)。
 這是內部實驗專案（`private: true`，未發佈至 npm）；版本號用來標記「哪一代」，逐項變更以 git log 為準。
 
+## [0.2.7] — 2026-08-02
+
+- 走線 begin/end 連點防抖（1s/0.5s 守門）——近空走線不再被標完成。
+- guide：gen:edges 重產 SOP 補 `--force` 與 generated 換版警語。
+
 ## [0.2.6] — 2026-08-02
 
 - 活動辨識權限被拒不再擋開始走線（降警告，acc 離線重建路徑同缺步偵測器）。
